@@ -1,0 +1,11 @@
+syntax:glob
+*~
+.*.swp
+\#*\#
+tags
+*.o
+*.layout
+.ycm_extra_conf.pyc
+bin/
+obj/
+eigen3/
