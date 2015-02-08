@@ -5,6 +5,7 @@ using std::cerr;
 using std::endl;
 
 std::ofstream fout("a.txt");
+//std::ofstream fout("/dev/null");
 
 // list of neuron models
 enum NeuronModel
@@ -370,32 +371,49 @@ public:
     while ((se = poisson_events.HeadEvent()).time < t_step_end) {
       NextDt(se.time - t);        // step one sub dt
       neu_state.dym_vals(se.id, LIF_param.id_gE) += pm.arr_ps[se.id];
-      cout << "Poisson input: to neuron " << se.id
-           << " at " << se.time << endl;
-      cout << "t = " << t << endl;
-      cout << neu_state.dym_vals << endl;
+//      cout << "Poisson input: to neuron " << se.id
+//           << " at " << se.time << endl;
+//      cout << "t = " << t << endl;
+//      cout << neu_state.dym_vals << endl;
       poisson_events.PopEvent(pm.arr_pr);
     }
     if (t < t_step_end) {
       NextDt(t_step_end - t);
     }
-    cout << "t = " << t << endl;
-    cout << neu_state.dym_vals << endl;
+//    cout << "t = " << t << endl;
+//    cout << neu_state.dym_vals << endl;
 
-    fout << neu_state.dym_vals << endl;
+    static int out_i = 0;
+    if ((out_i++ & 3)==0) {
+      const Eigen::ArrayXXd stat = neu_state.dym_vals.transpose();
+      for (int n = 0; n < pm.n_total(); n++) {
+        fout << stat.data()+n << '\t';
+      }
+      fout << '\n';
+//      fout << neu_state.dym_vals << endl;
+    }
   }
 };
 
 int main()
 {
   // fill in parameters
-  TyNeuronalParams pm(LIF_G, 2, 0);
-  pm.arr_pr[0] = 1.0;
-  pm.arr_pr[1] = 1.0;
-  pm.arr_ps[0] = 0.012;
-  pm.arr_ps[1] = 0.012;
+  int n_neu = 100;
+  TyNeuronalParams pm(LIF_G, n_neu, 0);
+  for (int i = 0; i < n_neu; i++) {
+    pm.arr_pr[i] = 1.0;
+    pm.arr_ps[i] = 0.012;
+  }
   std::vector< Eigen::Triplet<double> > net_coef;
-  net_coef.push_back({1, 0, 1.0});
+  //net_coef.push_back({1, 0, 1.0});
+  for (int i = 0; i < n_neu; i++) {
+    for (int j = 0; j < n_neu; j++) {
+      if (i==j) {
+        continue;
+      }
+      net_coef.push_back({i, j, 1.0});
+    }
+  }
   pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
   for (int j = 0; j < pm.n_total(); j++) {
     if (pm.net.coeffRef(j,j)) {
@@ -411,7 +429,7 @@ int main()
   cout << "t = " << neu_simu.t << endl;
   cout << neu_simu.neu_state.dym_vals << endl;
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < (int)(1e3 / e_dt); i++) {
     neu_simu.NextStep();
   }
 
