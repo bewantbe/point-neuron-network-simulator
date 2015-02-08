@@ -273,18 +273,18 @@ public:
     }
   }
 
-  void NextDtSingleNeuState(double *dym_val, double &t_in_refractory, double dt_local)
+  void NextQuietDtNeuState(double *dym_val, double &t_in_refractory, double dt_local)
   {
     if (t_in_refractory == 0) {
       NextDtContinuous(dym_val, dt_local);
+      // deal with possible spike here?
     } else {
       double t_refractory_remain = LIF_param.TIME_REFRACTORY
                                  - t_in_refractory;
       if (t_refractory_remain < dt_local) {
         NextDtConductance(dym_val, t_refractory_remain);
-        t_local += t_refractory_remain;
-        dt_local = poisson_time_que.Front() - t_local;
-        NextDtContinuous(dym_val, dt_local);
+        NextDtContinuous(dym_val, dt_local - t_refractory_remain);
+        t_refractory_remain = 0;
       } else {
         NextDtConductance(dym_val, dt_local);
         t_refractory_remain += dt_local;
@@ -307,27 +307,12 @@ public:
       double t_local = t;
       while (poisson_time_que.Front() < t_step_end) {
         double dt_local = poisson_time_que.Front() - t_local;
-        if (tmp_neu_state.time_in_refractory[j] == 0) {
-          NextDtContinuous(dym_val, dt_local);
-        } else {
-          double t_refractory_remain = LIF_param.TIME_REFRACTORY
-                                     - tmp_neu_state.time_in_refractory[j];
-          if (t_refractory_remain < dt_local) {
-            NextDtConductance(dym_val, t_refractory_remain);
-            tmp_neu_state.time_in_refractory[j] = 0;
-            t_local += t_refractory_remain;
-            dt_local = poisson_time_que.Front() - t_local;
-            NextDtContinuous(dym_val, dt_local);
-          } else {
-            NextDtConductance(dym_val, dt_local);
-            tmp_neu_state.time_in_refractory[j] += dt_local;
-          }
-        }
+        NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j], dt_local);
         dym_val[LIF_param.id_gE] += pm.arr_ps[j];
         poisson_time_que.PopWithRate(pm.arr_pr[j]);
         t_local += dt_local;
       }
-      NextDtContinuous(dym_val, t_step_end - t_local);
+      NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j], t_step_end - t_local);
     }
 
     neu_state = tmp_neu_state;
