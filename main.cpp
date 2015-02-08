@@ -1,9 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <algorithm>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/Sparse>
+#include "common_header.h"
 
 using std::cout;
 using std::cerr;
@@ -17,7 +12,7 @@ enum NeuronModel
   HH
 };
 
-typedef Eigen::SparseMatrix<double> SparseMat;
+typedef Eigen::SparseMatrix<double> SparseMat;  // column-major by default
 typedef std::vector<double> TyArrVals;
 
 // parameters about neuronal system
@@ -52,6 +47,25 @@ struct TyNeuronalParams
   }
 };
 
+const struct TyLIFParam
+{
+  double Vot_Threshold  = 1.0;
+  double VOT_RESET      = 0.0;
+  double Con_Leakage = 0.05;
+  double Vot_Leakage = 0.0;
+  double Vot_Excitatory = 14.0/3.0;
+  double Vot_Inhibitory = -2.0/3.0;
+  double Time_ExCon    = 2.0;
+  double Time_ExConR   = 0.5;
+  double Time_InCon    = 5.0;
+  double Time_InConR   = 0.8;
+  double TIME_REFRACTORY = 2.0;  // ms
+  int n_var = 3;  // number of dynamical variables
+  int id_V  = 0;  // index of V variable
+  int id_gE = 1;  // index of gE variable
+  int id_gI = 2;  // index of gI variable
+} LIF_param;
+
 struct TyNeuronalDymState
 {
   Eigen::ArrayXXd dym_vals;  // current dynamical states of neurons
@@ -61,12 +75,12 @@ struct TyNeuronalDymState
   {
     switch (pm.neuron_model) {
       case LIF_G:
-        dym_vals.resize(pm.n_total(), 3);  // V, G_E, G_I
+        dym_vals.resize(pm.n_total(), LIF_param.n_var);  // V, G_E, G_I
         break;
       case LIF_GH:
-        break;
+//        break;
       case HH:
-        break;
+//        break;
       default:
         cerr << "Neuron model not support!" << endl;
         exit(-1);
@@ -80,7 +94,7 @@ struct TyNeuronalDymState
 };
 
 //std::random_device rd;
-std::mt19937 rand_eng(1);  // gen(rd())
+std::mt19937 rand_eng(1);  // rand_eng(rd())
 
 //class TyPoissonQueue
 //{
@@ -160,18 +174,20 @@ struct TySpikeEvent
   { return time == b.time && id == b.id; }
 };
 
+typedef std::priority_queue<
+    TySpikeEvent,
+    std::vector<TySpikeEvent>,
+    std::greater<TySpikeEvent> > TySpikeEventQueue;
+
 class CPoissonEvents
 {
 public:
-  std::priority_queue<
-    TySpikeEvent,
-    std::vector<TySpikeEvent>,
-    std::greater<TySpikeEvent> > spike_events;
+  TySpikeEventQueue poisson_spike_events;
 
   void Clear()
   {
-    while (!spike_events.empty()) {
-      spike_events.pop();
+    while (!poisson_spike_events.empty()) {
+      poisson_spike_events.pop();
     }
   }
 
@@ -180,29 +196,34 @@ public:
     Clear();
     for (size_t j = 0; j < rate_vec.size(); j++) {
       if (rate_vec[j]==0) {
-        spike_events.emplace(INFINITY, j);
+        poisson_spike_events.emplace(INFINITY, j);
       } else if (rate_vec[j]<0) {
-        spike_events.emplace(INFINITY, j);  // anyway ...
+        poisson_spike_events.emplace(INFINITY, j);  // anyway ...
         std::cerr << "Negative Poisson rate!" << endl;
       } else {
         // "1.0 - " to avoid log(zero)
-        spike_events.emplace(j,
-          t0 - log(1.0 - g_rand()) / rate_vec[j]);
+        poisson_spike_events.emplace(
+          t0 - log(1.0 - g_rand()) / rate_vec[j],
+          j);
       }
     }
+    cout << "CPoissonEvents: size = " << rate_vec.size() << endl;
+    cout << "top: time = " << poisson_spike_events.top().time
+         << " id = " << poisson_spike_events.top().id << endl;
   }
 
   const TySpikeEvent & HeadEvent() const
   {
-    return spike_events.top();
+    return poisson_spike_events.top();
   }
 
   void PopEvent(const TyArrVals &rate_vec)
   {
-    const TySpikeEvent event = spike_events.top();
-    spike_events.pop();
-    spike_events.emplace(event.id,
-      event.time - log(1.0 - g_rand()) / rate_vec[event.id]);
+    const TySpikeEvent event = poisson_spike_events.top();
+    poisson_spike_events.pop();
+    poisson_spike_events.emplace(
+      event.time - log(1.0 - g_rand()) / rate_vec[event.id],
+      event.id);
   }
 
   CPoissonEvents(const TyArrVals &rate_vec, double t0  = 0)
@@ -229,23 +250,6 @@ public:
     poisson_events.Init(pm.arr_pr, t);
   }
 
-  struct TyNeuronalDymState tmp_neu_state;
-
-  struct TyLIFParam
-  {
-    double Vot_Threshold  = 1.0;
-    double VOT_RESET      = 0.0;
-    double Con_Leakage = 0.05;
-    double Vot_Leakage = 0.0;
-    double Vot_Excitatory = 14.0/3.0;
-    double Vot_Inhibitory = -2.0/3.0;
-    double Time_ExCon    = 2.0;
-    double Time_ExConR   = 0.5;
-    double Time_InCon    = 5.0;
-    double Time_InConR   = 0.8;
-    double TIME_REFRACTORY = 2.0;  // ms
-  } LIF_param;
-
   // Get instantaneous dv/dt for LIF model
   void LIFGetDvVec(Eigen::ArrayXd &dv_vec, const struct TyNeuronalDymState &nds)
   {
@@ -258,7 +262,7 @@ public:
              - gI * (v - LIF_param.Vot_Inhibitory);
   }
 
-  // evolve assume not reset, not external input at all
+  // evolve assume not reset, not external input at all (isolated)
   void NextDtContinuous(struct TyNeuronalDymState &nds, double dt)
   {
     // classical Runge Kutta 4
@@ -301,6 +305,8 @@ public:
     t += dt;
   }
 
+  struct TyNeuronalDymState tmp_neu_state;
+
   void NextDt(double dt)
   {
     tmp_neu_state = neu_state;
@@ -308,7 +314,7 @@ public:
     NextDtContinuous(tmp_neu_state, dt);
     // keep fired neuron in resting state;
     for (int j = 0; j < pm.n_total(); j++) {
-      // TODO: not exactly correct
+      /// TODO: not exactly correct
       if (tmp_neu_state.time_in_refractory[j]) {
         tmp_neu_state.dym_vals(j, 0) = LIF_param.VOT_RESET;
         tmp_neu_state.time_in_refractory[j] += dt;
@@ -317,16 +323,42 @@ public:
         }
       }
     }
-    // do reset
+    TySpikeEventQueue local_spike_events;
+    // do reset exceed threshold
     for (int j = 0; j < pm.n_total(); j++) {
-      // TODO: not exactly correct
+      /// TODO: not exactly correct
       if (tmp_neu_state.dym_vals(j, 0) > LIF_param.Vot_Threshold) {
+        local_spike_events.emplace(t, j);
         tmp_neu_state.dym_vals(j, 0) = LIF_param.VOT_RESET;
         tmp_neu_state.time_in_refractory[j] += dt;
         if (tmp_neu_state.time_in_refractory[j] > LIF_param.TIME_REFRACTORY) {
           tmp_neu_state.time_in_refractory[j] = 0;
         }
       }
+    }
+    // do synaptic coupling
+    while (local_spike_events.size()) {
+      const TySpikeEvent &se = local_spike_events.top();
+      if (se.id < pm.n_E) {
+        // Excitatory neuron fired
+        for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
+          if (it.row() < pm.n_E) {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gE) += pm.scee;
+          } else {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gE) += pm.scie;
+          }
+        }
+      } else {
+        // Inhibitory neuron fired
+        for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
+          if (it.row() < pm.n_E) {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gI) += pm.scei;
+          } else {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gI) += pm.scii;
+          }
+        }
+      }
+      local_spike_events.pop();
     }
     neu_state = tmp_neu_state;
   }
@@ -338,8 +370,18 @@ public:
     TySpikeEvent se;
     while ((se = poisson_events.HeadEvent()).time < t_step_end) {
       NextDt(se.time - t);        // step one sub dt
+      neu_state.dym_vals(se.id, LIF_param.id_gE) += pm.arr_ps[se.id];
+      cout << "Poisson input: to neuron " << se.id
+           << " at " << se.time << endl;
+      cout << "t = " << t << endl;
+      cout << neu_state.dym_vals << endl;
       poisson_events.PopEvent(pm.arr_pr);
     }
+    if (t < t_step_end) {
+      NextDt(t_step_end - t);
+    }
+    cout << "t = " << t << endl;
+    cout << neu_state.dym_vals << endl;
   }
 };
 
@@ -354,16 +396,30 @@ int main()
   std::vector< Eigen::Triplet<double> > net_coef;
   net_coef.push_back({1, 0, 1.0});
   pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
+  for (int j = 0; j < pm.n_total(); j++) {
+    if (pm.net.coeffRef(j,j)) {
+      pm.net.coeffRef(j,j) = 0;
+    }
+  }
+  pm.net.makeCompressed();
 
   // Create simulator
   double e_dt = 1.0 / 2;  // ms
   CNeuronSimulator neu_simu(pm, e_dt);
 
-  for (int i = 0; i < 1; i++) {
+  cout << "t = " << neu_simu.t << endl;
+  cout << neu_simu.neu_state.dym_vals << endl;
+
+  for (int i = 0; i < 10; i++) {
     neu_simu.NextStep();
-    cout << "t = " << neu_simu.t << endl;
-    cout << neu_simu.neu_state.dym_vals << endl;
   }
+
+//  for (int i = 0; i < 10000; i++) {
+//    const TySpikeEvent &se = neu_simu.poisson_events.HeadEvent();
+//    cout << "Poisson input: to neuron " << se.id
+//           << " at " << se.time << endl;
+//    neu_simu.poisson_events.PopEvent(pm.arr_pr);
+//  }
 
   return 0;
 }
