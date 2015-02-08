@@ -4,6 +4,8 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+std::ofstream fout("a.txt");
+
 // list of neuron models
 enum NeuronModel
 {
@@ -207,9 +209,6 @@ public:
           j);
       }
     }
-    cout << "CPoissonEvents: size = " << rate_vec.size() << endl;
-    cout << "top: time = " << poisson_spike_events.top().time
-         << " id = " << poisson_spike_events.top().id << endl;
   }
 
   const TySpikeEvent & HeadEvent() const
@@ -382,6 +381,8 @@ public:
     }
     cout << "t = " << t << endl;
     cout << neu_state.dym_vals << endl;
+
+    fout << neu_state.dym_vals << endl;
   }
 };
 
@@ -410,16 +411,13 @@ int main()
   cout << "t = " << neu_simu.t << endl;
   cout << neu_simu.neu_state.dym_vals << endl;
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 100; i++) {
     neu_simu.NextStep();
   }
 
-//  for (int i = 0; i < 10000; i++) {
-//    const TySpikeEvent &se = neu_simu.poisson_events.HeadEvent();
-//    cout << "Poisson input: to neuron " << se.id
-//           << " at " << se.time << endl;
-//    neu_simu.poisson_events.PopEvent(pm.arr_pr);
-//  }
+  // Octave
+  // load a.txt
+  // plot([a(1:2:end, 1), a(2:2:end, 1)], '-o')
 
   return 0;
 }
