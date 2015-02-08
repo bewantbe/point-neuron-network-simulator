@@ -99,56 +99,6 @@ struct TyNeuronalDymState
 //std::random_device rd;
 std::mt19937 rand_eng(1);  // rand_eng(rd())
 
-//class TyPoissonQueue
-//{
-//public:
-//  std::queue<double> poisson_time;
-//  void AddEventsUntilTime(double rate, double t_until)
-//  {
-//    std::exponential_distribution<> exp_dis(rate);
-//    while (poisson_time.back() <= t_until) {
-//      poisson_time.push( poisson_time.back() + exp_dis(rand_eng) );
-//    }
-//  }
-//
-//  void Init(double rate, double t0)
-//  {
-//    std::exponential_distribution<> exp_dis(rate);
-//    poisson_time.push(t0 + exp_dis(rand_eng));
-//  }
-//};
-
-//class TyPoissonQueueVec
-//{
-//public:
-//  typedef std::pair<double, int> TySpikeEvent;  // event time, index (of neuron)
-//  struct std::vector<TyPoissonQueue> poission_queue_vec;
-//  struct std::vector<TyPoissonQueue>::iterator poission_queue_it;
-//  std::vector<TySpikeEvent> poisson_event_vec;
-//
-//  void Init(const TyArrVals &rate_vec, double t0 = 0)
-//  {
-//    // each poission_queue_vec[] should have at least one event
-//    poission_queue_vec.resize(rate_vec.size());
-//    for (size_t j = 0; j < rate_vec.size(); j++) {
-//      poission_queue_vec[j].Init(rate_vec[j], t0);
-//    }
-//    poission_queue_it = poission_queue_vec.end();  // point to next event
-//  }
-//
-//  TySpikeEvent & PopFirst(const TyArrVals &rate_vec)
-//  {
-//    if (poission_queue_it == poisson_event_vec.end()) {
-//      // no enough event, generate more
-//      for (int j = 0; j < rate_vec.size(); j++) {
-//        poission_queue_vec[j].AddEventsUntilTime(rate_vec[j], 100);
-//      }
-//    } else {
-//      return *poisson_queue_it++;
-//    }
-//  }
-//};
-
 double g_rand()
 {
   static std::uniform_real_distribution<double> udis(0, 1);
@@ -234,6 +184,77 @@ public:
   CPoissonEvents() {}
 };
 
+//class TyTimeQueue
+//{
+//public:
+//  std::queue<double> poisson_time;
+//  void AddEventsUntilTime(double rate, double t_until)
+//  {
+//    std::exponential_distribution<> exp_dis(rate);
+//    while (poisson_time.back() <= t_until) {
+//      poisson_time.push( poisson_time.back() + exp_dis(rand_eng) );
+//    }
+//  }
+//
+//  void Init(double rate, double t0)
+//  {
+//    std::exponential_distribution<> exp_dis(rate);
+//    poisson_time.push(t0 + exp_dis(rand_eng));
+//  }
+//};
+
+class TyTimeQueue: private std::queue<double>
+{
+public:
+  void AddEventsUntilTime(double rate, double t_until)
+  {
+    std::exponential_distribution<> exp_dis(rate);
+    while (back() <= t_until) {
+      push( back() + exp_dis(rand_eng) );
+    }
+  }
+
+  void Init(double rate, double t0)
+  {
+    std::exponential_distribution<> exp_dis(rate);
+    push(t0 + exp_dis(rand_eng));
+  }
+
+  double Front() const
+  {
+    return front();
+  }
+
+  void PopWithRateTime(double rate)
+  {
+    if (size() <= 1) {
+      if (std::isfinite(back())) {
+        AddEventsUntilTime(rate, back() + 10.0 / rate);
+        pop();
+      }
+    } else {
+      pop();
+    }
+  }
+};
+
+class TyPoissonTimeVec: public std::vector<TyTimeQueue>
+{
+public:
+  void Init(const TyArrVals &rate_vec, double t0 = 0)
+  {
+    // each poission_queue_vec[] should have at least one event
+    resize(rate_vec.size());
+    for (size_t j = 0; j < rate_vec.size(); j++) {
+      operator[](j).Init(rate_vec[j], t0);
+    }
+  }
+  TyPoissonTimeVec(const TyArrVals &rate_vec, double t0 = 0)
+  {
+    Init(rate_vec, t0);
+  }
+};
+
 class CNeuronSimulator
 {
 public:
@@ -263,7 +284,7 @@ public:
   }
 
   // evolve assume not reset, not external input at all (isolated)
-  void NextDtContinuous(struct TyNeuronalDymState &nds, double dt)
+  void NextDtContinuousVec(struct TyNeuronalDymState &nds, double dt)
   {
     // classical Runge Kutta 4
     // for voltage only, conductance evolve exactly use exp()
@@ -311,7 +332,159 @@ public:
   {
     tmp_neu_state = neu_state;
     // evolve as if not reset not resting
-    NextDtContinuous(tmp_neu_state, dt);
+    NextDtContinuousVec(tmp_neu_state, dt);
+    // keep fired neuron in resting state;
+    for (int j = 0; j < pm.n_total(); j++) {
+      /// TODO: not exactly correct
+      if (tmp_neu_state.time_in_refractory[j]) {
+        tmp_neu_state.dym_vals(j, 0) = LIF_param.VOT_RESET;
+        tmp_neu_state.time_in_refractory[j] += dt;
+        if (tmp_neu_state.time_in_refractory[j] > LIF_param.TIME_REFRACTORY) {
+          tmp_neu_state.time_in_refractory[j] = 0;
+        }
+      }
+    }
+    TySpikeEventQueue local_spike_events;
+    // do reset exceed threshold
+    for (int j = 0; j < pm.n_total(); j++) {
+      /// TODO: not exactly correct
+      if (tmp_neu_state.dym_vals(j, 0) > LIF_param.Vot_Threshold) {
+        local_spike_events.emplace(t, j);
+        tmp_neu_state.dym_vals(j, 0) = LIF_param.VOT_RESET;
+        tmp_neu_state.time_in_refractory[j] += dt;
+        if (tmp_neu_state.time_in_refractory[j] > LIF_param.TIME_REFRACTORY) {
+          tmp_neu_state.time_in_refractory[j] = 0;
+        }
+      }
+    }
+    // do synaptic coupling
+    while (local_spike_events.size()) {
+      const TySpikeEvent &se = local_spike_events.top();
+      if (se.id < pm.n_E) {
+        // Excitatory neuron fired
+        for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
+          if (it.row() < pm.n_E) {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gE) += pm.scee;
+          } else {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gE) += pm.scie;
+          }
+        }
+      } else {
+        // Inhibitory neuron fired
+        for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
+          if (it.row() < pm.n_E) {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gI) += pm.scei;
+          } else {
+            tmp_neu_state.dym_vals(it.row(), LIF_param.id_gI) += pm.scii;
+          }
+        }
+      }
+      local_spike_events.pop();
+    }
+    neu_state = tmp_neu_state;
+  }
+
+  // evolve one dt
+  void NextStep()
+  {
+    double t_step_end = t + dt;
+    TySpikeEvent se;
+    while ((se = poisson_events.HeadEvent()).time < t_step_end) {
+      NextDt(se.time - t);        // step one sub dt
+      neu_state.dym_vals(se.id, LIF_param.id_gE) += pm.arr_ps[se.id];
+//      cout << "Poisson input: to neuron " << se.id
+//           << " at " << se.time << endl;
+//      cout << "t = " << t << endl;
+//      cout << neu_state.dym_vals << endl;
+      poisson_events.PopEvent(pm.arr_pr);
+    }
+    if (t < t_step_end) {
+      NextDt(t_step_end - t);
+    }
+//    cout << "t = " << t << endl;
+//    cout << neu_state.dym_vals << endl;
+
+    static int out_i = 0;
+    if ((out_i++ & 3)==0) {
+      const Eigen::ArrayXXd stat = neu_state.dym_vals.transpose();
+      for (int n = 0; n < pm.n_total(); n++) {
+        fout << stat.data()+n << '\t';
+      }
+      fout << '\n';
+//      fout << neu_state.dym_vals << endl;
+    }
+  }
+};
+
+class CNeuronSimulatorVer1
+{
+public:
+  struct TyNeuronalParams pm;
+  struct TyNeuronalDymState neu_state;
+  TyPoissonTimeVec poisson_time_vec;
+  double t, dt;
+
+  CNeuronSimulatorVer1(const TyNeuronalParams &_pm, double _dt)
+  :pm(_pm), neu_state(_pm)
+  {
+    t = 0;
+    dt = _dt;
+    poisson_time_vec.Init(pm.arr_pr, t);
+  }
+
+  // Get instantaneous dv/dt for LIF model
+  double LIFGetDv(double *dym_val)
+  {
+    dv_vec = - LIF_param.Con_Leakage * (dym_val(LIF_param.id_V) - LIF_param.Vot_Leakage)
+             - dym_val(LIF_param.id_gE) * (dym_val(LIF_param.id_V) - LIF_param.Vot_Excitatory)
+             - dym_val(LIF_param.id_gI) * (dym_val(LIF_param.id_V) - LIF_param.Vot_Inhibitory);
+  }
+
+  // evolve assume not reset, not external input at all (isolated)
+  void NextDtContinuous(double *dym_val, double dt)
+  {
+    // classical Runge Kutta 4 (for voltage)
+    // conductance evolve exactly use exp()
+
+    double tmp_dym_val = dym_val;
+    double k1, k2, k3, k4;
+    double exp_E = exp(-0.5 * dt / LIF_param.Time_ExCon);
+    double exp_I = exp(-0.5 * dt / LIF_param.Time_InCon);
+
+    // k1 = f(t_n, y_n)
+    k1 = LIFGetDv(tmp_dym_val);
+
+    // y_n + 0.5*k1*dt
+    tmp_dym_val(LIF_param.id_V ) = dym_val(LIF_param.id_V ) + 0.5 * dt * k1;
+    tmp_dym_val(LIF_param.id_gE) *= exp_E;
+    tmp_dym_val(LIF_param.id_gI) *= exp_I;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k2 = LIFGetDv(tmp_dym_val);
+
+    // y_n + 0.5*k1*dt
+    tmp_dym_val(LIF_param.id_V ) = dym_val(LIF_param.id_V ) + 0.5 * dt * k2;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k3 = LIFGetDv(tmp_dym_val);
+
+    // y_n + 0.5*k1*dt
+    tmp_dym_val(LIF_param.id_V ) = dym_val(LIF_param.id_V ) + dt * k3;
+    tmp_dym_val(LIF_param.id_gE) *= exp_E;
+    tmp_dym_val(LIF_param.id_gI) *= exp_I;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k4 = LIFGetDv(tmp_dym_val);
+
+    dym_val(LIF_param.id_V ) += dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
+    dym_val(LIF_param.id_gE) = tmp_dym_val(LIF_param.id_gE);
+    dym_val(LIF_param.id_gI) = tmp_dym_val(LIF_param.id_gI);
+  }
+
+  struct TyNeuronalDymState tmp_neu_state;
+
+  void NextDt(double dt)
+  {
+    tmp_neu_state = neu_state;
+    // evolve as if not reset not resting
+    NextDtContinuousVec(tmp_neu_state, dt);
     // keep fired neuron in resting state;
     for (int j = 0; j < pm.n_total(); j++) {
       /// TODO: not exactly correct

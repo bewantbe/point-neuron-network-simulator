@@ -1,4 +1,5 @@
 #include <stdio.h>  // printf is good
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <vector>

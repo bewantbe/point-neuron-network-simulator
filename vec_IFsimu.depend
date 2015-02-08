@@ -2,8 +2,9 @@
 1423359787 source:/home/xyy/code/test/vec_IFsimu/main.cpp
 	"common_header.h"
 
-1423357210 source:/home/xyy/code/test/vec_IFsimu/common_header.h
+1423362631 source:/home/xyy/code/test/vec_IFsimu/common_header.h
 	<stdio.h>
+	<cmath>
 	<iostream>
 	<fstream>
 	<vector>
