@@ -22,15 +22,24 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-pg" />
+					<Add option="-g" />
 				</Compiler>
 				<Linker>
-					<Add option="-s" />
+					<Add option="-pg" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-pedantic-errors" />
+			<Add option="-std=c++11" />
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="common_header.h">
+			<Option compile="1" />
+		</Unit>
+		<Unit filename="main.cpp" />
+		<Unit filename="simulator_v0.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />
