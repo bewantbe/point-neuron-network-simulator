@@ -76,6 +76,12 @@ struct TyNeuronalDymState
   Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dym_vals;  // For CNeuronSimulatorEvolveEach
   TyArrVals time_in_refractory;
 
+  void Zeros()
+  {
+    dym_vals.setZero();
+    for (auto &i : time_in_refractory) i = 0;
+  }
+
   TyNeuronalDymState(const TyNeuronalParams &pm)
   {
     switch (pm.neuron_model) {
@@ -91,6 +97,7 @@ struct TyNeuronalDymState
         exit(-1);
     }
     time_in_refractory.resize(pm.n_total());
+    Zeros();
   }
 
 //private:
@@ -375,14 +382,15 @@ public:
                                  - t_in_refractory;
       if (t_refractory_remain < dt_local) {
         NextDtConductance(dym_val, t_refractory_remain);
+        // dym_val[LIF_param.id_V] = 0;
         NextDtContinuous(dym_val, spike_time_local, dt_local - t_refractory_remain);
-        t_refractory_remain = 0;
+        t_in_refractory = 0;
         if (!std::isnan(spike_time_local)) {
           cerr << "NextQuietDtNeuState(): bbbbbbb" << endl;
         }
       } else {
         NextDtConductance(dym_val, dt_local);
-        t_refractory_remain += dt_local;
+        t_in_refractory += dt_local;
       }
     }
   }
@@ -428,6 +436,7 @@ public:
     struct TyNeuronalDymState tmp_neu_state;
 
     do {
+      cout << "t = " << t_sub << endl;
       TySpikeEventQueue spike_events;
       tmp_neu_state = neu_state;
       NextDt(tmp_neu_state, spike_events, t_end - t_sub);
@@ -459,7 +468,7 @@ typedef CNeuronSimulatorEvolveEach CNeuronSimulator;
 int main()
 {
   // fill in parameters
-  int n_neu = 100;
+  int n_neu = 2;
   TyNeuronalParams pm(LIF_G, n_neu, 0);
   for (int i = 0; i < n_neu; i++) {
     pm.arr_pr[i] = 1.0;
@@ -490,8 +499,14 @@ int main()
   cout << "t = " << neu_simu.t << endl;
   cout << neu_simu.neu_state.dym_vals << endl;
 
-  for (int i = 0; i < (int)(1e3 / e_dt); i++) {
+//  for (int i = 0; i < (int)(1e3 / e_dt); i++) {
+//    neu_simu.NextStep();
+//  }
+
+  for (int i = 0; i < 50; i++) {
     neu_simu.NextStep();
+    cout << "t = " << neu_simu.t << endl;
+    cout << neu_simu.neu_state.dym_vals << endl;
   }
 
   // Octave
