@@ -448,8 +448,11 @@ public:
              << spike_events.top().time << endl;
         latest_spike_event = spike_events.top();
         // Really evolve the whole system, spike_events will be discard.
-        NextDt(neu_state, spike_events, spike_events.top().time - t_sub);
-        t_sub = spike_events.top().time;
+        NextDt(neu_state, spike_events, latest_spike_event.time - t_sub);
+        if (spike_events.top().id != latest_spike_event.id) {
+          cerr << "NextStep(): Should not happen." << endl;
+        }
+        t_sub = latest_spike_event.time;
         // force the neuron to spike
         if (neu_state.time_in_refractory[latest_spike_event.id] == 0) {
           neu_state.dym_vals(latest_spike_event.id, LIF_param.id_V) = 0;
