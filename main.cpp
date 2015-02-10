@@ -1,4 +1,8 @@
 #include "common_header.h"
+#include "math_helper.h"
+
+// #define NDEBUG
+#include <cassert>
 
 using std::cout;
 using std::cerr;
@@ -144,47 +148,57 @@ typedef std::priority_queue<
     std::vector<TySpikeEvent>,
     std::greater<TySpikeEvent> > TySpikeEventQueue;
 
-class TyPoissonTimeQueue: public std::queue<double>
+class TyPoissonTimeSeq: public std::vector<double>
 {
 public:
+  iterator it_seq = begin();  // point to current event
+
+  // Requirements: t_until <= inf, rate >= 0.
   void AddEventsUntilTime(double rate, double t_until)
   {
+    assert(rate >= 0);
     std::exponential_distribution<> exp_dis(rate);
-    while (back() <= t_until) {
-      push( back() + exp_dis(rand_eng) );
+    while (back() < t_until) {
+      push_back( back() + exp_dis(rand_eng) );
     }
   }
 
   void Init(double rate, double t0)
   {
+    assert(rate >= 0);
+    clear();
     std::exponential_distribution<> exp_dis(rate);
-    push(t0 + exp_dis(rand_eng));
+    push_back(t0 + exp_dis(rand_eng));
+    it_seq = begin();
   }
 
   double Front() const
   {
-    return front();
+    return *it_seq;
   }
 
-  void PopWithRate(double rate)
+  void PopAndFill(double rate)
   {
-    if (size() <= 1) {
+    assert(it_seq < end());
+    it_seq++;
+    if (it_seq == end()) {
+      assert(size() > 0);
       if (std::isfinite(back())) {
+        Init(rate, back());
         AddEventsUntilTime(rate, back() + 12.0 / rate);
-        pop();
+      } else {
+        it_seq--;
       }
-    } else {
-      pop();
     }
   }
 };
 
-class TyPoissonTimeVec: public std::vector<TyPoissonTimeQueue>
+class TyPoissonTimeVec: public std::vector<TyPoissonTimeSeq>
 {
 public:
   void Init(const TyArrVals &rate_vec, double t0 = 0)
   {
-    // each poission_queue_vec[] should have at least one event
+    // each TyPoissonTimeSeq should have at least one event
     resize(rate_vec.size());
     for (size_t j = 0; j < rate_vec.size(); j++) {
       operator[](j).Init(rate_vec[j], t0);
@@ -194,8 +208,7 @@ public:
   {
     Init(rate_vec, t0);
   }
-  TyPoissonTimeVec()
-  { }
+  TyPoissonTimeVec() = default;
 };
 
 class CNeuronSimulatorEvolveEach
@@ -220,65 +233,6 @@ public:
     return - LIF_param.Con_Leakage * (dym_val[LIF_param.id_V] - LIF_param.Vot_Leakage)
            - dym_val[LIF_param.id_gE] * (dym_val[LIF_param.id_V] - LIF_param.Vot_Excitatory)
            - dym_val[LIF_param.id_gI] * (dym_val[LIF_param.id_V] - LIF_param.Vot_Inhibitory);
-  }
-
-  double root_search(double x1, double x2,
-                     double fx1, double fx2,
-                     double dfx1, double dfx2, double xacc) const
-  {
-    const int Maxnum_search = 50;
-    int j;
-    double tempx1,tempx2,dx,f,fmid,xmid,root;
-
-    auto hermit = [] (double a, double b, double va, double vb,
-              double dva, double dvb, double x)
-      {
-        // use v(a), v(b), dv(a)/dt, dv(b)/dt to construct a cubic polynomial
-        // basic function f1 satisfies: f1(a)=1, f1(b)=0, f1'(a)=0, f1'(b)=0
-        double f1 = va*(2*x+b-3*a)*(x-b)*(x-b)/(b-a)/(b-a)/(b-a);
-        // basic function f2 satisfies: f2(a)=0, f2(b)=1, f2'(a)=0, f2'(b)=0
-        double f2 = vb*(3*b-2*x-a)*(x-a)*(x-a)/(b-a)/(b-a)/(b-a);
-        // basic function f3 satisfies: f3(a)=0, f3(b)=0, f3'(a)=1, f3'(b)=0
-        double f3 = dva*(x-a)*(x-b)*(x-b)/(b-a)/(b-a);
-        // basic function f4 satisfies: f4(a)=0, f4(b)=0, f4'(a)=0, f4'(b)=1
-        double f4 = dvb*(x-a)*(x-a)*(x-b)/(b-a)/(b-a);
-
-        // the polynomial of v(x) - Vot_Threshold
-        return f1 + f2 + f3 + f4 - LIF_param.Vot_Threshold;
-      };
-
-
-    // for firing time case, fx1<0, fmid>0
-    f    = hermit(x1,x2,fx1,fx2,dfx1,dfx2,x1);
-    fmid = hermit(x1,x2,fx1,fx2,dfx1,dfx2,x2);
-    /**************************************
-      if (fabs(x2-x1)<xacc)
-      {
-        return x1;
-      }
-    ***************************************/
-    if (f*fmid > 0) {
-      cerr << "root_search(): Failed to find root !" << endl;
-      return x1;
-    }
-
-    tempx1 = x1;
-    tempx2 = x2;
-    for (j=0; j<Maxnum_search; j++) {
-      dx = tempx2 - tempx1;
-      xmid = tempx1 + dx/2;
-      fmid = hermit(x1,x2,fx1,fx2,dfx1,dfx2,xmid);
-      if (fmid <= 0.0)
-        tempx1 = xmid;
-      else
-        tempx2 = xmid;
-      // the interval is small enough or already find the root
-      if (fabs(fmid)<xacc) {
-        root = xmid;
-        return root;
-      }
-    }
-    return xmid;
   }
 
   // evolve assume not reset, not external input at all (isolated)
@@ -320,8 +274,8 @@ public:
         && dym_val[LIF_param.id_V ] >= LIF_param.Vot_Threshold) {
       // could miss some spikes
       spike_time_local = root_search(0, dt,
-                               v_n, dym_val[LIF_param.id_V ],
-                               k1, LIFGetDv(dym_val), 1e-12);
+        v_n, dym_val[LIF_param.id_V ],
+        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, 1e-12);
     } else {
       spike_time_local = std::numeric_limits<double>::quiet_NaN();
     }
@@ -408,20 +362,20 @@ public:
     // evolve each neuron as if no reset
     for (int j = 0; j < pm.n_total(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
-      //TyPoissonTimeQueue &poisson_time_que = poisson_time_vec[j];
-      TyPoissonTimeQueue poisson_time_que = poisson_time_vec[j];  // an copy
+      //TyPoissonTimeQueue &poisson_time_seq = poisson_time_vec[j];
+      TyPoissonTimeSeq poisson_time_seq = poisson_time_vec[j];  // an copy
       double *dym_val = tmp_neu_state.dym_vals.data() + j * LIF_param.n_var;
       double t_local = t;
       double spike_time_local = std::numeric_limits<double>::quiet_NaN();
-      while (poisson_time_que.Front() < t_step_end) {
-        double dt_local = poisson_time_que.Front() - t_local;
+      while (poisson_time_seq.Front() < t_step_end) {
+        double dt_local = poisson_time_seq.Front() - t_local;
         NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, dt_local);
         if (!std::isnan(spike_time_local)) {
           spike_events.emplace(t_local + spike_time_local, j);
         }
         dym_val[LIF_param.id_gE] += pm.arr_ps[j];
-        poisson_time_que.PopWithRate(pm.arr_pr[j]);
+        poisson_time_seq.PopAndFill(pm.arr_pr[j]);
         t_local += dt_local;
       }
       NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j],
