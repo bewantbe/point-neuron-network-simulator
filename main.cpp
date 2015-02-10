@@ -120,7 +120,10 @@ struct TySpikeEvent
   int id;
 
   TySpikeEvent()
-  {}
+  {
+    time = std::numeric_limits<double>::quiet_NaN();
+    id = -1;
+  }
 
   TySpikeEvent(double _time, int _id)
   : time(_time), id(_id)
@@ -141,7 +144,7 @@ typedef std::priority_queue<
     std::vector<TySpikeEvent>,
     std::greater<TySpikeEvent> > TySpikeEventQueue;
 
-class TyPoissonTimeQueue: private std::queue<double>
+class TyPoissonTimeQueue: public std::queue<double>
 {
 public:
   void AddEventsUntilTime(double rate, double t_until)
@@ -313,7 +316,8 @@ public:
 
     dym_val[LIF_param.id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
 
-    if (v_n < 1 && dym_val[LIF_param.id_V ] >= 1) {
+    if (v_n < LIF_param.Vot_Threshold
+        && dym_val[LIF_param.id_V ] >= LIF_param.Vot_Threshold) {
       // could miss some spikes
       spike_time_local = root_search(0, dt,
                                v_n, dym_val[LIF_param.id_V ],
@@ -353,6 +357,7 @@ public:
     }
   }
 
+  // evolve single neuron as if no external input
   void NextQuietDtNeuState(double *dym_val, double &t_in_refractory,
                            double &spike_time_local, double dt_local)
   {
@@ -403,7 +408,8 @@ public:
     // evolve each neuron as if no reset
     for (int j = 0; j < pm.n_total(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
-      TyPoissonTimeQueue &poisson_time_que = poisson_time_vec[j];
+      //TyPoissonTimeQueue &poisson_time_que = poisson_time_vec[j];
+      TyPoissonTimeQueue poisson_time_que = poisson_time_vec[j];  // an copy
       double *dym_val = tmp_neu_state.dym_vals.data() + j * LIF_param.n_var;
       double t_local = t;
       double spike_time_local = std::numeric_limits<double>::quiet_NaN();
