@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1423604221 source:/home/xyy/code/test/vec_IFsimu/main.cpp
+1423605699 source:/home/xyy/code/test/vec_IFsimu/main.cpp
 	"common_header.h"
 	"math_helper.h"
 	<cassert>
@@ -27,4 +27,8 @@
 	<eigen3/Eigen/Sparse>
 
 1423604191 /home/xyy/code/test/vec_IFsimu/math_helper.h
+
+1423604248 source:/home/xyy/code/test/vec_IFsimu/math_helper.cpp
+	<iostream>
+	<cmath>
 

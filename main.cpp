@@ -148,10 +148,18 @@ typedef std::priority_queue<
     std::vector<TySpikeEvent>,
     std::greater<TySpikeEvent> > TySpikeEventQueue;
 
-class TyPoissonTimeSeq: public std::vector<double>
+typedef std::vector<double> TyInternalVec;
+
+class TyPoissonTimeSeq: public TyInternalVec
 {
 public:
-  iterator it_seq = begin();  // point to current event
+  typedef size_t TyIdx;
+  TyIdx id_seq = 0;  // point to current event
+//  TyPoissonTimeSeq() = default;
+//  TyPoissonTimeSeq(const TyPoissonTimeSeq &pts)
+//  : TyInternalVec(pts),
+//    id_seq(pts.id_seq)
+//  {}
 
   // Requirements: t_until <= inf, rate >= 0.
   void AddEventsUntilTime(double rate, double t_until)
@@ -169,46 +177,78 @@ public:
     clear();
     std::exponential_distribution<> exp_dis(rate);
     push_back(t0 + exp_dis(rand_eng));
-    it_seq = begin();
+    id_seq = 0;
   }
 
   double Front() const
   {
-    return *it_seq;
+    return operator[](id_seq);
   }
 
-  void PopAndFill(double rate)
+  void PopAndFill(double rate, bool auto_shrink = false)
   {
-    assert(it_seq < end());
-    it_seq++;
-    if (it_seq == end()) {
+    assert(id_seq < size());
+    id_seq++;
+    if (id_seq == size()) {
       assert(size() > 0);
       if (std::isfinite(back())) {
-        Init(rate, back());
+        if (auto_shrink) {
+          Init(rate, back());
+        }
         AddEventsUntilTime(rate, back() + 12.0 / rate);
       } else {
-        it_seq--;
+        id_seq--;
       }
     }
+  }
+
+  void Shrink()
+  {
+    assert(id_seq < size());
+    erase(begin(), begin()+id_seq);
+    id_seq = 0;
   }
 };
 
 class TyPoissonTimeVec: public std::vector<TyPoissonTimeSeq>
 {
+  std::vector<TyPoissonTimeSeq::TyIdx> id_seq_vec;
 public:
-  void Init(const TyArrVals &rate_vec, double t0 = 0)
+  void Init(const TyArrVals &rate_vec, double t0)
   {
     // each TyPoissonTimeSeq should have at least one event
     resize(rate_vec.size());
     for (size_t j = 0; j < rate_vec.size(); j++) {
       operator[](j).Init(rate_vec[j], t0);
     }
+    id_seq_vec.resize(rate_vec.size());
   }
+
   TyPoissonTimeVec(const TyArrVals &rate_vec, double t0 = 0)
   {
     Init(rate_vec, t0);
   }
+
   TyPoissonTimeVec() = default;
+
+  void RestoreIdx()
+  {
+    for (size_t j = 0; j < size(); j++) {
+      operator[](j).id_seq = id_seq_vec[j];
+    }
+  }
+
+  void SaveIdxAndClean()
+  {
+    int j = 0;
+    for (iterator it = begin(); it != end(); it++, j++) {
+      if (it->size() - it->id_seq < it->id_seq / 7) {
+        it->Shrink();
+        printf("  ( %d-th TyPoissonTimeSeq size shrinked )\n", j);
+      }
+      id_seq_vec[j] = it->id_seq;
+    }
+  }
 };
 
 class CNeuronSimulatorEvolveEach
@@ -270,8 +310,8 @@ public:
 
     dym_val[LIF_param.id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
 
-    if (v_n < LIF_param.Vot_Threshold
-        && dym_val[LIF_param.id_V ] >= LIF_param.Vot_Threshold) {
+    if (v_n <= LIF_param.Vot_Threshold
+        && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
       // could miss some spikes
       spike_time_local = root_search(0, dt,
         v_n, dym_val[LIF_param.id_V ],
@@ -288,7 +328,7 @@ public:
     dym_val[LIF_param.id_gI] *= exp(-dt / LIF_param.Time_InCon);
   }
 
-  void SynapsesInteract(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
+  void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
   {
     if (se.id < pm.n_E) {
       // Excitatory neuron fired
@@ -319,20 +359,22 @@ public:
     if (t_in_refractory == 0) {
       NextDtContinuous(dym_val, spike_time_local, dt_local);
       if (!std::isnan(spike_time_local)) {
-        t_in_refractory = dt_local - spike_time_local;
+        // this std::max is used to avoid very rare case
+        t_in_refractory = std::max(dt_local - spike_time_local,
+                                   std::numeric_limits<double>::min());
         if (t_in_refractory < LIF_param.TIME_REFRACTORY) {
           dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
         } else {
-          // short refractory period, active again
+          // short refractory period (< dt_local), active again
           dt_local = t_in_refractory - LIF_param.TIME_REFRACTORY;
           t_in_refractory = 0;
-          // reset dym_val
+          // set conductance state at firing
           NextDtConductance(dym_val, -dt_local);
-          dym_val[LIF_param.id_V] = 0;
+          dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
           double spike_time_local_tmp;
           NextDtContinuous(dym_val, spike_time_local_tmp, dt_local);
           if (!std::isnan(spike_time_local_tmp)) {
-            cerr << "NextQuietDtNeuState(): aaaaaaa" << endl;
+            cerr << "NextQuietDtNeuState(): spike too fast" << endl;
           }
         }
       }
@@ -345,7 +387,7 @@ public:
         NextDtContinuous(dym_val, spike_time_local, dt_local - t_refractory_remain);
         t_in_refractory = 0;
         if (!std::isnan(spike_time_local)) {
-          cerr << "NextQuietDtNeuState(): bbbbbbb" << endl;
+          cerr << "NextQuietDtNeuState(): spike too fast" << endl;
         }
       } else {
         NextDtConductance(dym_val, dt_local);
@@ -354,20 +396,23 @@ public:
     }
   }
 
-  // evolve as if no synaptic interact
+  // evolve as if no synaptic interaction
   void NextDt(struct TyNeuronalDymState &tmp_neu_state,
               TySpikeEventQueue &spike_events, double dt)
   {
     double t_step_end = t + dt;
+    printf("----- Trying t = %f .. %f -------\n", t, t_step_end);
     // evolve each neuron as if no reset
     for (int j = 0; j < pm.n_total(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
-      //TyPoissonTimeQueue &poisson_time_seq = poisson_time_vec[j];
-      TyPoissonTimeSeq poisson_time_seq = poisson_time_vec[j];  // an copy
+      TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
       double *dym_val = tmp_neu_state.dym_vals.data() + j * LIF_param.n_var;
       double t_local = t;
       double spike_time_local = std::numeric_limits<double>::quiet_NaN();
       while (poisson_time_seq.Front() < t_step_end) {
+        printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
+               j, poisson_time_seq.id_seq, poisson_time_seq.size(),
+               poisson_time_seq.Front());
         double dt_local = poisson_time_seq.Front() - t_local;
         NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, dt_local);
@@ -389,37 +434,40 @@ public:
   // evolve the whole system one dt
   void NextStep()
   {
-    double t_sub = t;
     double t_end = t + dt;
     TySpikeEvent latest_spike_event =
       {std::numeric_limits<double>::quiet_NaN(), -1};
-    struct TyNeuronalDymState tmp_neu_state;
+    struct TyNeuronalDymState bk_neu_state;
 
+    printf("===== NextStep(): t = %f .. %f\n", t, t_end);
+    poisson_time_vec.SaveIdxAndClean();
     do {
-      cout << "t = " << t_sub << endl;
       TySpikeEventQueue spike_events;
-      tmp_neu_state = neu_state;
-      NextDt(tmp_neu_state, spike_events, t_end - t_sub);
-      if (spike_events.size() == 0) {
-        neu_state = tmp_neu_state;
-        break;
-      } else {
-        cout << "spike [" << spike_events.top().id << "] at "
+      bk_neu_state = neu_state;         // make a backup
+      //poisson_time_vec.RestoreIdx();
+      NextDt(neu_state, spike_events, t_end - t);
+      if (spike_events.size() != 0) {
+        neu_state = bk_neu_state;
+        cout << "Neuron [" << spike_events.top().id << "] spike at "
              << spike_events.top().time << endl;
         latest_spike_event = spike_events.top();
-        // Really evolve the whole system, spike_events will be discard.
-        NextDt(neu_state, spike_events, latest_spike_event.time - t_sub);
+        // Really evolve the whole system. spike_events will be discard.
+        poisson_time_vec.RestoreIdx();
+        NextDt(neu_state, spike_events, latest_spike_event.time - t);
         if (spike_events.top().id != latest_spike_event.id) {
           cerr << "NextStep(): Should not happen." << endl;
         }
-        t_sub = latest_spike_event.time;
-        // force the neuron to spike
+        t = latest_spike_event.time;
+        // force the neuron to spike, if not already
         if (neu_state.time_in_refractory[latest_spike_event.id] == 0) {
           neu_state.dym_vals(latest_spike_event.id, LIF_param.id_V) = 0;
           neu_state.time_in_refractory[latest_spike_event.id] =
             std::numeric_limits<double>::min();
         }
-        SynapsesInteract(neu_state, latest_spike_event);
+        SynapticInteraction(neu_state, latest_spike_event);
+        poisson_time_vec.SaveIdxAndClean();
+      } else {
+        break;
       }
     } while (true);
     t = t_end;

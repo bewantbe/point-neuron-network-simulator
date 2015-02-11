@@ -39,6 +39,8 @@
 			<Option compile="1" />
 		</Unit>
 		<Unit filename="main.cpp" />
+		<Unit filename="math_helper.cpp" />
+		<Unit filename="math_helper.h" />
 		<Unit filename="simulator_v0.h" />
 		<Extensions>
 			<envvars />
