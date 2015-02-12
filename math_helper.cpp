@@ -1,9 +1,11 @@
 #include <iostream>
 #include <cmath>
 
+// usuall, set xmid_guess to x2
 double root_search(double x1, double x2,
                    double fx1, double fx2,
-                   double dfx1, double dfx2, double rhs, double xacc)
+                   double dfx1, double dfx2, double rhs,
+                   double xmid_guess, double xacc)
 {
   const int Maxnum_search = 50;
   int j;
@@ -29,7 +31,7 @@ double root_search(double x1, double x2,
 
   // for firing time case, fx1<0, fmid>0
   f    = hermit(x1,x2,fx1,fx2,dfx1,dfx2,x1,rhs);
-  fmid = hermit(x1,x2,fx1,fx2,dfx1,dfx2,x2,rhs);
+  fmid = hermit(x1,x2,fx1,fx2,dfx1,dfx2,xmid_guess,rhs);
   /**************************************
     if (fabs(x2-x1)<xacc)
     {
@@ -37,12 +39,12 @@ double root_search(double x1, double x2,
     }
   ***************************************/
   if (f*fmid > 0) {
-    std::cerr << "root_search(): Failed to find root !" << std::endl;
-    return x1;
+    //std::cerr << "root_search(): Failed to find root !" << std::endl;
+    return NAN;
   }
 
   tempx1 = x1;
-  tempx2 = x2;
+  tempx2 = xmid_guess;
   for (j=0; j<Maxnum_search; j++) {
     dx = tempx2 - tempx1;
     xmid = tempx1 + dx/2;

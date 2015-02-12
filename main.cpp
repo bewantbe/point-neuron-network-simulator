@@ -5,7 +5,8 @@
 #include <cassert>
 
 const bool g_b_debug = false;
-//#define printf(...) ((void)0);
+//#define dbg_printf(...) ((void)0);
+#define dbg_printf printf
 
 using std::cout;
 using std::cerr;
@@ -247,7 +248,7 @@ public:
     for (iterator it = begin(); it != end(); it++, j++) {
       if (it->size() - it->id_seq < it->id_seq / 7) {
         it->Shrink();
-        printf("  ( %d-th TyPoissonTimeSeq size shrinked )\n", j);
+        dbg_printf("  ( %d-th TyPoissonTimeSeq size shrinked )\n", j);
       }
       id_seq_vec[j] = it->id_seq;
     }
@@ -315,12 +316,28 @@ public:
 
     if (v_n <= LIF_param.Vot_Threshold
         && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
-      // could miss some spikes
       spike_time_local = root_search(0, dt,
         v_n, dym_val[LIF_param.id_V ],
-        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, 1e-12);
+        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, dt, 1e-12);
     } else {
-      spike_time_local = std::numeric_limits<double>::quiet_NaN();
+      if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms
+        // try extract some missing spikes
+        double c = v_n;
+        double b = k1;
+        double a = (dym_val[LIF_param.id_V ] - c - b*dt)/(dt*dt);
+        double t_max_guess = -b/(2*a);
+        // in LIF, it can guarantee that a<0(concave), hence t_max_guess > 0
+        if (t_max_guess<dt) {
+          dbg_printf("rare case captured, guess time: %f\n", t_max_guess);
+          spike_time_local = root_search(0, dt,
+            v_n, dym_val[LIF_param.id_V ],
+            k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, t_max_guess, 1e-12);
+        } else {
+          spike_time_local = std::numeric_limits<double>::quiet_NaN();
+        }
+      } else {
+        spike_time_local = std::numeric_limits<double>::quiet_NaN();
+      }
     }
   }
 
@@ -404,7 +421,7 @@ public:
               TySpikeEventQueue &spike_events, double dt)
   {
     double t_step_end = t + dt;
-    printf("----- Trying t = %f .. %f -------\n", t, t_step_end);
+    dbg_printf("----- Trying t = %f .. %f -------\n", t, t_step_end);
     // evolve each neuron as if no reset
     for (int j = 0; j < pm.n_total(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
@@ -413,7 +430,7 @@ public:
       double t_local = t;
       double spike_time_local = std::numeric_limits<double>::quiet_NaN();
       while (poisson_time_seq.Front() < t_step_end) {
-        printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
+        dbg_printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
                j, poisson_time_seq.id_seq, poisson_time_seq.size(),
                poisson_time_seq.Front());
         double dt_local = poisson_time_seq.Front() - t_local;
@@ -442,7 +459,7 @@ public:
       {std::numeric_limits<double>::quiet_NaN(), -1};
     struct TyNeuronalDymState bk_neu_state;
 
-    printf("===== NextStep(): t = %f .. %f\n", t, t_end);
+    dbg_printf("===== NextStep(): t = %f .. %f\n", t, t_end);
     poisson_time_vec.SaveIdxAndClean();
     do {
       TySpikeEventQueue spike_events;
@@ -451,20 +468,20 @@ public:
       NextDt(neu_state, spike_events, t_end - t);
       if (spike_events.size() != 0) {
         neu_state = bk_neu_state;
-        printf("Neuron [%d] spike at t = %f\n",
+        dbg_printf("Neuron [%d] spike at t = %f\n",
                spike_events.top().id, spike_events.top().time);
         latest_spike_event = spike_events.top();
         // Really evolve the whole system. spike_events will be discard.
         poisson_time_vec.RestoreIdx();
         NextDt(neu_state, spike_events, latest_spike_event.time - t);
         if (spike_events.top().id != latest_spike_event.id) {
-          printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
+          dbg_printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
               latest_spike_event.id, latest_spike_event.time,
               spike_events.top().id, spike_events.top().time) ;
-          printf("spike events in this interval:\n");
+          dbg_printf("spike events in this interval:\n");
           while (spike_events.size() > 0) {
             TySpikeEvent se = spike_events.top();
-            printf("  #%2d at %f, v0=%f g0=%f, v1=%f g1=%f\n",
+            dbg_printf("  #%2d at %f, v0=%f g0=%f, v1=%f g1=%f\n",
             se.id, se.time,
             bk_neu_state.dym_vals(se.id, 0), bk_neu_state.dym_vals(se.id, 1),
             neu_state.dym_vals(se.id, 0), neu_state.dym_vals(se.id, 1));
