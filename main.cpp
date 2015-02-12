@@ -4,6 +4,9 @@
 // #define NDEBUG
 #include <cassert>
 
+const bool g_b_debug = false;
+//#define printf(...) ((void)0);
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -22,7 +25,7 @@ enum NeuronModel
   HH
 };
 
-const struct TyLIFParam
+struct TyLIFParam
 {
   double Vot_Threshold  = 1.0;
   double VOT_RESET      = 0.0;
@@ -448,14 +451,25 @@ public:
       NextDt(neu_state, spike_events, t_end - t);
       if (spike_events.size() != 0) {
         neu_state = bk_neu_state;
-        cout << "Neuron [" << spike_events.top().id << "] spike at "
-             << spike_events.top().time << endl;
+        printf("Neuron [%d] spike at t = %f\n",
+               spike_events.top().id, spike_events.top().time);
         latest_spike_event = spike_events.top();
         // Really evolve the whole system. spike_events will be discard.
         poisson_time_vec.RestoreIdx();
         NextDt(neu_state, spike_events, latest_spike_event.time - t);
         if (spike_events.top().id != latest_spike_event.id) {
-          cerr << "NextStep(): Should not happen." << endl;
+          printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
+              latest_spike_event.id, latest_spike_event.time,
+              spike_events.top().id, spike_events.top().time) ;
+          printf("spike events in this interval:\n");
+          while (spike_events.size() > 0) {
+            TySpikeEvent se = spike_events.top();
+            printf("  #%2d at %f, v0=%f g0=%f, v1=%f g1=%f\n",
+            se.id, se.time,
+            bk_neu_state.dym_vals(se.id, 0), bk_neu_state.dym_vals(se.id, 1),
+            neu_state.dym_vals(se.id, 0), neu_state.dym_vals(se.id, 1));
+            spike_events.pop();
+          }
         }
         t = latest_spike_event.time;
         // force the neuron to spike, if not already
@@ -479,7 +493,7 @@ typedef CNeuronSimulatorEvolveEach CNeuronSimulator;
 int main()
 {
   // fill in parameters
-  int n_neu = 2;
+  int n_neu = 100;
   TyNeuronalParams pm(LIF_G, n_neu, 0);
   for (int i = 0; i < n_neu; i++) {
     pm.arr_pr[i] = 1.0;
@@ -502,6 +516,10 @@ int main()
     }
   }
   pm.net.makeCompressed();
+  pm.scee = 0.0001;
+  pm.scie = 0;
+  pm.scei = 0;
+  pm.scii = 0;
 
   // Create simulator
   double e_dt = 1.0 / 2;  // ms
@@ -510,15 +528,16 @@ int main()
   cout << "t = " << neu_simu.t << endl;
   cout << neu_simu.neu_state.dym_vals << endl;
 
-//  for (int i = 0; i < (int)(1e3 / e_dt); i++) {
-//    neu_simu.NextStep();
-//  }
-
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < (int)(1e3 / e_dt); i++) {
     neu_simu.NextStep();
-    cout << "t = " << neu_simu.t << endl;
-    cout << neu_simu.neu_state.dym_vals << endl;
+    if (g_b_debug) {
+      cout << "t = " << neu_simu.t << endl;
+      cout << neu_simu.neu_state.dym_vals << endl;
+    }
   }
+
+  cout << "t = " << neu_simu.t << endl;
+  cout << neu_simu.neu_state.dym_vals << endl;
 
   // Octave
   // load a.txt
