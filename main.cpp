@@ -159,11 +159,11 @@ class TyPoissonTimeSeq: public TyInternalVec
 public:
   typedef size_t TyIdx;
   TyIdx id_seq = 0;  // point to current event
-//  TyPoissonTimeSeq() = default;
-//  TyPoissonTimeSeq(const TyPoissonTimeSeq &pts)
-//  : TyInternalVec(pts),
-//    id_seq(pts.id_seq)
-//  {}
+  TyPoissonTimeSeq() = default;
+  TyPoissonTimeSeq(const TyPoissonTimeSeq &pts)
+    : TyInternalVec(pts),
+    id_seq(pts.id_seq)
+  {}
 
   // Requirements: t_until <= inf, rate >= 0.
   void AddEventsUntilTime(double rate, double t_until)
@@ -326,7 +326,7 @@ public:
         double b = k1;
         double a = (dym_val[LIF_param.id_V ] - c - b*dt)/(dt*dt);
         double t_max_guess = -b/(2*a);
-        // in LIF, it can guarantee that a<0(concave), hence t_max_guess > 0
+        // in LIF, it can guarantee that a<0 (concave), hence t_max_guess > 0
         if (t_max_guess<dt) {
           dbg_printf("rare case captured, guess time: %f\n", t_max_guess);
           spike_time_local = root_search(0, dt,
@@ -354,18 +354,18 @@ public:
       // Excitatory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gE) += pm.scee;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gE) += it.value() * pm.scee;
         } else {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gE) += pm.scie;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gE) += it.value() * pm.scie;
         }
       }
     } else {
       // Inhibitory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gI) += pm.scei;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gI) += it.value() * pm.scei;
         } else {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gI) += pm.scii;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gI) += it.value() * pm.scii;
         }
       }
     }
@@ -410,6 +410,7 @@ public:
           cerr << "NextQuietDtNeuState(): spike too fast" << endl;
         }
       } else {
+        spike_time_local = std::numeric_limits<double>::quiet_NaN();
         NextDtConductance(dym_val, dt_local);
         t_in_refractory += dt_local;
       }
@@ -491,7 +492,7 @@ public:
         t = latest_spike_event.time;
         // force the neuron to spike, if not already
         if (neu_state.time_in_refractory[latest_spike_event.id] == 0) {
-          neu_state.dym_vals(latest_spike_event.id, LIF_param.id_V) = 0;
+          neu_state.dym_vals(latest_spike_event.id, LIF_param.id_V) = LIF_param.VOT_RESET;
           neu_state.time_in_refractory[latest_spike_event.id] =
             std::numeric_limits<double>::min();
         }
@@ -507,33 +508,94 @@ public:
 
 typedef CNeuronSimulatorEvolveEach CNeuronSimulator;
 
-int main()
+void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path)
+{
+  std::ifstream fin(path);
+  size_t id;
+  double time;
+  for (auto &i : poisson_time_vec) {
+    i.clear();
+  }
+  while (fin >> id >> time) {
+    if (id >= poisson_time_vec.size()) {
+      cerr << "FillPoissonEventsFromFile(): number of neuron does not match!" << endl;
+      exit(-8);
+    } else {
+      poisson_time_vec[id].push_back(time);
+    }
+  }
+  for (auto &i : poisson_time_vec) {
+    i.push_back(NAN);
+  }
+}
+
+void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
+{
+  std::ifstream fin(path);
+  double v, gE, gI;
+  size_t j = 0;
+  neu_dym_stat.dym_vals.setZero();
+  while (fin >> v >> gE >> gI) {
+    neu_dym_stat.dym_vals(j, 0) = v;
+    neu_dym_stat.dym_vals(j, 1) = gE;
+    neu_dym_stat.dym_vals(j, 2) = gI;
+    neu_dym_stat.time_in_refractory[j] = 0;
+    j++;
+    if (j >= neu_dym_stat.time_in_refractory.size()) {
+      cerr << "read " << j << " init data" << endl;
+      break;
+    }
+  }
+}
+
+int main(int argc, char *argv[])
 {
   // fill in parameters
-  int n_neu = 100;
+  int n_neu = 2;
   TyNeuronalParams pm(LIF_G, n_neu, 0);
+
+  cout << "network:\n";
+  cout << pm.net << "\n";
+  cout << "end network\n";
+
   for (int i = 0; i < n_neu; i++) {
     pm.arr_pr[i] = 1.0;
     pm.arr_ps[i] = 0.012;
   }
-  std::vector< Eigen::Triplet<double> > net_coef;
+  typedef Eigen::Triplet<double> TyEdgeTriplet;
+  std::vector< TyEdgeTriplet > net_coef;
   //net_coef.push_back({1, 0, 1.0});
   for (int i = 0; i < n_neu; i++) {
     for (int j = 0; j < n_neu; j++) {
       if (i==j) {
         continue;
       }
-      net_coef.push_back({i, j, 1.0});
+      net_coef.push_back(TyEdgeTriplet(i, j, 1.0));
     }
   }
+  cout << "size net_coef = " << net_coef.size() << "\n";
   pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
   for (int j = 0; j < pm.n_total(); j++) {
     if (pm.net.coeffRef(j,j)) {
       pm.net.coeffRef(j,j) = 0;
     }
   }
+  pm.net.prune(std::numeric_limits<double>::min(), 1);  // remove zeros;
   pm.net.makeCompressed();
-  pm.scee = 0.0001;
+
+  for (int k=0; k<2; k++) {
+    for (SparseMat::InnerIterator it(pm.net, k); it; ++it) {
+      cout << "edge (" << it.row() << " " << k << ")" << endl;
+    }
+  }
+
+  cout << "network:\n";
+  cout << pm.net << "\n";
+  cout << "end network\n";
+
+  //return 1;
+
+  pm.scee = 0.01;
   pm.scie = 0;
   pm.scei = 0;
   pm.scii = 0;
@@ -542,16 +604,41 @@ int main()
   double e_dt = 1.0 / 2;  // ms
   CNeuronSimulator neu_simu(pm, e_dt);
 
+  FillNeuStateFromFile(neu_simu.neu_state, "neu_state_init.txt");
+  FillPoissonEventsFromFile(neu_simu.poisson_time_vec, "poisson_events.txt");
+  for (int i = 0; i < pm.n_total(); i++) {
+    cout << "neuron [" << i << "] poisson vec " << neu_simu.poisson_time_vec[i].size() << endl;
+  }
+
   cout << "t = " << neu_simu.t << endl;
   cout << neu_simu.neu_state.dym_vals << endl;
 
+  FILE *volt_fout = fopen("volt.txt", "w");
+
+  for (int j = 0; j < pm.n_total(); j++) {
+    fprintf(volt_fout, "%.16e %.16e %.16e  ",
+      neu_simu.neu_state.dym_vals(j, 0),
+      neu_simu.neu_state.dym_vals(j, 1),
+      neu_simu.neu_state.dym_vals(j, 2));
+  }
+  fprintf(volt_fout, "\n");
+
+  //std::ofstream volt_fout("volt.txt");
   for (int i = 0; i < (int)(1e3 / e_dt); i++) {
     neu_simu.NextStep();
+    for (int j = 0; j < pm.n_total(); j++) {
+      fprintf(volt_fout, "%.16e %.16e %.16e  ",
+        neu_simu.neu_state.dym_vals(j, 0),
+        neu_simu.neu_state.dym_vals(j, 1),
+        neu_simu.neu_state.dym_vals(j, 2));
+    }
+    fprintf(volt_fout, "\n");
     if (g_b_debug) {
       cout << "t = " << neu_simu.t << endl;
       cout << neu_simu.neu_state.dym_vals << endl;
     }
   }
+  fclose(volt_fout);
 
   cout << "t = " << neu_simu.t << endl;
   cout << neu_simu.neu_state.dym_vals << endl;
