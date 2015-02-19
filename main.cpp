@@ -1,12 +1,15 @@
+#define NDEBUG
 #include "common_header.h"
 #include "math_helper.h"
 
-// #define NDEBUG
 #include <cassert>
 
 const bool g_b_debug = false;
-//#define dbg_printf(...) ((void)0);
+#ifdef NDEBUG
+#define dbg_printf(...) ((void)0);
+#else
 #define dbg_printf printf
+#end
 
 using std::cout;
 using std::cerr;
@@ -551,12 +554,8 @@ void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
 int main(int argc, char *argv[])
 {
   // fill in parameters
-  int n_neu = 2;
+  int n_neu = 100;
   TyNeuronalParams pm(LIF_G, n_neu, 0);
-
-  cout << "network:\n";
-  cout << pm.net << "\n";
-  cout << "end network\n";
 
   for (int i = 0; i < n_neu; i++) {
     pm.arr_pr[i] = 1.0;
@@ -565,15 +564,17 @@ int main(int argc, char *argv[])
   typedef Eigen::Triplet<double> TyEdgeTriplet;
   std::vector< TyEdgeTriplet > net_coef;
   //net_coef.push_back({1, 0, 1.0});
-  for (int i = 0; i < n_neu; i++) {
-    for (int j = 0; j < n_neu; j++) {
-      if (i==j) {
-        continue;
-      }
-      net_coef.push_back(TyEdgeTriplet(i, j, 1.0));
-    }
+  //for (int i = 0; i < n_neu; i++) {
+    //for (int j = 0; j < n_neu; j++) {
+      //if (i==j) {
+        //continue;
+      //}
+      //net_coef.push_back(TyEdgeTriplet(i, j, 1.0));
+    //}
+  //}
+  for (int i = 0; i < n_neu-1; i++) {
+    net_coef.push_back(TyEdgeTriplet(i, i+1, 1.0));
   }
-  cout << "size net_coef = " << net_coef.size() << "\n";
   pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
   for (int j = 0; j < pm.n_total(); j++) {
     if (pm.net.coeffRef(j,j)) {
@@ -583,19 +584,7 @@ int main(int argc, char *argv[])
   pm.net.prune(std::numeric_limits<double>::min(), 1);  // remove zeros;
   pm.net.makeCompressed();
 
-  for (int k=0; k<2; k++) {
-    for (SparseMat::InnerIterator it(pm.net, k); it; ++it) {
-      cout << "edge (" << it.row() << " " << k << ")" << endl;
-    }
-  }
-
-  cout << "network:\n";
-  cout << pm.net << "\n";
-  cout << "end network\n";
-
-  //return 1;
-
-  pm.scee = 0.01;
+  pm.scee = 0.001;
   pm.scie = 0;
   pm.scei = 0;
   pm.scii = 0;
@@ -605,13 +594,15 @@ int main(int argc, char *argv[])
   CNeuronSimulator neu_simu(pm, e_dt);
 
   FillNeuStateFromFile(neu_simu.neu_state, "neu_state_init.txt");
-  FillPoissonEventsFromFile(neu_simu.poisson_time_vec, "poisson_events.txt");
-  for (int i = 0; i < pm.n_total(); i++) {
-    cout << "neuron [" << i << "] poisson vec " << neu_simu.poisson_time_vec[i].size() << endl;
-  }
+  //FillPoissonEventsFromFile(neu_simu.poisson_time_vec, "poisson_events.txt");
+  //for (int i = 0; i < pm.n_total(); i++) {
+    //cout << "neuron [" << i << "] poisson vec " << neu_simu.poisson_time_vec[i].size() << endl;
+  //}
 
-  cout << "t = " << neu_simu.t << endl;
-  cout << neu_simu.neu_state.dym_vals << endl;
+  if (g_b_debug) {
+    cout << "t = " << neu_simu.t << endl;
+    cout << neu_simu.neu_state.dym_vals << endl;
+  }
 
   FILE *volt_fout = fopen("volt.txt", "w");
 
@@ -624,24 +615,21 @@ int main(int argc, char *argv[])
   fprintf(volt_fout, "\n");
 
   //std::ofstream volt_fout("volt.txt");
-  for (int i = 0; i < (int)(1e3 / e_dt); i++) {
+  for (int i = 0; i < (int)(1e4 / e_dt); i++) {
     neu_simu.NextStep();
-    for (int j = 0; j < pm.n_total(); j++) {
-      fprintf(volt_fout, "%.16e %.16e %.16e  ",
-        neu_simu.neu_state.dym_vals(j, 0),
-        neu_simu.neu_state.dym_vals(j, 1),
-        neu_simu.neu_state.dym_vals(j, 2));
-    }
-    fprintf(volt_fout, "\n");
+    //for (int j = 0; j < pm.n_total(); j++) {
+      //fprintf(volt_fout, "%.16e %.16e %.16e  ",
+        //neu_simu.neu_state.dym_vals(j, 0),
+        //neu_simu.neu_state.dym_vals(j, 1),
+        //neu_simu.neu_state.dym_vals(j, 2));
+    //}
+    //fprintf(volt_fout, "\n");
     if (g_b_debug) {
       cout << "t = " << neu_simu.t << endl;
       cout << neu_simu.neu_state.dym_vals << endl;
     }
   }
   fclose(volt_fout);
-
-  cout << "t = " << neu_simu.t << endl;
-  cout << neu_simu.neu_state.dym_vals << endl;
 
   // Octave
   // load a.txt
