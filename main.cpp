@@ -2,6 +2,9 @@
 #include "common_header.h"
 #include "math_helper.h"
 
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
 #include <cassert>
 
 const bool g_b_debug = false;
@@ -9,7 +12,7 @@ const bool g_b_debug = false;
 #define dbg_printf(...) ((void)0);
 #else
 #define dbg_printf printf
-#end
+#endif
 
 using std::cout;
 using std::cerr;
@@ -17,9 +20,6 @@ using std::endl;
 
 typedef Eigen::SparseMatrix<double> SparseMat;  // column-major by default
 typedef std::vector<double> TyArrVals;
-
-std::ofstream fout("a.txt");
-//std::ofstream fout("/dev/null");
 
 // list of neuron models
 enum NeuronModel
@@ -282,7 +282,7 @@ public:
            - dym_val[LIF_param.id_gI] * (dym_val[LIF_param.id_V] - LIF_param.Vot_Inhibitory);
   }
 
-  // evolve assume not reset, not external input at all (isolated)
+  // evolve the ODE assume not reset, not external input at all
   void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
     // classical Runge Kutta 4 (for voltage)
@@ -420,7 +420,7 @@ public:
     }
   }
 
-  // evolve as if no synaptic interaction
+  // evolve neuron system as if no synaptic interaction
   void NextDt(struct TyNeuronalDymState &tmp_neu_state,
               TySpikeEventQueue &spike_events, double dt)
   {
@@ -551,16 +551,46 @@ void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
   }
 }
 
-int main(int argc, char *argv[])
+void FillFullNet(TyNeuronalParams &pm)
+{
+  typedef Eigen::Triplet<double> TyEdgeTriplet;
+  std::vector< TyEdgeTriplet > net_coef;
+  int n_neu = pm.n_total();
+  for (int i = 0; i < n_neu; i++) {
+    for (int j = 0; j < n_neu; j++) {
+      if (i==j) {
+        continue;
+      }
+      net_coef.push_back(TyEdgeTriplet(i, j, 1.0));
+    }
+  }
+
+//  for (int i = 0; i < n_neu-1; i++) {
+//    net_coef.push_back(TyEdgeTriplet(i, i+1, 1.0));
+//  }
+
+  pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
+  for (int j = 0; j < pm.n_total(); j++) {
+    if (pm.net.coeffRef(j,j)) {
+      pm.net.coeffRef(j,j) = 0;
+    }
+  }
+  pm.net.prune(std::numeric_limits<double>::min(), 1);  // remove zeros;
+  pm.net.makeCompressed();
+}
+
+void Test100neu()
 {
   // fill in parameters
   int n_neu = 100;
   TyNeuronalParams pm(LIF_G, n_neu, 0);
 
   for (int i = 0; i < n_neu; i++) {
-    pm.arr_pr[i] = 1.0;
+    pm.arr_pr[i] = 1;
     pm.arr_ps[i] = 0.012;
   }
+
+  // prepare network
   typedef Eigen::Triplet<double> TyEdgeTriplet;
   std::vector< TyEdgeTriplet > net_coef;
   //net_coef.push_back({1, 0, 1.0});
@@ -584,6 +614,7 @@ int main(int argc, char *argv[])
   pm.net.prune(std::numeric_limits<double>::min(), 1);  // remove zeros;
   pm.net.makeCompressed();
 
+  // connection strength
   pm.scee = 0.001;
   pm.scie = 0;
   pm.scei = 0;
@@ -593,7 +624,7 @@ int main(int argc, char *argv[])
   double e_dt = 1.0 / 2;  // ms
   CNeuronSimulator neu_simu(pm, e_dt);
 
-  FillNeuStateFromFile(neu_simu.neu_state, "neu_state_init.txt");
+  //FillNeuStateFromFile(neu_simu.neu_state, "neu_state_init.txt");
   //FillPoissonEventsFromFile(neu_simu.poisson_time_vec, "poisson_events.txt");
   //for (int i = 0; i < pm.n_total(); i++) {
     //cout << "neuron [" << i << "] poisson vec " << neu_simu.poisson_time_vec[i].size() << endl;
@@ -630,10 +661,100 @@ int main(int argc, char *argv[])
     }
   }
   fclose(volt_fout);
-
   // Octave
   // load a.txt
   // plot([a(1:2:end, 1), a(2:2:end, 1)], '-o')
+}
+
+int main(int argc, char *argv[])
+{
+  // Declare the supported options.
+  po::options_description desc("Allowed options");
+  // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
+  desc.add_options()
+      ("help,h", "produce help message")
+      ("t",    po::value<double>()->default_value(1e4), "time")
+      ("dt",   po::value<double>()->default_value(1.0/2), "delta t")
+      ("nE",   po::value<unsigned int>()->default_value(1), "number of excitatory neuron")
+      ("nI",   po::value<unsigned int>()->default_value(0), "number of inhibitory neuron")
+      ("net",  po::value<std::string>(), "network name")
+      ("scee", po::value<double>()->default_value(0.005), "cortical strength E->E")
+      ("scie", po::value<double>()->default_value(0.005), "cortical strength E->I")
+      ("scei", po::value<double>()->default_value(0.005), "cortical strength I->E")
+      ("scii", po::value<double>()->default_value(0.005), "cortical strength I->I")
+      ("ps",   po::value<double>()->default_value(0.012), "Poisson input strength")
+      ("pr",   po::value<double>()->default_value(1.0),   "Poisson input rate")
+      ("psi",  po::value<double>()->default_value(0.012), "Poisson input strength, inhibitory type")
+      ("pri",  po::value<double>()->default_value(0.0),   "Poisson input rate, inhibitory type")
+      ("pr-mul", po::value<double>()->multitoken(), "Poisson input rate multiper")
+      ("volt-path,o",      po::value<std::string>(), "volt output file path")
+      ("ras-path",         po::value<std::string>(), "ras output file path")
+      ("isi-path",         po::value<std::string>(), "isi output file path")
+      ("conductance-path", po::value<std::string>(), "conductance output file path")
+  ;
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) {
+      cout << desc << "\n";
+      return 1;
+  }
+
+  if (vm.count("ps")) {
+      cout << "ps = " << vm["ps"].as<double>() << "\n";
+  }
+
+  TyNeuronalParams pm(LIF_G, vm["nE"].as<unsigned int>(), vm["nI"].as<unsigned int>());
+  int n_neu = vm["nE"].as<unsigned int>() + vm["nI"].as<unsigned int>();
+  for (int i = 0; i < n_neu; i++) {
+    pm.arr_pr[i] = vm["pr"].as<double>();
+    pm.arr_ps[i] = vm["ps"].as<double>();
+    pm.arr_psi[i] = vm["psi"].as<double>();
+  }
+
+//  if (vm.count("pr-mul")) {
+//    std::string v = vm["pr-mul"].as<std::string>();
+//    cout << v << endl;
+//    // TODO: pause it
+//  }
+
+  pm.scee = vm["scee"].as<double>();
+  pm.scie = vm["scie"].as<double>();
+  pm.scei = vm["scei"].as<double>();
+  pm.scii = vm["scii"].as<double>();
+
+  if (vm.count("net")) {
+    std::string name_net = vm["net"].as<std::string>();
+    if (name_net == "-") {
+      FillFullNet(pm);
+    }
+  }
+
+  double e_t  = vm["t"].as<double>();
+  double e_dt = vm["dt"].as<double>();
+  if (e_dt <= 0 || e_t <= 0) {
+    return 2;
+  }
+  CNeuronSimulator neu_simu(pm, e_dt);
+
+  size_t n_step = (size_t)(e_t / e_dt);
+
+  std::ofstream fout_volt;
+  bool output_volt = false;
+  if (vm.count("volt-path")) {
+    output_volt = true;
+    fout_volt.open( vm["volt-path"].as<std::string>() );
+  }
+  for (size_t i = 0; i < n_step; i++) {
+    neu_simu.NextStep();
+    if (output_volt) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, 0), sizeof(double));
+      }
+    }
+  }
 
   return 0;
 }
