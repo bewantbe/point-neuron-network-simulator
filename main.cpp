@@ -155,6 +155,8 @@ typedef std::priority_queue<
     std::vector<TySpikeEvent>,
     std::greater<TySpikeEvent> > TySpikeEventQueue;
 
+typedef std::vector< TySpikeEvent > TySpikeEventVec;
+
 typedef std::vector<double> TyInternalVec;
 
 class TyPoissonTimeSeq: public TyInternalVec
@@ -456,7 +458,7 @@ public:
   }
 
   // evolve the whole system one dt
-  void NextStep()
+  void NextStep(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
     TySpikeEvent latest_spike_event =
@@ -475,6 +477,8 @@ public:
         dbg_printf("Neuron [%d] spike at t = %f\n",
                spike_events.top().id, spike_events.top().time);
         latest_spike_event = spike_events.top();
+        ras.push_back(latest_spike_event);
+        vec_n_spike[latest_spike_event.id]++;
         // Really evolve the whole system. spike_events will be discard.
         poisson_time_vec.RestoreIdx();
         NextDt(neu_state, spike_events, latest_spike_event.time - t);
@@ -646,8 +650,10 @@ void Test100neu()
   fprintf(volt_fout, "\n");
 
   //std::ofstream volt_fout("volt.txt");
+  TySpikeEventVec ras;
+  std::vector< size_t > vec_n_spike(pm.n_total());
   for (int i = 0; i < (int)(1e4 / e_dt); i++) {
-    neu_simu.NextStep();
+    neu_simu.NextStep(ras, vec_n_spike);
     //for (int j = 0; j < pm.n_total(); j++) {
       //fprintf(volt_fout, "%.16e %.16e %.16e  ",
         //neu_simu.neu_state.dym_vals(j, 0),
@@ -659,6 +665,7 @@ void Test100neu()
       cout << "t = " << neu_simu.t << endl;
       cout << neu_simu.neu_state.dym_vals << endl;
     }
+    ras.clear();
   }
   fclose(volt_fout);
   // Octave
@@ -675,6 +682,7 @@ int main(int argc, char *argv[])
       ("help,h", "produce help message")
       ("t",    po::value<double>()->default_value(1e4), "time")
       ("dt",   po::value<double>()->default_value(1.0/2), "delta t")
+      ("stv",  po::value<double>()->default_value(1.0/2), "delta t for output")
       ("nE",   po::value<unsigned int>()->default_value(1), "number of excitatory neuron")
       ("nI",   po::value<unsigned int>()->default_value(0), "number of inhibitory neuron")
       ("net",  po::value<std::string>(), "network name")
@@ -747,12 +755,37 @@ int main(int argc, char *argv[])
     output_volt = true;
     fout_volt.open( vm["volt-path"].as<std::string>() );
   }
+
+  std::ofstream fout_ras;
+  bool output_ras = false;
+  if (vm.count("ras-path")) {
+    output_ras = true;
+    fout_ras.open( vm["ras-path"].as<std::string>() );
+    fout_ras.precision(17);
+  }
+
+  TySpikeEventVec ras;
+  std::vector< size_t > vec_n_spike(pm.n_total());
   for (size_t i = 0; i < n_step; i++) {
-    neu_simu.NextStep();
+    neu_simu.NextStep(ras, vec_n_spike);
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
         fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, 0), sizeof(double));
       }
+    }
+    if (output_ras) {
+      for (size_t j = 0; j < ras.size(); j++) {
+        fout_ras << ras[j].id + 1 << '\t' << ras[j].time << '\n';
+      }
+    }
+    ras.clear();
+  }
+
+  if (vm.count("isi-path")) {
+    std::ofstream fout_isi( vm["isi-path"].as<std::string>() );
+    fout_isi.precision(17);
+    for (int j = 0; j < pm.n_total(); j++) {
+      fout_isi << e_t / vec_n_spike[j] << '\t';
     }
   }
 
