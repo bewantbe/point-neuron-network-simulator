@@ -623,7 +623,7 @@ int main(int argc, char *argv[])
       ("isi-path",         po::value<std::string>(), "isi output file path")
       ("conductance-path", po::value<std::string>(), "conductance output file path")
       ("initial-state-path", po::value<std::string>(), "initial state file path")
-      ("poisson-input-path", po::value<std::string>(), "Poisson input file path")
+      ("poisson-event-path", po::value<std::string>(), "Poisson event file path")
   ;
 
   po::variables_map vm;
@@ -685,14 +685,14 @@ int main(int argc, char *argv[])
 
   CNeuronSimulator neu_simu(pm, e_dt);
 
-  if (vm.count("init-path")) {
+  if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(neu_simu.neu_state,
-                         vm["init-path"].as<std::string>().c_str());
+                         vm["initial-state-path"].as<std::string>().c_str());
   }
 
-  if (vm.count("poisson-input-path")) {
+  if (vm.count("poisson-event-path")) {
     FillPoissonEventsFromFile(neu_simu.poisson_time_vec,
-                              vm["poisson-input-path"].as<std::string>().c_str());
+                              vm["poisson-event-path"].as<std::string>().c_str());
   }
 
   TySpikeEventVec ras;                            // record spike raster
