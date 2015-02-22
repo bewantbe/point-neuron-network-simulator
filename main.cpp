@@ -1,3 +1,4 @@
+// g++ -g -O0 -std=c++11 -Wall main.cpp math_helper.cpp -lboost_program_options -o bin/vec_IFsimu
 #define NDEBUG
 #include "common_header.h"
 #include "math_helper.h"
@@ -332,7 +333,8 @@ public:
         double t_max_guess = -b/(2*a);
         // in LIF, it can guarantee that a<0 (concave), hence t_max_guess > 0
         if (t_max_guess<dt) {
-          dbg_printf("rare case captured, guess time: %f\n", t_max_guess);
+          //dbg_printf("rare case captured, guess time: %f\n", t_max_guess);
+          printf("rare case captured, guess time: %f\n", t_max_guess);
           spike_time_local = root_search(0, dt,
             v_n, dym_val[LIF_param.id_V ],
             k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, t_max_guess, 1e-12);
@@ -495,6 +497,12 @@ public:
             spike_events.pop();
           }
         }
+//        else {
+//          if (spike_events.top().time < latest_spike_event.time) {
+//            // more accurate spike time, use it.
+//            //latest_spike_event = spike_events.top();
+//          }
+//        }
         t = latest_spike_event.time;
         // force the neuron to spike, if not already
         if (neu_state.time_in_refractory[latest_spike_event.id] == 0) {
@@ -533,6 +541,8 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
   for (auto &i : poisson_time_vec) {
     i.push_back(NAN);
   }
+  cout << "poisson size[0] = " << poisson_time_vec[0].size() << endl;
+  cout << "poisson size[1] = " << poisson_time_vec[1].size() << endl;
 }
 
 void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
@@ -599,31 +609,53 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
 int main(int argc, char *argv[])
 {
   // Declare the supported options.
-  po::options_description desc("Allowed options");
+  po::options_description desc("Options");
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
-      ("help,h", "produce help message")
-      ("t",    po::value<double>()->default_value(1e4), "time")
-      ("dt",   po::value<double>()->default_value(1.0/2), "delta t")
-      ("stv",  po::value<double>()->default_value(1.0/2), "delta t for output")
-      ("nE",   po::value<unsigned int>()->default_value(1), "number of excitatory neuron")
-      ("nI",   po::value<unsigned int>()->default_value(0), "number of inhibitory neuron")
-      ("net",  po::value<std::string>(), "network name")
-      ("scee", po::value<double>()->default_value(0.005), "cortical strength E->E")
-      ("scie", po::value<double>()->default_value(0.005), "cortical strength E->I")
-      ("scei", po::value<double>()->default_value(0.005), "cortical strength I->E")
-      ("scii", po::value<double>()->default_value(0.005), "cortical strength I->I")
-      ("ps",   po::value<double>()->default_value(0.012), "Poisson input strength")
-      ("pr",   po::value<double>()->default_value(1.0),   "Poisson input rate")
-      ("psi",  po::value<double>()->default_value(0.012), "Poisson input strength, inhibitory type")
-      ("pri",  po::value<double>()->default_value(0.0),   "Poisson input rate, inhibitory type")
-      ("pr-mul", po::value<double>()->multitoken(), "Poisson input rate multiper")
-      ("volt-path,o",      po::value<std::string>(), "volt output file path")
-      ("ras-path",         po::value<std::string>(), "ras output file path")
-      ("isi-path",         po::value<std::string>(), "isi output file path")
-      ("conductance-path", po::value<std::string>(), "conductance output file path")
-      ("initial-state-path", po::value<std::string>(), "initial state file path")
-      ("poisson-event-path", po::value<std::string>(), "Poisson event file path")
+      ("help,h",
+       "produce help message")
+      ("t",    po::value<double>()->default_value(1e4),
+       "simulation time")
+      ("dt",   po::value<double>()->default_value(1.0/2),
+       "simulation delta t")
+      ("stv",  po::value<double>(),
+       "delta t for output")
+      ("nE",   po::value<unsigned int>()->default_value(1),
+       "number of excitatory neuron")
+      ("nI",   po::value<unsigned int>()->default_value(0),
+       "number of inhibitory neuron")
+      ("net",  po::value<std::string>(),
+       "network name")
+      ("scee", po::value<double>()->default_value(0.0),
+       "cortical strength E->E")
+      ("scie", po::value<double>()->default_value(0.0),
+       "cortical strength E->I")
+      ("scei", po::value<double>()->default_value(0.0),
+       "cortical strength I->E")
+      ("scii", po::value<double>()->default_value(0.0),
+       "cortical strength I->I")
+      ("ps",   po::value<double>(),
+       "Poisson input strength")
+      ("pr",   po::value<double>()->default_value(1.0),
+       "Poisson input rate")
+      ("psi",  po::value<double>(),
+       "Poisson input strength, inhibitory type")
+      ("pri",  po::value<double>(),
+       "Poisson input rate, inhibitory type")
+      ("pr-mul", po::value<double>()->multitoken(),
+       "Poisson input rate multiper")
+      ("volt-path,o",      po::value<std::string>(),
+       "volt output file path")
+      ("ras-path",         po::value<std::string>(),
+       "ras output file path")
+      ("isi-path",         po::value<std::string>(),
+       "isi output file path")
+      ("conductance-path", po::value<std::string>(),
+       "conductance output file path")
+      ("initial-state-path", po::value<std::string>(),
+       "initial state file path")
+      ("input-event-path", po::value<std::string>(),
+       "Input event file path")
   ;
 
   po::variables_map vm;
@@ -635,12 +667,18 @@ int main(int argc, char *argv[])
       return 1;
   }
 
+  // Set neural parameters
   TyNeuronalParams pm(LIF_G, vm["nE"].as<unsigned int>(), vm["nI"].as<unsigned int>());
   int n_neu = vm["nE"].as<unsigned int>() + vm["nI"].as<unsigned int>();
+
+  // set poisson input
+  if (! vm.count("ps")) {
+    cerr << "Must specify poisson input strength (--ps arg)." << endl;
+    return 1;
+  }
   for (int i = 0; i < n_neu; i++) {
     pm.arr_pr[i] = vm["pr"].as<double>();
     pm.arr_ps[i] = vm["ps"].as<double>();
-    pm.arr_psi[i] = vm["psi"].as<double>();
   }
 
 //  if (vm.count("pr-mul")) {
@@ -648,6 +686,10 @@ int main(int argc, char *argv[])
 //    cout << v << endl;
 //    // TODO: pause it
 //  }
+  
+  if (vm.count("psi") || vm.count("pri")) {
+    cerr << "option --psi and --pri not support yet!" << endl;
+  }
 
   pm.scee = vm["scee"].as<double>();
   pm.scie = vm["scie"].as<double>();
@@ -658,13 +700,22 @@ int main(int argc, char *argv[])
     std::string name_net = vm["net"].as<std::string>();
     FillNetFromPath(pm, name_net);
   } else {
-    cout << "You need to specify the network." << endl;
+    cout << "You must specify the network. (--net)" << endl;
     exit(-1);
   }
 
-  double e_t  = vm["t"].as<double>();
-  double e_dt = vm["dt"].as<double>();
-  if (e_dt <= 0 || e_t <= 0) {
+  double e_t   = vm["t"].as<double>();
+  double e_dt  = vm["dt"].as<double>();
+  double e_stv = e_dt;
+  if (vm.count("stv")) {
+    e_stv = vm["stv"].as<double>();
+  }
+  if (!(e_t > 0) || !(e_dt > 0) || !(e_stv > 0)) {
+    cerr << "Only support positive time!" << endl;
+    return 2;
+  }
+  if (!(e_dt<=e_stv && e_stv<=e_t)) {
+    cerr << "Must dt <= stv <= t !" << endl;
     return 2;
   }
 
@@ -675,6 +726,13 @@ int main(int argc, char *argv[])
     fout_volt.open( vm["volt-path"].as<std::string>() );
   }
 
+  std::ofstream fout_G;    // G: conductance
+  bool output_G = false;
+  if (vm.count("conductance-path")) {
+    output_G = true;
+    fout_G.open( vm["conductance-path"].as<std::string>() );
+  }
+
   std::ofstream fout_ras;
   bool output_ras = false;
   if (vm.count("ras-path")) {
@@ -683,35 +741,64 @@ int main(int argc, char *argv[])
     fout_ras.precision(17);
   }
 
+  // simulator for the neural network
   CNeuronSimulator neu_simu(pm, e_dt);
 
   if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(neu_simu.neu_state,
                          vm["initial-state-path"].as<std::string>().c_str());
+    cout << "initial state loaded!" << endl;
   }
 
-  if (vm.count("poisson-event-path")) {
+  if (vm.count("input-event-path")) {
     FillPoissonEventsFromFile(neu_simu.poisson_time_vec,
-                              vm["poisson-event-path"].as<std::string>().c_str());
+                              vm["input-event-path"].as<std::string>().c_str());
+    cout << "input event loaded!" << endl;
   }
 
-  TySpikeEventVec ras;                            // record spike raster
-  std::vector<size_t> vec_n_spike(pm.n_total());  // record number of spikes
-  size_t n_step = (size_t)(e_t / e_dt);
-  // main loop
-  for (size_t i = 0; i < n_step; i++) {
-    neu_simu.NextStep(ras, vec_n_spike);
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, 0), sizeof(double));
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_V), sizeof(double));
       }
     }
+    if (output_G) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gE), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gI), sizeof(double));
+      }
+    }
+
+  std::vector<size_t> vec_n_spike(pm.n_total());  // count the number of spikes
+  TySpikeEventVec ras;                            // record spike raster
+  int n_dt_in_stv = round(e_stv / e_dt);
+  int count_n_dt_in_stv = n_dt_in_stv;
+  size_t n_step = (size_t)(e_t / e_dt);
+  // Main loop
+  for (size_t i = 0; i < n_step; i++) {
+    neu_simu.NextStep(ras, vec_n_spike);
     if (output_ras) {
       for (size_t j = 0; j < ras.size(); j++) {
         fout_ras << ras[j].id + 1 << '\t' << ras[j].time << '\n';
       }
     }
     ras.clear();
+    // output dynamical variable(s) every n_dt_in_stv
+    count_n_dt_in_stv--;
+    if (count_n_dt_in_stv > 0) {
+      continue;
+    }
+    count_n_dt_in_stv = n_dt_in_stv;
+    if (output_volt) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_V), sizeof(double));
+      }
+    }
+    if (output_G) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gE), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gI), sizeof(double));
+      }
+    }
   }
 
   if (vm.count("isi-path")) {
