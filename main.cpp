@@ -324,9 +324,9 @@ public:
 
     if (v_n <= LIF_param.Vot_Threshold
         && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
-      spike_time_local = root_search(dt,
+      spike_time_local = cubic_hermit_real_root(dt,
         v_n, dym_val[LIF_param.id_V ],
-        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, dt);
+        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold);
     } else {
       if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms
         // Try capture some missing spikes that the intermediate value passes
@@ -338,13 +338,13 @@ public:
         double a = (dym_val[LIF_param.id_V ] - c - b*dt)/(dt*dt);
         double t_max_guess = -b/(2*a);
         // in LIF, it can guarantee that a<0 (concave), hence t_max_guess > 0
-        if (t_max_guess<dt) {
+        if (t_max_guess<dt && (b*b)/(-4*a)+c > LIF_param.Vot_Threshold) {
           //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
           printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
           // root should in [0, t_max_guess]
-          spike_time_local = root_search(dt,
+          spike_time_local = cubic_hermit_real_root(dt,
             v_n, dym_val[LIF_param.id_V ],
-            k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, t_max_guess);
+            k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold);
         } else {
           spike_time_local = std::numeric_limits<double>::quiet_NaN();
         }
