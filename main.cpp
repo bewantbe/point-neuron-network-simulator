@@ -337,8 +337,11 @@ public:
         double b = k1;
         double a = (dym_val[LIF_param.id_V ] - c - b*dt)/(dt*dt);
         double t_max_guess = -b/(2*a);
-        // in LIF, it can guarantee that a<0 (concave), hence t_max_guess > 0
-        if (t_max_guess<dt && (b*b)/(-4*a)+c > LIF_param.Vot_Threshold) {
+        // In LIF with jump conductance, it can guarantee that a<0 (concave),
+        // hence t_max_guess > 0. But with G H conductance, we still need to
+        // check 0 < t_max_guess
+        if (0 < t_max_guess && t_max_guess<dt
+            && (b*b)/(-4*a)+c > LIF_param.Vot_Threshold) {
           //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
           printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
           // root should in [0, t_max_guess]
@@ -529,6 +532,7 @@ public:
 
 typedef CNeuronSimulatorEvolveEach CNeuronSimulator;
 
+// The event's times for each neuron should be ascending.
 void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path)
 {
   std::ifstream fin(path);
@@ -571,13 +575,15 @@ void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
   }
 }
 
+// Read network from text file. The number neurons should be known first.
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
 {
   typedef Eigen::Triplet<double> TyEdgeTriplet;
-  std::vector< TyEdgeTriplet > net_coef;
+  std::vector<TyEdgeTriplet> net_coef;
   int n_neu = pm.n_total();
 
   if (name_net == "-") {
+    // Fully connected network
     for (int i = 0; i < n_neu; i++) {
       for (int j = 0; j < n_neu; j++) {
         if (i==j) {
@@ -587,16 +593,20 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
       }
     }
   } else if (name_net == "--") {
-    for (int i = 0; i < n_neu-1; i++) {
-      net_coef.push_back(TyEdgeTriplet(i, i+1, 1.0));
+    // Simple ring structure
+    net_coef.push_back(TyEdgeTriplet(0, n_neu-1, 1.0));
+    for (int i = 1; i < n_neu; i++) {
+      net_coef.push_back(TyEdgeTriplet(i, i-1, 1.0));
     }
   } else {
+    // Read network from text file
+    // Negative strength is possible, but that is unusual
     std::ifstream fin_net(name_net);
     double ev;
     for (int i = 0; i < n_neu; i++) {
       for (int j = 0; j < n_neu; j++) {
         fin_net >> ev;
-        if (ev > 0 && std::isfinite(ev) && i != j) {
+        if (ev != 0 && std::isfinite(ev) && i != j) {
           net_coef.push_back(TyEdgeTriplet(i, j, ev));
         }
       }
