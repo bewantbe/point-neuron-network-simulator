@@ -28,15 +28,13 @@
 		</Build>
 		<Compiler>
 			<Add option="-pedantic-errors" />
-			<Add option="-std=c++11" />
 			<Add option="-Wall" />
+			<Add option="-std=c++11" />
 		</Compiler>
 		<Linker>
 			<Add library="boost_program_options" />
 		</Linker>
-		<Unit filename="common_header.h">
-			<Option compile="1" />
-		</Unit>
+		<Unit filename="common_header.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="math_helper.cpp" />
 		<Unit filename="math_helper.h" />

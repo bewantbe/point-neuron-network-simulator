@@ -19,7 +19,7 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-typedef Eigen::SparseMatrix<double> SparseMat;  // column-major by default
+typedef Eigen::SparseMatrix<double, Eigen::ColMajor> SparseMat;
 typedef std::vector<double> TyArrVals;
 
 // list of neuron models
@@ -75,6 +75,7 @@ struct TyNeuronalParams
   }
 
   TyNeuronalParams(enum NeuronModel _neuron_model, int _n_E, int _n_I)
+  :scee(0), scie(0), scei(0), scii(0)
   {
     neuron_model = _neuron_model;
     SetNumberOfNeurons(_n_E, _n_I);
@@ -84,7 +85,9 @@ struct TyNeuronalParams
 struct TyNeuronalDymState
 {
   // current dynamical states of neurons
-  Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dym_vals;  // For CNeuronSimulatorEvolveEach
+  // RowMajor for CNeuronSimulatorEvolveEach, so state variables
+  // of each neuron are continuous on memory
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dym_vals;
   TyArrVals time_in_refractory;
 
   void Zeros()
@@ -250,7 +253,7 @@ public:
   void SaveIdxAndClean()
   {
     int j = 0;
-    for (iterator it = begin(); it != end(); it++, j++) {
+    for (iterator it = begin(); it != end(); ++it, ++j) {
       if (it->size() - it->id_seq < it->id_seq / 7) {
         it->Shrink();
         dbg_printf("  ( %d-th TyPoissonTimeSeq size shrinked )\n", j);
@@ -321,21 +324,25 @@ public:
 
     if (v_n <= LIF_param.Vot_Threshold
         && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
-      spike_time_local = root_search(0, dt,
+      spike_time_local = root_search(dt,
         v_n, dym_val[LIF_param.id_V ],
         k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, dt, 1e-12);
     } else {
       if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms
-        // try extract some missing spikes
+        // Try capture some missing spikes that the intermediate value passes
+        // threshold, but both ends lower than threshold.
+        // Get quadratic curve from value of both ends and derivative from left end
+        // Return the maximum point as `t_max_guess'
         double c = v_n;
         double b = k1;
         double a = (dym_val[LIF_param.id_V ] - c - b*dt)/(dt*dt);
         double t_max_guess = -b/(2*a);
         // in LIF, it can guarantee that a<0 (concave), hence t_max_guess > 0
         if (t_max_guess<dt) {
-          //dbg_printf("rare case captured, guess time: %f\n", t_max_guess);
-          printf("rare case captured, guess time: %f\n", t_max_guess);
-          spike_time_local = root_search(0, dt,
+          //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
+          printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
+          // root should in [0, t_max_guess]
+          spike_time_local = root_search(dt,
             v_n, dym_val[LIF_param.id_V ],
             k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, t_max_guess, 1e-12);
         } else {
@@ -438,8 +445,8 @@ public:
       double spike_time_local = std::numeric_limits<double>::quiet_NaN();
       while (poisson_time_seq.Front() < t_step_end) {
         dbg_printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
-               j, poisson_time_seq.id_seq, poisson_time_seq.size(),
-               poisson_time_seq.Front());
+                   j, poisson_time_seq.id_seq, poisson_time_seq.size(),
+                   poisson_time_seq.Front());
         double dt_local = poisson_time_seq.Front() - t_local;
         NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, dt_local);
@@ -473,10 +480,10 @@ public:
       bk_neu_state = neu_state;         // make a backup
       //poisson_time_vec.RestoreIdx();
       NextDt(neu_state, spike_events, t_end - t);
-      if (spike_events.size() != 0) {
+      if (!spike_events.empty()) {
         neu_state = bk_neu_state;
         dbg_printf("Neuron [%d] spike at t = %f\n",
-               spike_events.top().id, spike_events.top().time);
+                   spike_events.top().id, spike_events.top().time);
         latest_spike_event = spike_events.top();
         ras.push_back(latest_spike_event);
         vec_n_spike[latest_spike_event.id]++;
@@ -485,15 +492,15 @@ public:
         NextDt(neu_state, spike_events, latest_spike_event.time - t);
         if (spike_events.top().id != latest_spike_event.id) {
           dbg_printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
-              latest_spike_event.id, latest_spike_event.time,
-              spike_events.top().id, spike_events.top().time) ;
+                     latest_spike_event.id, latest_spike_event.time,
+                     spike_events.top().id, spike_events.top().time) ;
           dbg_printf("spike events in this interval:\n");
-          while (spike_events.size() > 0) {
+          while (!spike_events.empty()) {
             TySpikeEvent se = spike_events.top();
             dbg_printf("  #%2d at %f, v0=%f g0=%f, v1=%f g1=%f\n",
-            se.id, se.time,
-            bk_neu_state.dym_vals(se.id, 0), bk_neu_state.dym_vals(se.id, 1),
-            neu_state.dym_vals(se.id, 0), neu_state.dym_vals(se.id, 1));
+                       se.id, se.time,
+                       bk_neu_state.dym_vals(se.id, 0), bk_neu_state.dym_vals(se.id, 1),
+                       neu_state.dym_vals(se.id, 0), neu_state.dym_vals(se.id, 1));
             spike_events.pop();
           }
         }
@@ -686,7 +693,7 @@ int main(int argc, char *argv[])
 //    cout << v << endl;
 //    // TODO: pause it
 //  }
-  
+
   if (vm.count("psi") || vm.count("pri")) {
     cerr << "option --psi and --pri not support yet!" << endl;
   }
@@ -756,17 +763,17 @@ int main(int argc, char *argv[])
     cout << "input event loaded!" << endl;
   }
 
-    if (output_volt) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_V), sizeof(double));
-      }
+  if (output_volt) {
+    for (int j = 0; j < pm.n_total(); j++) {
+      fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_V), sizeof(double));
     }
-    if (output_G) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gE), sizeof(double));
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gI), sizeof(double));
-      }
+  }
+  if (output_G) {
+    for (int j = 0; j < pm.n_total(); j++) {
+      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gE), sizeof(double));
+      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gI), sizeof(double));
     }
+  }
 
   std::vector<size_t> vec_n_spike(pm.n_total());  // count the number of spikes
   TySpikeEventVec ras;                            // record spike raster
