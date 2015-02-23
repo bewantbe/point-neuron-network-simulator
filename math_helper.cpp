@@ -1,11 +1,14 @@
 #include <iostream>
 #include <cmath>
 
+// Search the root of hermit interpolated function that
+// passes zero from below to above.
+// Return NAN if no root found.
 // usuall, set xmid_guess to x2
 double root_search(double x2,
                    double fx1, double fx2,
                    double dfx1, double dfx2, double rhs,
-                   double xmid_guess, double xacc)
+                   double xmid_guess)
 {
   // normalize to x=[0,1]
   dfx1 *= x2;
@@ -22,11 +25,9 @@ double root_search(double x2,
   double c3 = dfx1 + dfx2 + 2*(fx1 - fx2);
   auto hermit = [&] (double rx)
     {
-      return (fx1*(2*rx+1) + dfx1*rx)*((rx-1)*(rx-1))
-            +(fx2*(3-2*rx) + dfx2*(rx-1))*(rx*rx);
-//      return fx1 + ((fx2-fx1)*(3-2*rx)*rx
-//                    +(dfx1 - (dfx1+dfx2)*rx)*(1-rx))*rx;
-//      return ((c3*rx+c2)*rx+c1)*rx+c0;
+//      return (fx1*(2*rx+1) + dfx1*rx)*((rx-1)*(rx-1))
+//            +(fx2*(3-2*rx) + dfx2*(rx-1))*(rx*rx);
+      return ((c3*rx+c2)*rx+c1)*rx+c0;
     };
 
   auto d_hermit = [&] (double rx)
@@ -34,37 +35,32 @@ double root_search(double x2,
       return (3*c3*rx+2*c2)*rx+c1;
     };
 
-  // for firing time case, fx1<0, fmid>0
+  // only find root in the case of monotonically increasing
   if (!(hermit(0) <= 0 && hermit(xmid_guess) >= 0)) {
-//  if (hermit(0) * hermit(xmid_guess) > 0) {
-    //std::cerr << "root_search(): Failed to find root !" << std::endl;
     return NAN;
   }
 
-  const int Maxnum_search = 4;  // 6 + 3,  4 + 4
+  // Find root by binary search and newton's iteration
+  // Accuracy: 2^-6 ^2 ^2 ^2 = 3.5527e-15
+  const int n_iter_binary = 6;
   double tempx1 = 0;
   double tempx2 = xmid_guess;
   double fmid,xmid;
-  for (int j=0; j<Maxnum_search; j++) {
-    xmid = tempx1 + (tempx2 - tempx1)/2;
+  for (int j = 0; j < n_iter_binary; j++) {
+    xmid = (tempx2 + tempx1)*0.5;   // no need to take care of overflow
     fmid = hermit(xmid);
     if (fmid <= 0.0)
       tempx1 = xmid;
     else
       tempx2 = xmid;
-    // the interval is small enough or already find the root
-    if (fabs(fmid)<xacc) {
-      break;
-//      return xmid * x2;
-    }
   }
   xmid -= hermit(xmid) / d_hermit(xmid);
   xmid -= hermit(xmid) / d_hermit(xmid);
   xmid -= hermit(xmid) / d_hermit(xmid);
   xmid -= hermit(xmid) / d_hermit(xmid);
-  if (xmid<0 || xmid>1) {
-    fprintf(stderr, "failed in Newton's iteration! Use naive guess.\n");
-    xmid = 0.5;
+  if (xmid<tempx1 || tempx2<xmid) {
+    fprintf(stderr, "failed in Newton's iteration! Use result of binary search.\n");
+    xmid = (tempx2 + tempx1)*0.5;
   }
   return xmid * x2;
 }

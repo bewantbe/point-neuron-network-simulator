@@ -326,7 +326,7 @@ public:
         && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
       spike_time_local = root_search(dt,
         v_n, dym_val[LIF_param.id_V ],
-        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, dt, 1e-12);
+        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, dt);
     } else {
       if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms
         // Try capture some missing spikes that the intermediate value passes
@@ -344,7 +344,7 @@ public:
           // root should in [0, t_max_guess]
           spike_time_local = root_search(dt,
             v_n, dym_val[LIF_param.id_V ],
-            k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, t_max_guess, 1e-12);
+            k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold, t_max_guess);
         } else {
           spike_time_local = std::numeric_limits<double>::quiet_NaN();
         }
