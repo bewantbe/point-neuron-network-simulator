@@ -1,4 +1,6 @@
 // g++ -g -O0 -std=c++11 -Wall main.cpp math_helper.cpp -lboost_program_options -o bin/vec_IFsimu
+//Could faster:
+// g++ -g -O2 -falign-functions=16 -falign-loops=16
 #include "common_header.h"
 #include "math_helper.h"
 
@@ -330,10 +332,14 @@ public:
     return k1;
   }
 
-  // Evolve the ODE assume not reset, not external input at all
-  // With spike time calculation
+  // Evolve the ODE assume not reset, not external input at all.
+  // With spike time calculation.
+  // The separation of LIFDymRK4Step() make program 4% slower.
   __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
+    double dym_tn[LIF_param.n_var];
+    memcpy(dym_tn, dym_val, LIF_param.n_var*sizeof(double));
+
     double v_n = dym_val[LIF_param.id_V];
     double k1  = LIFDymRK4Step(dym_val, dt);
 
@@ -342,8 +348,27 @@ public:
       spike_time_local = cubic_hermit_real_root(dt,
         v_n, dym_val[LIF_param.id_V ],
         k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold);
+      // Further root refinement
+      double dym_tmp[LIF_param.n_var];
+      memcpy(dym_tmp, dym_tn, LIF_param.n_var*sizeof(double));
+      LIFDymRK4Step(dym_tmp, spike_time_local);
+      double dr = (dym_tmp[LIF_param.id_V] - LIF_param.Vot_Threshold) / LIFGetDv(dym_tmp);
+      static double dr_max = 0;
+      if (fabs(dr) > 0.0005) {
+        dr_max = dr;
+        cout.precision(16);
+        cout << "dr_max = " << dr_max << ", t = " << t << "\n";
+        cout << "  dt  = " << dt << "\n";
+        cout << "  @t_n  : v, gE, gI = " << dym_tn[0] << " " << dym_tn[1]<< " " << dym_tn[2] << "\n";
+        cout << "  @t_n+1: v, gE, gI = " << dym_val[0] << " " << dym_val[1]<< " " << dym_val[2] << "\n";
+        cout << "  k_n   = " << LIFGetDv(dym_tn) << "\n";
+        cout << "  k_n+1 = " << LIFGetDv(dym_val) << "\n";
+        cout << "  spike_time_local = " << spike_time_local << "\n";
+      }
+//      spike_time_local -= dr;
+//      throw "whhhhhhh";
     } else {
-      if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms
+      if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms, LIF,G model
         // Try capture some missing spikes that the intermediate value passes
         // threshold, but both ends lower than threshold.
         // Get quadratic curve from value of both ends and derivative from left end
@@ -358,7 +383,8 @@ public:
         if (0 < t_max_guess && t_max_guess<dt
             && (b*b)/(-4*a)+c > LIF_param.Vot_Threshold) {
           //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
-          printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
+          printf("NextDtContinuous(): possible mid-dt spike detected:\n");
+          printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
           // root should in [0, t_max_guess]
           spike_time_local = cubic_hermit_real_root(dt,
             v_n, dym_val[LIF_param.id_V ],
@@ -504,7 +530,7 @@ public:
     do {
       TySpikeEventQueue spike_events;
       bk_neu_state = neu_state;         // make a backup
-      //poisson_time_vec.RestoreIdx();
+      // Try evolve a whole time step
       NextDt(neu_state, spike_events, t_end - t);
       if (!spike_events.empty()) {
         neu_state = bk_neu_state;
@@ -517,9 +543,10 @@ public:
         poisson_time_vec.RestoreIdx();
         NextDt(neu_state, spike_events, latest_spike_event.time - t);
         if (spike_events.top().id != latest_spike_event.id) {
-          fprintf(stderr, "error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
+          fprintf(stderr, "Warning: NextStep(): neuron of first spike is different from prediction of large time step!\n  Original: #%d at %f, now #%d at %f\n",
                   latest_spike_event.id, latest_spike_event.time,
                   spike_events.top().id, spike_events.top().time);
+          printf("  t = %f, dt = %f.\n", t, dt);
 //          dbg_printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
 //                     latest_spike_event.id, latest_spike_event.time,
 //                     spike_events.top().id, spike_events.top().time) ;
