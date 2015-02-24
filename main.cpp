@@ -1,5 +1,4 @@
 // g++ -g -O0 -std=c++11 -Wall main.cpp math_helper.cpp -lboost_program_options -o bin/vec_IFsimu
-#define NDEBUG
 #include "common_header.h"
 #include "math_helper.h"
 
@@ -9,6 +8,7 @@ namespace po = boost::program_options;
 #include <cassert>
 
 const bool g_b_debug = false;
+#define NDEBUG
 #ifdef NDEBUG
 #define dbg_printf(...) ((void)0);
 #else
@@ -47,6 +47,8 @@ struct TyLIFParam
   int id_V  = 0;  // index of V variable
   int id_gE = 1;  // index of gE variable
   int id_gI = 2;  // index of gI variable
+  int id_gEInject = 1;  // index of gE injection variable
+  int id_gIInject = 2;  // index of gI injection variable
 } LIF_param;
 
 // parameters about neuronal system
@@ -241,7 +243,7 @@ public:
     Init(rate_vec, t0);
   }
 
-  TyPoissonTimeVec() = default;
+  TyPoissonTimeVec() = default;  // enable all other default constructors
 
   void RestoreIdx()
   {
@@ -370,24 +372,25 @@ public:
       // Excitatory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gE) += it.value() * pm.scee;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gEInject) += it.value() * pm.scee;
         } else {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gE) += it.value() * pm.scie;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gEInject) += it.value() * pm.scie;
         }
       }
     } else {
       // Inhibitory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gI) += it.value() * pm.scei;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gIInject) += it.value() * pm.scei;
         } else {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gI) += it.value() * pm.scii;
+          e_neu_state.dym_vals(it.row(), LIF_param.id_gIInject) += it.value() * pm.scii;
         }
       }
     }
   }
 
-  // evolve single neuron as if no external input
+  // Evolve single neuron as if no external input
+  // Return first spike time in `spike_time_local', if any.
   void NextQuietDtNeuState(double *dym_val, double &t_in_refractory,
                            double &spike_time_local, double dt_local)
   {
@@ -401,7 +404,7 @@ public:
         if (t_in_refractory < LIF_param.TIME_REFRACTORY) {
           dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
         } else {
-          // short refractory period (< dt_local), active again
+          // short refractory period (< dt_local), neuron will active again
           dt_local = t_in_refractory - LIF_param.TIME_REFRACTORY;
           t_in_refractory = 0;
           // set conductance state at firing
@@ -410,21 +413,28 @@ public:
           double spike_time_local_tmp;
           NextDtContinuous(dym_val, spike_time_local_tmp, dt_local);
           if (!std::isnan(spike_time_local_tmp)) {
-            cerr << "NextQuietDtNeuState(): spike too fast" << endl;
+            cerr << "NextQuietDtNeuState(): Multiple spikes in one dt." << endl;
+            cerr << "dt_local = " << dt_local << '\n';
+            cerr << "spike_time_local = " << spike_time_local << '\n';
+            cerr << "t_in_refractory = " << t_in_refractory << '\n';
+            cerr << "dym_val[LIF_param.id_V] = " << dym_val[LIF_param.id_V] << '\n';
+            cerr << "dym_val[LIF_param.id_gE] = " << dym_val[LIF_param.id_gE] << '\n';
+            throw "Multiple spikes in one dt.";
           }
         }
       }
     } else {
+      // neuron in refractory period
       double t_refractory_remain = LIF_param.TIME_REFRACTORY
                                  - t_in_refractory;
+      assert(t_refractory_remain >=0);
       if (t_refractory_remain < dt_local) {
+        // neuron will awake after t_refractory_remain which is in this dt_local
         NextDtConductance(dym_val, t_refractory_remain);
-        // dym_val[LIF_param.id_V] = 0;
-        NextDtContinuous(dym_val, spike_time_local, dt_local - t_refractory_remain);
+        assert( dym_val[LIF_param.id_V] == 0 );
         t_in_refractory = 0;
-        if (!std::isnan(spike_time_local)) {
-          cerr << "NextQuietDtNeuState(): spike too fast" << endl;
-        }
+        NextQuietDtNeuState(dym_val, t_in_refractory,
+                            spike_time_local, dt_local - t_refractory_remain);
       } else {
         spike_time_local = std::numeric_limits<double>::quiet_NaN();
         NextDtConductance(dym_val, dt_local);
@@ -433,7 +443,7 @@ public:
     }
   }
 
-  // evolve neuron system as if no synaptic interaction
+  // Evolve every neurons as if no synaptic interaction
   void NextDt(struct TyNeuronalDymState &tmp_neu_state,
               TySpikeEventQueue &spike_events, double dt)
   {
@@ -456,7 +466,7 @@ public:
         if (!std::isnan(spike_time_local)) {
           spike_events.emplace(t_local + spike_time_local, j);
         }
-        dym_val[LIF_param.id_gE] += pm.arr_ps[j];
+        dym_val[LIF_param.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
         t_local += dt_local;
       }
@@ -527,6 +537,17 @@ public:
       }
     } while (true);
     t = t_end;
+  }
+
+  // Test and correct the neuron voltage (e.g. for imported data).
+  void SaneTestVolt()
+  {
+    for (int j = 0; j < pm.n_total(); j++) {
+      if (neu_state.dym_vals(j, LIF_param.id_V) > LIF_param.Vot_Threshold) {
+        neu_state.dym_vals(j, LIF_param.id_V) = 0;
+        neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();
+      }
+    }
   }
 };
 
@@ -765,6 +786,7 @@ int main(int argc, char *argv[])
     FillNeuStateFromFile(neu_simu.neu_state,
                          vm["initial-state-path"].as<std::string>().c_str());
     cout << "initial state loaded!" << endl;
+    neu_simu.SaneTestVolt();
   }
 
   if (vm.count("input-event-path")) {
