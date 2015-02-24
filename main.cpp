@@ -291,8 +291,9 @@ public:
            - dym_val[LIF_param.id_gI] * (dym_val[LIF_param.id_V] - LIF_param.Vot_Inhibitory);
   }
 
-  // evolve the ODE assume not reset, not external input at all
-  __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
+  // Evolve the ODE assume not reset, not external input at all.
+  // Return derivative k1 at t_n, for later interpolation.
+  __attribute__ ((noinline)) double LIFDymRK4Step(double *dym_val, double dt) const
   {
     // classical Runge Kutta 4 (for voltage)
     // conductance evolve exactly use exp()
@@ -321,10 +322,20 @@ public:
     dym_val[LIF_param.id_V ] = v_n + dt * k3;
     dym_val[LIF_param.id_gE] *= exp_E;
     dym_val[LIF_param.id_gI] *= exp_I;
-    // k4 = f(t+dt/2, y_n + k3*dt)
+    // k4 = f(t+dt, y_n + k3*dt)
     k4 = LIFGetDv(dym_val);
 
     dym_val[LIF_param.id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
+
+    return k1;
+  }
+
+  // Evolve the ODE assume not reset, not external input at all
+  // With spike time calculation
+  __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
+  {
+    double v_n = dym_val[LIF_param.id_V];
+    double k1  = LIFDymRK4Step(dym_val, dt);
 
     if (v_n <= LIF_param.Vot_Threshold
         && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
