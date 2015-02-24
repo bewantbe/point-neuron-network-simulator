@@ -30,6 +30,11 @@ bin/vec_IFsimu --t 1e3 --dt 0.5 --stv 0.5 --nE 700 --nI 300 --net - --scee 0.002
 %real	0m14.339s  % poly coeff
 %real	0m9.692s   % 6 binary + 3 newton's
 
+perf record --call-graph dwarf -- yourapp
+-fno-omit-frame-pointer
+perf record --call-graph fp -- yourapp
+perf report -g graph --no-children
+
 # Compare
 X0 = load('neu_state_init.txt');
 p = size(X0,2)/3;
@@ -79,18 +84,32 @@ v_ras = load('v_ras.txt');
 figure(8);
 plot(a_ras(1:5000,1) == v_ras(1:5000,1));
 
+%f_neu_spike_times = @(ras, id) ras(ras(:,1)==id, 2)
+plot(a_ras(a_ras(:,1)==40, 2), a_ras(a_ras(:,1)==40, 2) - v_ras(v_ras(:,1)==40, 2));
+
 figure(10);
 clf;
 cla;
 %local_ras = ras(1:1000, :);
-local_ras = ras;
+local_ras = a_ras;
 line([local_ras(:, 2)'; local_ras(:, 2)'],...
      [local_ras(:, 1)'; local_ras(:, 1)'-0.8]);
+ylim([0 p]);
+print('-depsc2', 'a_ras.eps');
 
 figure(11);
 clf;
 cla;
-local_ras = ras(1:1000, :);
+local_ras = v_ras(1:1000, :);
 line([local_ras(:, 2)'; local_ras(:, 2)'],...
      [local_ras(:, 1)'; local_ras(:, 1)'-0.8]);
+ylim([0 p]);
+print('-depsc2', 'v_ras.eps');
+
+n = length(a_ras);
+rnd_ras = zeros(n, 2);
+rnd_ras(:, 1) = randi(100, n, 1);
+rnd_ras(:, 2) = sort(1000*rand(n, 1));
+
+print('-depsc2', 'rnd_ras.eps');
 

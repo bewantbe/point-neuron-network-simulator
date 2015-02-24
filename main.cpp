@@ -15,6 +15,8 @@ const bool g_b_debug = false;
 #define dbg_printf printf
 #endif
 
+#include "fmath.hpp"
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -290,15 +292,15 @@ public:
   }
 
   // evolve the ODE assume not reset, not external input at all
-  void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
+  __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
     // classical Runge Kutta 4 (for voltage)
     // conductance evolve exactly use exp()
 
     double v_n = dym_val[LIF_param.id_V];
     double k1, k2, k3, k4;
-    double exp_E = exp(-0.5 * dt / LIF_param.Time_ExCon);
-    double exp_I = exp(-0.5 * dt / LIF_param.Time_InCon);
+    double exp_E = fmath::expd(-0.5 * dt / LIF_param.Time_ExCon);
+    double exp_I = fmath::expd(-0.5 * dt / LIF_param.Time_InCon);
 
     // k1 = f(t_n, y_n)
     k1 = LIFGetDv(dym_val);
@@ -362,11 +364,11 @@ public:
   // evolve condunctance only
   void NextDtConductance(double *dym_val, double dt) const
   {
-    dym_val[LIF_param.id_gE] *= exp(-dt / LIF_param.Time_ExCon);
-    dym_val[LIF_param.id_gI] *= exp(-dt / LIF_param.Time_InCon);
+    dym_val[LIF_param.id_gE] *= fmath::expd(-dt / LIF_param.Time_ExCon);
+    dym_val[LIF_param.id_gI] *= fmath::expd(-dt / LIF_param.Time_InCon);
   }
 
-  void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
+  __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
   {
     if (se.id < pm.n_E) {
       // Excitatory neuron fired
@@ -391,7 +393,7 @@ public:
 
   // Evolve single neuron as if no external input
   // Return first spike time in `spike_time_local', if any.
-  void NextQuietDtNeuState(double *dym_val, double &t_in_refractory,
+  __attribute__ ((noinline)) void NextQuietDtNeuState(double *dym_val, double &t_in_refractory,
                            double &spike_time_local, double dt_local)
   {
     //! at most one spike allowed during this dt_local
@@ -444,7 +446,7 @@ public:
   }
 
   // Evolve every neurons as if no synaptic interaction
-  void NextDt(struct TyNeuronalDymState &tmp_neu_state,
+  __attribute__ ((noinline)) void NextDt(struct TyNeuronalDymState &tmp_neu_state,
               TySpikeEventQueue &spike_events, double dt)
   {
     double t_step_end = t + dt;
@@ -479,7 +481,7 @@ public:
   }
 
   // evolve the whole system one dt
-  void NextStep(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  __attribute__ ((noinline)) void NextStep(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
     TySpikeEvent latest_spike_event =
@@ -504,9 +506,12 @@ public:
         poisson_time_vec.RestoreIdx();
         NextDt(neu_state, spike_events, latest_spike_event.time - t);
         if (spike_events.top().id != latest_spike_event.id) {
-          dbg_printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
-                     latest_spike_event.id, latest_spike_event.time,
-                     spike_events.top().id, spike_events.top().time) ;
+          fprintf(stderr, "error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
+                  latest_spike_event.id, latest_spike_event.time,
+                  spike_events.top().id, spike_events.top().time);
+//          dbg_printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
+//                     latest_spike_event.id, latest_spike_event.time,
+//                     spike_events.top().id, spike_events.top().time) ;
           dbg_printf("spike events in this interval:\n");
           while (!spike_events.empty()) {
             TySpikeEvent se = spike_events.top();
