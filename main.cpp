@@ -47,12 +47,12 @@ struct TyLIFParam
   double Time_InCon    = 5.0;
   double Time_InConR   = 0.8;
   double TIME_REFRACTORY = 2.0;  // ms
-  int n_var = 3;  // number of dynamical variables
-  int id_V  = 0;  // index of V variable
-  int id_gE = 1;  // index of gE variable
-  int id_gI = 2;  // index of gI variable
-  int id_gEInject = 1;  // index of gE injection variable
-  int id_gIInject = 2;  // index of gI injection variable
+  static const int n_var = 3;  // number of dynamical variables
+  static const int id_V  = 0;  // index of V variable
+  static const int id_gE = 1;  // index of gE variable
+  static const int id_gI = 2;  // index of gI variable
+  static const int id_gEInject = 1;  // index of gE injection variable
+  static const int id_gIInject = 2;  // index of gI injection variable
 } LIF_param;
 
 // parameters about neuronal system
@@ -334,6 +334,7 @@ public:
 
   // Evolve the ODE assume not reset, not external input at all.
   // With spike time calculation.
+  // `spike_time_local' should be guaranteed to be with in [0, dt] or NAN.
   // The separation of LIFDymRK4Step() make program 4% slower.
   __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
@@ -348,23 +349,23 @@ public:
       spike_time_local = cubic_hermit_real_root(dt,
         v_n, dym_val[LIF_param.id_V ],
         k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold);
-      // Further root refinement
-      double dym_tmp[LIF_param.n_var];
-      memcpy(dym_tmp, dym_tn, LIF_param.n_var*sizeof(double));
-      LIFDymRK4Step(dym_tmp, spike_time_local);
-      double dr = (dym_tmp[LIF_param.id_V] - LIF_param.Vot_Threshold) / LIFGetDv(dym_tmp);
-      static double dr_max = 0;
-      if (fabs(dr) > 0.0005) {
-        dr_max = dr;
-        cout.precision(16);
-        cout << "dr_max = " << dr_max << ", t = " << t << "\n";
-        cout << "  dt  = " << dt << "\n";
-        cout << "  @t_n  : v, gE, gI = " << dym_tn[0] << " " << dym_tn[1]<< " " << dym_tn[2] << "\n";
-        cout << "  @t_n+1: v, gE, gI = " << dym_val[0] << " " << dym_val[1]<< " " << dym_val[2] << "\n";
-        cout << "  k_n   = " << LIFGetDv(dym_tn) << "\n";
-        cout << "  k_n+1 = " << LIFGetDv(dym_val) << "\n";
-        cout << "  spike_time_local = " << spike_time_local << "\n";
-      }
+//      // Further root refinement
+//      double dym_tmp[LIF_param.n_var];
+//      memcpy(dym_tmp, dym_tn, LIF_param.n_var*sizeof(double));
+//      LIFDymRK4Step(dym_tmp, spike_time_local);
+//      double dr = (dym_tmp[LIF_param.id_V] - LIF_param.Vot_Threshold) / LIFGetDv(dym_tmp);
+//      static double dr_max = 0;
+//      if (fabs(dr) > 0.0005) {
+//        dr_max = dr;
+//        cout.precision(16);
+//        cout << "dr_max = " << dr_max << ", t = " << t << "\n";
+//        cout << "  dt  = " << dt << "\n";
+//        cout << "  @t_n  : v, gE, gI = " << dym_tn[0] << " " << dym_tn[1]<< " " << dym_tn[2] << "\n";
+//        cout << "  @t_n+1: v, gE, gI = " << dym_val[0] << " " << dym_val[1]<< " " << dym_val[2] << "\n";
+//        cout << "  k_n   = " << LIFGetDv(dym_tn) << "\n";
+//        cout << "  k_n+1 = " << LIFGetDv(dym_val) << "\n";
+//        cout << "  spike_time_local = " << spike_time_local << "\n";
+//      }
 //      spike_time_local -= dr;
 //      throw "whhhhhhh";
     } else {
@@ -428,52 +429,55 @@ public:
     }
   }
 
-  // Evolve single neuron as if no external input
+  // Evolve single neuron as if no external input.
   // Return first spike time in `spike_time_local', if any.
   __attribute__ ((noinline)) void NextQuietDtNeuState(double *dym_val, double &t_in_refractory,
                            double &spike_time_local, double dt_local)
   {
     //! at most one spike allowed during this dt_local
     if (t_in_refractory == 0) {
+      dbg_printf("NextQuietDtNeuState(): dt_local = %f:\n", dt_local);
+      dbg_printf("NextQuietDtNeuState(): begin state=%f,%f,%f\n",
+                 dym_val[0], dym_val[1], dym_val[2]);
       NextDtContinuous(dym_val, spike_time_local, dt_local);
+      dbg_printf("NextQuietDtNeuState(): end   state=%f,%f,%f\n",
+                 dym_val[0], dym_val[1], dym_val[2]);
       if (!std::isnan(spike_time_local)) {
-        // this std::max is used to avoid very rare case
-        t_in_refractory = std::max(dt_local - spike_time_local,
-                                   std::numeric_limits<double>::min());
-        if (t_in_refractory < LIF_param.TIME_REFRACTORY) {
-          dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
-        } else {
-          // short refractory period (< dt_local), neuron will active again
+        // Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
+        t_in_refractory = dt_local - spike_time_local
+                          + std::numeric_limits<double>::min();
+        dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
+        dbg_printf("Reach threshold detected\n");
+        if (t_in_refractory >= LIF_param.TIME_REFRACTORY) {
+          // Short refractory period (< dt_local), neuron will active again.
           dt_local = t_in_refractory - LIF_param.TIME_REFRACTORY;
           t_in_refractory = 0;
-          // set conductance state at firing
+          // Back to the activation time.
           NextDtConductance(dym_val, -dt_local);
-          dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
           double spike_time_local_tmp;
           NextDtContinuous(dym_val, spike_time_local_tmp, dt_local);
           if (!std::isnan(spike_time_local_tmp)) {
-            cerr << "NextQuietDtNeuState(): Multiple spikes in one dt." << endl;
-            cerr << "dt_local = " << dt_local << '\n';
-            cerr << "spike_time_local = " << spike_time_local << '\n';
-            cerr << "t_in_refractory = " << t_in_refractory << '\n';
-            cerr << "dym_val[LIF_param.id_V] = " << dym_val[LIF_param.id_V] << '\n';
-            cerr << "dym_val[LIF_param.id_gE] = " << dym_val[LIF_param.id_gE] << '\n';
+            cerr << "NextQuietDtNeuState(): Multiple spikes in one dt. Interaction dropped." << endl;
+            cerr << "  dt_local = " << dt_local << '\n';
+            cerr << "  spike_time_local = " << spike_time_local << '\n';
+            cerr << "  t_in_refractory = " << t_in_refractory << '\n';
+            cerr << "  dym_val[LIF_param.id_V] = " << dym_val[LIF_param.id_V] << '\n';
+            cerr << "  dym_val[LIF_param.id_gE] = " << dym_val[LIF_param.id_gE] << '\n';
             throw "Multiple spikes in one dt.";
           }
         }
       }
     } else {
-      // neuron in refractory period
-      double t_refractory_remain = LIF_param.TIME_REFRACTORY
+      // Neuron in refractory period.
+      double dt_refractory_remain = LIF_param.TIME_REFRACTORY
                                  - t_in_refractory;
-      assert(t_refractory_remain >=0);
-      if (t_refractory_remain < dt_local) {
-        // neuron will awake after t_refractory_remain which is in this dt_local
-        NextDtConductance(dym_val, t_refractory_remain);
-        assert( dym_val[LIF_param.id_V] == 0 );
+      if (dt_refractory_remain < dt_local) {
+        // neuron will awake after dt_refractory_remain which is in this dt_local
+        NextDtConductance(dym_val, dt_refractory_remain);
+        assert( dym_val[LIF_param.id_V] == LIF_param.VOT_RESET );
         t_in_refractory = 0;
         NextQuietDtNeuState(dym_val, t_in_refractory,
-                            spike_time_local, dt_local - t_refractory_remain);
+                            spike_time_local, dt_local - dt_refractory_remain);
       } else {
         spike_time_local = std::numeric_limits<double>::quiet_NaN();
         NextDtConductance(dym_val, dt_local);
@@ -484,11 +488,10 @@ public:
 
   // Evolve every neurons as if no synaptic interaction
   __attribute__ ((noinline)) void NextDt(struct TyNeuronalDymState &tmp_neu_state,
-              TySpikeEventQueue &spike_events, double dt)
+              TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
     dbg_printf("----- Trying t = %f .. %f -------\n", t, t_step_end);
-    // evolve each neuron as if no reset
     for (int j = 0; j < pm.n_total(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
@@ -499,87 +502,80 @@ public:
         dbg_printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
                    j, poisson_time_seq.id_seq, poisson_time_seq.size(),
                    poisson_time_seq.Front());
-        double dt_local = poisson_time_seq.Front() - t_local;
+        dbg_printf("Time from %f to %f\n", t_local, poisson_time_seq.Front());
         NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j],
-                            spike_time_local, dt_local);
+                            spike_time_local, poisson_time_seq.Front() - t_local);
         if (!std::isnan(spike_time_local)) {
-          spike_events.emplace(t_local + spike_time_local, j);
+          spike_events.emplace_back(t_local + spike_time_local, j);
         }
+        t_local = poisson_time_seq.Front();
         dym_val[LIF_param.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
-        t_local += dt_local;
       }
+      dbg_printf("Time from %f to %f\n", t_local, t_step_end);
       NextQuietDtNeuState(dym_val, tmp_neu_state.time_in_refractory[j],
                           spike_time_local, t_step_end - t_local);
       if (!std::isnan(spike_time_local)) {
-        spike_events.emplace(t_local + spike_time_local, j);
+        spike_events.emplace_back(t_local + spike_time_local, j);
       }
+      dbg_printf("Neuron %d @t=%f end state %f, %f, %f\n", j, t_step_end, dym_val[0], dym_val[1], dym_val[2]);
     }
   }
 
-  // evolve the whole system one dt
+  // Evolve the whole system one dt, with interaction
   __attribute__ ((noinline)) void NextStep(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
-    TySpikeEvent latest_spike_event =
+    TySpikeEvent heading_spike_event =
       {std::numeric_limits<double>::quiet_NaN(), -1};
     struct TyNeuronalDymState bk_neu_state;
+    TySpikeEventVec spike_events;
 
     dbg_printf("===== NextStep(): t = %f .. %f\n", t, t_end);
     poisson_time_vec.SaveIdxAndClean();
-    do {
-      TySpikeEventQueue spike_events;
-      bk_neu_state = neu_state;         // make a backup
-      // Try evolve a whole time step
-      NextDt(neu_state, spike_events, t_end - t);
-      if (!spike_events.empty()) {
-        neu_state = bk_neu_state;
-        dbg_printf("Neuron [%d] spike at t = %f\n",
-                   spike_events.top().id, spike_events.top().time);
-        latest_spike_event = spike_events.top();
-        ras.push_back(latest_spike_event);
-        vec_n_spike[latest_spike_event.id]++;
-        // Really evolve the whole system. spike_events will be discard.
-        poisson_time_vec.RestoreIdx();
-        NextDt(neu_state, spike_events, latest_spike_event.time - t);
-        if (spike_events.top().id != latest_spike_event.id) {
-          fprintf(stderr, "Warning: NextStep(): neuron of first spike is different from prediction of large time step!\n  Original: #%d at %f, now #%d at %f\n",
-                  latest_spike_event.id, latest_spike_event.time,
-                  spike_events.top().id, spike_events.top().time);
-          printf("  t = %f, dt = %f.\n", t, dt);
-//          dbg_printf("error: NextStep(): spike neuron is different from what it should be!\n  Original: #%d at %f, now #%d at %f\n",
-//                     latest_spike_event.id, latest_spike_event.time,
-//                     spike_events.top().id, spike_events.top().time) ;
-          dbg_printf("spike events in this interval:\n");
-          while (!spike_events.empty()) {
-            TySpikeEvent se = spike_events.top();
-            dbg_printf("  #%2d at %f, v0=%f g0=%f, v1=%f g1=%f\n",
-                       se.id, se.time,
-                       bk_neu_state.dym_vals(se.id, 0), bk_neu_state.dym_vals(se.id, 1),
-                       neu_state.dym_vals(se.id, 0), neu_state.dym_vals(se.id, 1));
-            spike_events.pop();
-          }
-        }
-//        else {
-//          if (spike_events.top().time < latest_spike_event.time) {
-//            // more accurate spike time, use it.
-//            //latest_spike_event = spike_events.top();
-//          }
-//        }
-        t = latest_spike_event.time;
-        // force the neuron to spike, if not already
-        if (neu_state.time_in_refractory[latest_spike_event.id] == 0) {
-          neu_state.dym_vals(latest_spike_event.id, LIF_param.id_V) = LIF_param.VOT_RESET;
-          neu_state.time_in_refractory[latest_spike_event.id] =
-            std::numeric_limits<double>::min();
-        }
-        SynapticInteraction(neu_state, latest_spike_event);
-        poisson_time_vec.SaveIdxAndClean();
-      } else {
+    while (true) {
+      spike_events.clear();
+      bk_neu_state = neu_state;                    // make a backup
+      NextDt(neu_state, spike_events, t_end - t);  // Try evolve till the end
+      if (spike_events.empty()) {
+        t = t_end;
         break;
+      } else {
+        // Find out the first spike.
+        heading_spike_event = *std::min_element(spike_events.begin(), spike_events.end());
+        dbg_printf("Neuron [%d] spike at t = %f\n",
+                   heading_spike_event.id, heading_spike_event.time);
+        // Really evolve the whole system.
+        poisson_time_vec.RestoreIdx();
+        spike_events.clear();
+        neu_state = bk_neu_state;
+        NextDt(neu_state, spike_events, heading_spike_event.time - t);
+        bool b_heading_spike_pushed = false;
+        for (size_t i = 0; i < spike_events.size(); i ++) {
+          if (spike_events[i].id == heading_spike_event.id) {
+            b_heading_spike_pushed = true;
+          } else {
+            cout << "Non-heading spike:  [" << i << "] id = " << spike_events[i].id << " time = " << spike_events[i].time << "\n";
+          }
+          // Here does not do `ras.emplace_back(spike_events[i])' because
+          // effectively the spike interaction are done at the same time.
+          ras.emplace_back(heading_spike_event.time, spike_events[i].id);
+          vec_n_spike[spike_events[i].id]++;
+          SynapticInteraction(neu_state, spike_events[i]);
+        }
+        // force the neuron to spike, if not already
+        if (!b_heading_spike_pushed) {
+          neu_state.dym_vals(heading_spike_event.id, LIF_param.id_V) = LIF_param.VOT_RESET;
+          neu_state.time_in_refractory[heading_spike_event.id] =
+            std::numeric_limits<double>::min();
+          ras.emplace_back(heading_spike_event);
+          vec_n_spike[heading_spike_event.id]++;
+          SynapticInteraction(neu_state, heading_spike_event);
+        }
+        t = heading_spike_event.time;
+        poisson_time_vec.SaveIdxAndClean();
       }
-    } while (true);
-    t = t_end;
+    }
   }
 
   // Test and correct the neuron voltage (e.g. for imported data).
