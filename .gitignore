@@ -1,0 +1,11 @@
+*~
+.*.swp
+\#*\#
+tags
+*.o
+*.layout
+.cccc/
+.ycm_extra_conf.pyc
+bin/
+obj/
+eigen3/

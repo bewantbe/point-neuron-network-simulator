@@ -1,0 +1,19 @@
+time g++ -g -O2 -falign-functions=16 -falign-loops=16 -std=c++11 -Wall main.cpp math_helper.cpp -lboost_program_options -o bin/vec_IFsimu
+
+time g++ -g -O2 -std=c++11 -Wall main.cpp math_helper.cpp -lboost_program_options -o bin/vec_IFsimu
+
+time bin/vec_IFsimu --t 1e6 --dt 0.125 --stv 0.5 --nE 1 --nI 1 --net - --scee 0.002 --scie 0.002 --scei 0.004 --scii 0.004 --pr 1 --ps 0.012 -o v_volt.dat --ras-path=v_ras.txt --isi-path=v_isi.txt
+
+time bin/vec_IFsimu --t 1e3 --dt 0.5 --stv 0.5 --nE 700 --nI 300 --net - --scee 0.002 --scie 0.002 --scei 0.004 --scii 0.004 --pr 1 --ps 0.005 -o v_volt.dat --ras-path=v_ras.txt --isi-path=v_isi.txt
+
+real	0m6.126s
+user	0m6.060s
+sys	0m0.056s
+real	0m6.170s
+user	0m6.116s
+sys	0m0.048s
+
+real	0m6.223s
+user	0m6.092s
+sys	0m0.040s
+
