@@ -33,17 +33,18 @@
 	<iostream>
 	<cmath>
 
-1424740311 source:/home/xyy/code/vec_IFsimu/math_helper.cpp
+1427187884 source:/home/xyy/code/vec_IFsimu/math_helper.cpp
 	<iostream>
 	<cmath>
 
-1424701268 source:/home/xyy/code/vec_IFsimu/main.cpp
+1427223490 source:/home/xyy/code/vec_IFsimu/main.cpp
 	"common_header.h"
 	"math_helper.h"
 	<boost/program_options.hpp>
 	<cassert>
+	"fmath.hpp"
 
-1423577101 /home/xyy/code/vec_IFsimu/common_header.h
+1427187884 /home/xyy/code/vec_IFsimu/common_header.h
 	<stdio.h>
 	<cmath>
 	<iostream>
@@ -54,7 +55,7 @@
 	<eigen3/Eigen/Dense>
 	<eigen3/Eigen/Sparse>
 
-1424709294 /home/xyy/code/vec_IFsimu/math_helper.h
+1427187884 /home/xyy/code/vec_IFsimu/math_helper.h
 
 1423577101 source:/home/xyy/code/vec_IFsimu/common_header.h
 	<stdio.h>
@@ -66,4 +67,18 @@
 	<algorithm>
 	<eigen3/Eigen/Dense>
 	<eigen3/Eigen/Sparse>
+
+1427187884 /home/xyy/code/vec_IFsimu/fmath.hpp
+	<math.h>
+	<stddef.h>
+	<assert.h>
+	<limits>
+	<stdlib.h>
+	<float.h>
+	<string.h>
+	<intrin.h>
+	<x86intrin.h>
+	<emmintrin.h>
+	"xbyak/xbyak.h"
+	"xbyak/xbyak_util.h"
 

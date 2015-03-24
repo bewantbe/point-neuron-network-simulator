@@ -27,7 +27,7 @@ typedef Eigen::SparseMatrix<double, Eigen::ColMajor> SparseMat;
 typedef std::vector<double> TyArrVals;
 
 // list of neuron models
-enum NeuronModel
+enum eNeuronModel
 {
   LIF_G,
   LIF_GH,
@@ -107,12 +107,11 @@ struct TyLIFParam
 
     return k1;
   }
-} LIF_param;
+};
 
 // parameters about neuronal system
 struct TyNeuronalParams
 {
-  enum NeuronModel neuron_model;
   int n_E, n_I;
   SparseMat net;
   double scee, scie, scei, scii;
@@ -134,14 +133,14 @@ struct TyNeuronalParams
     net.resize(n_total(), n_total());
   }
 
-  TyNeuronalParams(enum NeuronModel _neuron_model, int _n_E, int _n_I)
+  TyNeuronalParams(int _n_E, int _n_I)
   :scee(0), scie(0), scei(0), scii(0)
   {
-    neuron_model = _neuron_model;
     SetNumberOfNeurons(_n_E, _n_I);
   }
 };
 
+template<typename TyNeuronModel>
 struct TyNeuronalDymState
 {
   // current dynamical states of neurons
@@ -164,18 +163,7 @@ struct TyNeuronalDymState
 
   TyNeuronalDymState(const TyNeuronalParams &pm)
   {
-    switch (pm.neuron_model) {
-      case LIF_G:
-        dym_vals.resize(pm.n_total(), LIF_param.n_var);  // V, G_E, G_I
-        break;
-      case LIF_GH:
-//        break;
-      case HH:
-//        break;
-      default:
-        cerr << "Neuron model not support!" << endl;
-        exit(-1);
-    }
+    dym_vals.resize(pm.n_total(), TyNeuronModel::n_var);  // V, G_E, G_I etc.
     time_in_refractory.resize(pm.n_total());
     Zeros();
   }
@@ -329,16 +317,18 @@ public:
   }
 };
 
+template<typename TyNeuronModel>
 class CNeuronSimulatorEvolveEach
 {
 public:
+  TyNeuronModel neuron_model;
   struct TyNeuronalParams pm;
-  struct TyNeuronalDymState neu_state;
+  struct TyNeuronalDymState<TyNeuronModel> neu_state;
   TyPoissonTimeVec poisson_time_vec;
   double t, dt;
 
-  CNeuronSimulatorEvolveEach(const TyNeuronalParams &_pm, double _dt)
-  :pm(_pm), neu_state(_pm)
+  CNeuronSimulatorEvolveEach(const TyNeuronModel &_neuron_model, const TyNeuronalParams &_pm, double _dt)
+  :neuron_model(_neuron_model), pm(_pm), neu_state(_pm)
   {
     dt = _dt;
     t = 0;
@@ -351,22 +341,22 @@ public:
   // The separation of LIFDymRK4Step() make program 4% slower.
   __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
-//    double dym_tn[LIF_param.n_var];
-//    memcpy(dym_tn, dym_val, LIF_param.n_var*sizeof(double));
+//    double dym_tn[neuron_model.n_var];
+//    memcpy(dym_tn, dym_val, neuron_model.n_var*sizeof(double));
 
-    double v_n = dym_val[LIF_param.id_V];
-    double k1  = LIF_param.LIFDymRK4Step(dym_val, dt);
+    double v_n = dym_val[neuron_model.id_V];
+    double k1  = neuron_model.LIFDymRK4Step(dym_val, dt);
 
-    if (v_n <= LIF_param.Vot_Threshold
-        && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
+    if (v_n <= neuron_model.Vot_Threshold
+        && dym_val[neuron_model.id_V ] > neuron_model.Vot_Threshold) {
       spike_time_local = cubic_hermit_real_root(dt,
-        v_n, dym_val[LIF_param.id_V ],
-        k1, LIF_param.LIFGetDv(dym_val), LIF_param.Vot_Threshold);
+        v_n, dym_val[neuron_model.id_V ],
+        k1, neuron_model.LIFGetDv(dym_val), neuron_model.Vot_Threshold);
 //      // Further root refinement
-//      double dym_tmp[LIF_param.n_var];
-//      memcpy(dym_tmp, dym_tn, LIF_param.n_var*sizeof(double));
+//      double dym_tmp[neuron_model.n_var];
+//      memcpy(dym_tmp, dym_tn, neuron_model.n_var*sizeof(double));
 //      LIFDymRK4Step(dym_tmp, spike_time_local);
-//      double dr = (dym_tmp[LIF_param.id_V] - LIF_param.Vot_Threshold) / LIFGetDv(dym_tmp);
+//      double dr = (dym_tmp[neuron_model.id_V] - neuron_model.Vot_Threshold) / LIFGetDv(dym_tmp);
 //      static double dr_max = 0;
 //      if (fabs(dr) > 0.0005) {
 //        dr_max = dr;
@@ -389,20 +379,20 @@ public:
         // Return the maximum point as `t_max_guess'
         double c = v_n;
         double b = k1;
-        double a = (dym_val[LIF_param.id_V ] - c - b*dt)/(dt*dt);
+        double a = (dym_val[neuron_model.id_V ] - c - b*dt)/(dt*dt);
         double t_max_guess = -b/(2*a);
         // In LIF with jump conductance, it can guarantee that a<0 (concave),
         // hence t_max_guess > 0. But with G H conductance, we still need to
         // check 0 < t_max_guess
         if (0 < t_max_guess && t_max_guess < dt
-            && (b*b)/(-4*a)+c >= LIF_param.Vot_Threshold) {
+            && (b*b)/(-4*a)+c >= neuron_model.Vot_Threshold) {
           //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
           dbg_printf("NextDtContinuous(): possible mid-dt spike detected:\n");
           dbg_printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
           // root should in [0, t_max_guess]
           spike_time_local = cubic_hermit_real_root(dt,
-            v_n, dym_val[LIF_param.id_V ],
-            k1, LIF_param.LIFGetDv(dym_val), LIF_param.Vot_Threshold);
+            v_n, dym_val[neuron_model.id_V ],
+            k1, neuron_model.LIFGetDv(dym_val), neuron_model.Vot_Threshold);
         } else {
           spike_time_local = std::numeric_limits<double>::quiet_NaN();
         }
@@ -412,24 +402,24 @@ public:
     }
   }
 
-  __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
+  __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState<TyNeuronModel> &e_neu_state, const TySpikeEvent &se) const
   {
     if (se.id < pm.n_E) {
       // Excitatory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gEInject) += it.value() * pm.scee;
+          e_neu_state.dym_vals(it.row(), neuron_model.id_gEInject) += it.value() * pm.scee;
         } else {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gEInject) += it.value() * pm.scie;
+          e_neu_state.dym_vals(it.row(), neuron_model.id_gEInject) += it.value() * pm.scie;
         }
       }
     } else {
       // Inhibitory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gIInject) += it.value() * pm.scei;
+          e_neu_state.dym_vals(it.row(), neuron_model.id_gIInject) += it.value() * pm.scei;
         } else {
-          e_neu_state.dym_vals(it.row(), LIF_param.id_gIInject) += it.value() * pm.scii;
+          e_neu_state.dym_vals(it.row(), neuron_model.id_gIInject) += it.value() * pm.scii;
         }
       }
     }
@@ -452,14 +442,14 @@ public:
         // Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
         t_in_refractory = dt_local - spike_time_local
                           + std::numeric_limits<double>::min();
-        dym_val[LIF_param.id_V] = LIF_param.VOT_RESET;
+        dym_val[neuron_model.id_V] = neuron_model.VOT_RESET;
         dbg_printf("Reach threshold detected\n");
-        if (t_in_refractory >= LIF_param.TIME_REFRACTORY) {
+        if (t_in_refractory >= neuron_model.TIME_REFRACTORY) {
           // Short refractory period (< dt_local), neuron will active again.
-          dt_local = t_in_refractory - LIF_param.TIME_REFRACTORY;
+          dt_local = t_in_refractory - neuron_model.TIME_REFRACTORY;
           t_in_refractory = 0;
           // Back to the activation time.
-          LIF_param.NextDtConductance(dym_val, -dt_local);
+          neuron_model.NextDtConductance(dym_val, -dt_local);
           double spike_time_local_tmp;
           NextDtContinuous(dym_val, spike_time_local_tmp, dt_local);
           if (!std::isnan(spike_time_local_tmp)) {
@@ -467,33 +457,33 @@ public:
             cerr << "  dt_local = " << dt_local << '\n';
             cerr << "  spike_time_local = " << spike_time_local << '\n';
             cerr << "  t_in_refractory = " << t_in_refractory << '\n';
-            cerr << "  dym_val[LIF_param.id_V] = " << dym_val[LIF_param.id_V] << '\n';
-            cerr << "  dym_val[LIF_param.id_gE] = " << dym_val[LIF_param.id_gE] << '\n';
+            cerr << "  dym_val[neuron_model.id_V] = " << dym_val[neuron_model.id_V] << '\n';
+            cerr << "  dym_val[neuron_model.id_gE] = " << dym_val[neuron_model.id_gE] << '\n';
             throw "Multiple spikes in one dt.";
           }
         }
       }
     } else {
       // Neuron in refractory period.
-      double dt_refractory_remain = LIF_param.TIME_REFRACTORY
+      double dt_refractory_remain = neuron_model.TIME_REFRACTORY
                                  - t_in_refractory;
       if (dt_refractory_remain < dt_local) {
         // neuron will awake after dt_refractory_remain which is in this dt_local
-        LIF_param.NextDtConductance(dym_val, dt_refractory_remain);
-        assert( dym_val[LIF_param.id_V] == LIF_param.VOT_RESET );
+        neuron_model.NextDtConductance(dym_val, dt_refractory_remain);
+        assert( dym_val[neuron_model.id_V] == neuron_model.VOT_RESET );
         t_in_refractory = 0;
         NextQuietDtNeuState(dym_val, t_in_refractory,
                             spike_time_local, dt_local - dt_refractory_remain);
       } else {
         spike_time_local = std::numeric_limits<double>::quiet_NaN();
-        LIF_param.NextDtConductance(dym_val, dt_local);
+        neuron_model.NextDtConductance(dym_val, dt_local);
         t_in_refractory += dt_local;
       }
     }
   }
 
   // Evolve every neurons as if no synaptic interaction
-  __attribute__ ((noinline)) void NextDt(struct TyNeuronalDymState &tmp_neu_state,
+  __attribute__ ((noinline)) void NextDt(struct TyNeuronalDymState<TyNeuronModel> &tmp_neu_state,
               TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
@@ -515,7 +505,7 @@ public:
           spike_events.emplace_back(t_local + spike_time_local, j);
         }
         t_local = poisson_time_seq.Front();
-        dym_val[LIF_param.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
+        dym_val[neuron_model.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
       }
       dbg_printf("Time from %f to %f\n", t_local, t_step_end);
@@ -534,7 +524,7 @@ public:
     double t_end = t + dt;
     TySpikeEvent heading_spike_event =
       {std::numeric_limits<double>::quiet_NaN(), -1};
-    struct TyNeuronalDymState bk_neu_state;
+    struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
     TySpikeEventVec spike_events;
 
     dbg_printf("===== NextStep(): t = %f .. %f\n", t, t_end);
@@ -573,7 +563,7 @@ public:
         }
         // Force the neuron to spike, if not already
         if (!b_heading_spike_pushed) {
-          neu_state.dym_vals(heading_spike_event.id, LIF_param.id_V) = LIF_param.VOT_RESET;
+          neu_state.dym_vals(heading_spike_event.id, neuron_model.id_V) = neuron_model.VOT_RESET;
           neu_state.time_in_refractory[heading_spike_event.id] =
             std::numeric_limits<double>::min();
           ras.emplace_back(heading_spike_event);
@@ -590,15 +580,13 @@ public:
   void SaneTestVolt()
   {
     for (int j = 0; j < pm.n_total(); j++) {
-      if (neu_state.dym_vals(j, LIF_param.id_V) > LIF_param.Vot_Threshold) {
-        neu_state.dym_vals(j, LIF_param.id_V) = 0;
+      if (neu_state.dym_vals(j, neuron_model.id_V) > neuron_model.Vot_Threshold) {
+        neu_state.dym_vals(j, neuron_model.id_V) = 0;
         neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();
       }
     }
   }
 };
-
-typedef CNeuronSimulatorEvolveEach CNeuronSimulator;
 
 // The event's times for each neuron should be ascending.
 void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path)
@@ -624,16 +612,19 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
   cout << "poisson size[1] = " << poisson_time_vec[1].size() << endl;
 }
 
-void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
+template<typename TyNeuronModel>
+void FillNeuStateFromFile(TyNeuronalDymState<TyNeuronModel> &neu_dym_stat, const char *path)
 {
   std::ifstream fin(path);
-  double v, gE, gI;
+  double v;
   size_t j = 0;
   neu_dym_stat.dym_vals.setZero();
-  while (fin >> v >> gE >> gI) {
-    neu_dym_stat.dym_vals(j, 0) = v;
-    neu_dym_stat.dym_vals(j, 1) = gE;
-    neu_dym_stat.dym_vals(j, 2) = gI;
+  while (true) {
+    for (int k = 0; fin >> v, k < neu_dym_stat.dym_vals.cols(); k++) {
+      neu_dym_stat.dym_vals(j, k) = v;
+    }
+    if (fin.fail())
+      break;
     neu_dym_stat.time_in_refractory[j] = 0;
     j++;
     if (j >= neu_dym_stat.time_in_refractory.size()) {
@@ -691,69 +682,13 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
   pm.net.makeCompressed();
 }
 
-int main(int argc, char *argv[])
+template<typename TyNeuronModel>
+int MainLoop(const po::variables_map &vm)
 {
-  // Declare the supported options.
-  po::options_description desc("Options");
-  // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
-  desc.add_options()
-      ("help,h",
-       "produce help message")
-      ("t",    po::value<double>()->default_value(1e4),
-       "simulation time")
-      ("dt",   po::value<double>()->default_value(1.0/2),
-       "simulation delta t")
-      ("stv",  po::value<double>(),
-       "delta t for output")
-      ("nE",   po::value<unsigned int>()->default_value(1),
-       "number of excitatory neuron")
-      ("nI",   po::value<unsigned int>()->default_value(0),
-       "number of inhibitory neuron")
-      ("net",  po::value<std::string>(),
-       "network name")
-      ("scee", po::value<double>()->default_value(0.0),
-       "cortical strength E->E")
-      ("scie", po::value<double>()->default_value(0.0),
-       "cortical strength E->I")
-      ("scei", po::value<double>()->default_value(0.0),
-       "cortical strength I->E")
-      ("scii", po::value<double>()->default_value(0.0),
-       "cortical strength I->I")
-      ("ps",   po::value<double>(),
-       "Poisson input strength")
-      ("pr",   po::value<double>()->default_value(1.0),
-       "Poisson input rate")
-      ("psi",  po::value<double>(),
-       "Poisson input strength, inhibitory type")
-      ("pri",  po::value<double>(),
-       "Poisson input rate, inhibitory type")
-      ("pr-mul", po::value<double>()->multitoken(),
-       "Poisson input rate multiper")
-      ("volt-path,o",      po::value<std::string>(),
-       "volt output file path")
-      ("ras-path",         po::value<std::string>(),
-       "ras output file path")
-      ("isi-path",         po::value<std::string>(),
-       "isi output file path")
-      ("conductance-path", po::value<std::string>(),
-       "conductance output file path")
-      ("initial-state-path", po::value<std::string>(),
-       "initial state file path")
-      ("input-event-path", po::value<std::string>(),
-       "Input event file path")
-  ;
-
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
-
-  if (vm.count("help")) {
-      cout << desc << "\n";
-      return 1;
-  }
+  TyNeuronModel neuron_model;
 
   // Set neural parameters
-  TyNeuronalParams pm(LIF_G, vm["nE"].as<unsigned int>(), vm["nI"].as<unsigned int>());
+  TyNeuronalParams pm(vm["nE"].as<unsigned int>(), vm["nI"].as<unsigned int>());
   int n_neu = vm["nE"].as<unsigned int>() + vm["nI"].as<unsigned int>();
 
   // set poisson input
@@ -827,7 +762,7 @@ int main(int argc, char *argv[])
   }
 
   // simulator for the neural network
-  CNeuronSimulator neu_simu(pm, e_dt);
+  CNeuronSimulatorEvolveEach<TyNeuronModel> neu_simu(neuron_model, pm, e_dt);
 
   if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(neu_simu.neu_state,
@@ -844,13 +779,13 @@ int main(int argc, char *argv[])
 
   if (output_volt) {
     for (int j = 0; j < pm.n_total(); j++) {
-      fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_V), sizeof(double));
+      fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_V), sizeof(double));
     }
   }
   if (output_G) {
     for (int j = 0; j < pm.n_total(); j++) {
-      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gE), sizeof(double));
-      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gI), sizeof(double));
+      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gE), sizeof(double));
+      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gI), sizeof(double));
     }
   }
 
@@ -876,13 +811,13 @@ int main(int argc, char *argv[])
     count_n_dt_in_stv = n_dt_in_stv;
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_V), sizeof(double));
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_V), sizeof(double));
       }
     }
     if (output_G) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gE), sizeof(double));
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, LIF_param.id_gI), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gE), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gI), sizeof(double));
       }
     }
   }
@@ -896,4 +831,79 @@ int main(int argc, char *argv[])
   }
 
   return 0;
+}
+
+int main(int argc, char *argv[])
+{
+  // Declare the supported options.
+  po::options_description desc("Options");
+  // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
+  desc.add_options()
+      ("help,h",
+       "produce help message")
+      ("t",    po::value<double>()->default_value(1e4),
+       "simulation time")
+      ("dt",   po::value<double>()->default_value(1.0/2),
+       "simulation delta t")
+      ("stv",  po::value<double>(),
+       "delta t for output")
+      ("nE",   po::value<unsigned int>()->default_value(1),
+       "number of excitatory neuron")
+      ("nI",   po::value<unsigned int>()->default_value(0),
+       "number of inhibitory neuron")
+      ("net",  po::value<std::string>(),
+       "network name")
+      ("scee", po::value<double>()->default_value(0.0),
+       "cortical strength E->E")
+      ("scie", po::value<double>()->default_value(0.0),
+       "cortical strength E->I")
+      ("scei", po::value<double>()->default_value(0.0),
+       "cortical strength I->E")
+      ("scii", po::value<double>()->default_value(0.0),
+       "cortical strength I->I")
+      ("ps",   po::value<double>(),
+       "Poisson input strength")
+      ("pr",   po::value<double>()->default_value(1.0),
+       "Poisson input rate")
+      ("psi",  po::value<double>(),
+       "Poisson input strength, inhibitory type")
+      ("pri",  po::value<double>(),
+       "Poisson input rate, inhibitory type")
+      ("pr-mul", po::value<double>()->multitoken(),
+       "Poisson input rate multiper")
+      ("volt-path,o",      po::value<std::string>(),
+       "volt output file path")
+      ("ras-path",         po::value<std::string>(),
+       "ras output file path")
+      ("isi-path",         po::value<std::string>(),
+       "isi output file path")
+      ("conductance-path", po::value<std::string>(),
+       "conductance output file path")
+      ("initial-state-path", po::value<std::string>(),
+       "initial state file path")
+      ("input-event-path", po::value<std::string>(),
+       "Input event file path")
+  ;
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
+
+  if (vm.count("help")) {
+      cout << desc << "\n";
+      return 1;
+  }
+
+  eNeuronModel e_neuron_model = LIF_G;
+  int rt = 0;
+  switch (e_neuron_model) {
+    case LIF_G:
+      rt = MainLoop<TyLIFParam>(vm);
+      break;
+    default:
+      rt = -1;
+      cerr << "Unrecognized neuronal model enum \n";
+  }
+
+  return rt;
 }
