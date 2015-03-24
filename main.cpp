@@ -53,6 +53,60 @@ struct TyLIFParam
   static const int id_gI = 2;  // index of gI variable
   static const int id_gEInject = 1;  // index of gE injection variable
   static const int id_gIInject = 2;  // index of gI injection variable
+
+  // evolve condunctance only
+  void NextDtConductance(double *dym_val, double dt) const
+  {
+    dym_val[id_gE] *= fmath::expd(-dt / Time_ExCon);
+    dym_val[id_gI] *= fmath::expd(-dt / Time_InCon);
+  }
+
+  // Get instantaneous dv/dt for LIF model
+  double LIFGetDv(const double *dym_val) const
+  {
+    return - Con_Leakage * (dym_val[id_V] - Vot_Leakage)
+           - dym_val[id_gE] * (dym_val[id_V] - Vot_Excitatory)
+           - dym_val[id_gI] * (dym_val[id_V] - Vot_Inhibitory);
+  }
+
+  // Evolve the ODE assume not reset, not external input at all.
+  // Return derivative k1 at t_n, for later interpolation.
+  __attribute__ ((noinline)) double LIFDymRK4Step(double *dym_val, double dt) const
+  {
+    // classical Runge Kutta 4 (for voltage)
+    // conductance evolve exactly use exp()
+
+    double v_n = dym_val[id_V];
+    double k1, k2, k3, k4;
+    double exp_E = fmath::expd(-0.5 * dt / Time_ExCon);
+    double exp_I = fmath::expd(-0.5 * dt / Time_InCon);
+
+    // k1 = f(t_n, y_n)
+    k1 = LIFGetDv(dym_val);
+
+    // y_n + 0.5*k1*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k1;
+    dym_val[id_gE] *= exp_E;
+    dym_val[id_gI] *= exp_I;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k2 = LIFGetDv(dym_val);
+
+    // y_n + 0.5*k2*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k2;
+    // k3 = f(t+dt/2, y_n + 0.5*k2*dt)
+    k3 = LIFGetDv(dym_val);
+
+    // y_n + k3*dt
+    dym_val[id_V ] = v_n + dt * k3;
+    dym_val[id_gE] *= exp_E;
+    dym_val[id_gI] *= exp_I;
+    // k4 = f(t+dt, y_n + k3*dt)
+    k4 = LIFGetDv(dym_val);
+
+    dym_val[id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
+
+    return k1;
+  }
 } LIF_param;
 
 // parameters about neuronal system
@@ -100,6 +154,12 @@ struct TyNeuronalDymState
   {
     dym_vals.setZero();
     for (auto &i : time_in_refractory) i = 0;
+  }
+
+  // pointer to the state of j-th neuron
+  double *statePtr(int j)
+  {
+    return dym_vals.data() + j * dym_vals.cols();
   }
 
   TyNeuronalDymState(const TyNeuronalParams &pm)
@@ -285,70 +345,23 @@ public:
     poisson_time_vec.Init(pm.arr_pr, t);
   }
 
-  // Get instantaneous dv/dt for LIF model
-  double LIFGetDv(const double *dym_val) const
-  {
-    return - LIF_param.Con_Leakage * (dym_val[LIF_param.id_V] - LIF_param.Vot_Leakage)
-           - dym_val[LIF_param.id_gE] * (dym_val[LIF_param.id_V] - LIF_param.Vot_Excitatory)
-           - dym_val[LIF_param.id_gI] * (dym_val[LIF_param.id_V] - LIF_param.Vot_Inhibitory);
-  }
-
-  // Evolve the ODE assume not reset, not external input at all.
-  // Return derivative k1 at t_n, for later interpolation.
-  __attribute__ ((noinline)) double LIFDymRK4Step(double *dym_val, double dt) const
-  {
-    // classical Runge Kutta 4 (for voltage)
-    // conductance evolve exactly use exp()
-
-    double v_n = dym_val[LIF_param.id_V];
-    double k1, k2, k3, k4;
-    double exp_E = fmath::expd(-0.5 * dt / LIF_param.Time_ExCon);
-    double exp_I = fmath::expd(-0.5 * dt / LIF_param.Time_InCon);
-
-    // k1 = f(t_n, y_n)
-    k1 = LIFGetDv(dym_val);
-
-    // y_n + 0.5*k1*dt
-    dym_val[LIF_param.id_V ] = v_n + 0.5 * dt * k1;
-    dym_val[LIF_param.id_gE] *= exp_E;
-    dym_val[LIF_param.id_gI] *= exp_I;
-    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
-    k2 = LIFGetDv(dym_val);
-
-    // y_n + 0.5*k2*dt
-    dym_val[LIF_param.id_V ] = v_n + 0.5 * dt * k2;
-    // k3 = f(t+dt/2, y_n + 0.5*k2*dt)
-    k3 = LIFGetDv(dym_val);
-
-    // y_n + k3*dt
-    dym_val[LIF_param.id_V ] = v_n + dt * k3;
-    dym_val[LIF_param.id_gE] *= exp_E;
-    dym_val[LIF_param.id_gI] *= exp_I;
-    // k4 = f(t+dt, y_n + k3*dt)
-    k4 = LIFGetDv(dym_val);
-
-    dym_val[LIF_param.id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
-
-    return k1;
-  }
-
   // Evolve the ODE assume not reset, not external input at all.
   // With spike time calculation.
   // `spike_time_local' should be guaranteed to be with in [0, dt] or NAN.
   // The separation of LIFDymRK4Step() make program 4% slower.
   __attribute__ ((noinline)) void NextDtContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
-    double dym_tn[LIF_param.n_var];
-    memcpy(dym_tn, dym_val, LIF_param.n_var*sizeof(double));
+//    double dym_tn[LIF_param.n_var];
+//    memcpy(dym_tn, dym_val, LIF_param.n_var*sizeof(double));
 
     double v_n = dym_val[LIF_param.id_V];
-    double k1  = LIFDymRK4Step(dym_val, dt);
+    double k1  = LIF_param.LIFDymRK4Step(dym_val, dt);
 
     if (v_n <= LIF_param.Vot_Threshold
         && dym_val[LIF_param.id_V ] > LIF_param.Vot_Threshold) {
       spike_time_local = cubic_hermit_real_root(dt,
         v_n, dym_val[LIF_param.id_V ],
-        k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold);
+        k1, LIF_param.LIFGetDv(dym_val), LIF_param.Vot_Threshold);
 //      // Further root refinement
 //      double dym_tmp[LIF_param.n_var];
 //      memcpy(dym_tmp, dym_tn, LIF_param.n_var*sizeof(double));
@@ -381,15 +394,15 @@ public:
         // In LIF with jump conductance, it can guarantee that a<0 (concave),
         // hence t_max_guess > 0. But with G H conductance, we still need to
         // check 0 < t_max_guess
-        if (0 < t_max_guess && t_max_guess<dt
-            && (b*b)/(-4*a)+c > LIF_param.Vot_Threshold) {
+        if (0 < t_max_guess && t_max_guess < dt
+            && (b*b)/(-4*a)+c >= LIF_param.Vot_Threshold) {
           //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
-          printf("NextDtContinuous(): possible mid-dt spike detected:\n");
-          printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
+          dbg_printf("NextDtContinuous(): possible mid-dt spike detected:\n");
+          dbg_printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
           // root should in [0, t_max_guess]
           spike_time_local = cubic_hermit_real_root(dt,
             v_n, dym_val[LIF_param.id_V ],
-            k1, LIFGetDv(dym_val), LIF_param.Vot_Threshold);
+            k1, LIF_param.LIFGetDv(dym_val), LIF_param.Vot_Threshold);
         } else {
           spike_time_local = std::numeric_limits<double>::quiet_NaN();
         }
@@ -397,13 +410,6 @@ public:
         spike_time_local = std::numeric_limits<double>::quiet_NaN();
       }
     }
-  }
-
-  // evolve condunctance only
-  void NextDtConductance(double *dym_val, double dt) const
-  {
-    dym_val[LIF_param.id_gE] *= fmath::expd(-dt / LIF_param.Time_ExCon);
-    dym_val[LIF_param.id_gI] *= fmath::expd(-dt / LIF_param.Time_InCon);
   }
 
   __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
@@ -453,7 +459,7 @@ public:
           dt_local = t_in_refractory - LIF_param.TIME_REFRACTORY;
           t_in_refractory = 0;
           // Back to the activation time.
-          NextDtConductance(dym_val, -dt_local);
+          LIF_param.NextDtConductance(dym_val, -dt_local);
           double spike_time_local_tmp;
           NextDtContinuous(dym_val, spike_time_local_tmp, dt_local);
           if (!std::isnan(spike_time_local_tmp)) {
@@ -473,14 +479,14 @@ public:
                                  - t_in_refractory;
       if (dt_refractory_remain < dt_local) {
         // neuron will awake after dt_refractory_remain which is in this dt_local
-        NextDtConductance(dym_val, dt_refractory_remain);
+        LIF_param.NextDtConductance(dym_val, dt_refractory_remain);
         assert( dym_val[LIF_param.id_V] == LIF_param.VOT_RESET );
         t_in_refractory = 0;
         NextQuietDtNeuState(dym_val, t_in_refractory,
                             spike_time_local, dt_local - dt_refractory_remain);
       } else {
         spike_time_local = std::numeric_limits<double>::quiet_NaN();
-        NextDtConductance(dym_val, dt_local);
+        LIF_param.NextDtConductance(dym_val, dt_local);
         t_in_refractory += dt_local;
       }
     }
@@ -495,7 +501,7 @@ public:
     for (int j = 0; j < pm.n_total(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
-      double *dym_val = tmp_neu_state.dym_vals.data() + j * LIF_param.n_var;
+      double *dym_val = tmp_neu_state.statePtr(j);
       double t_local = t;
       double spike_time_local = std::numeric_limits<double>::quiet_NaN();
       while (poisson_time_seq.Front() < t_step_end) {
@@ -550,12 +556,14 @@ public:
         spike_events.clear();
         neu_state = bk_neu_state;
         NextDt(neu_state, spike_events, heading_spike_event.time - t);
+        // Record all spike events during the time step above
+        // Ideally, there should be only one event: heading_spike_event
         bool b_heading_spike_pushed = false;
         for (size_t i = 0; i < spike_events.size(); i ++) {
           if (spike_events[i].id == heading_spike_event.id) {
             b_heading_spike_pushed = true;
           } else {
-            cout << "Non-heading spike:  [" << i << "] id = " << spike_events[i].id << " time = " << spike_events[i].time << "\n";
+            cout << "Unexpected spike (spike before \"first\" spike):  [" << i << "] id = " << spike_events[i].id << " time = " << spike_events[i].time << "\n";
           }
           // Here does not do `ras.emplace_back(spike_events[i])' because
           // effectively the spike interaction are done at the same time.
@@ -563,7 +571,7 @@ public:
           vec_n_spike[spike_events[i].id]++;
           SynapticInteraction(neu_state, spike_events[i]);
         }
-        // force the neuron to spike, if not already
+        // Force the neuron to spike, if not already
         if (!b_heading_spike_pushed) {
           neu_state.dym_vals(heading_spike_event.id, LIF_param.id_V) = LIF_param.VOT_RESET;
           neu_state.time_in_refractory[heading_spike_event.id] =
