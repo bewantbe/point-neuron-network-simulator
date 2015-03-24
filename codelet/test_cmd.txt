@@ -17,3 +17,12 @@ real	0m6.223s
 user	0m6.092s
 sys	0m0.040s
 
+
+
+time bin/vec_IFsimu --neuron-model LIF-GH --t 1e3 --dt 0.5 --stv 0.5 --nE 700 --nI 300 --net - --scee 0.004 --scie 0.004 --scei 0.008 --scii 0.008 --pr 1 --ps 0.010 -o v_volt.dat --ras-path=v_ras.txt --isi-path=v_isi.txt
+
+time ./raster_tuning -ng -t 1e3 -dt 0.5 -stv 0.5 -n 700 300 -mat - -scee 0.004 -scei 0.004 -scie 0.008 -scii 0.008 -pr 1 -ps 0.010 -o v_volt_o.dat --save-spike-interval v_isi_o.txt
+
+
+time bin/vec_IFsimu --neuron-model LIF-GH --t 1e3 --dt 0.125 --stv 0.125 --nE 1 --net - --ps 0.02 --initial-state-path /home/xyy/code/vec_IFsimu/neu_state_init.txt --input-event-path /home/xyy/code/vec_IFsimu/poisson_events.txt -o v_volt.dat --ras-path=v_ras.txt --isi-path=v_isi.txt 
+

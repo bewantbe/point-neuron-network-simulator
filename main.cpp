@@ -36,25 +36,23 @@ enum eNeuronModel
 
 struct TyLIFParam
 {
-  double Vot_Threshold  = 1.0;
-  double VOT_RESET      = 0.0;
-  double Con_Leakage = 0.05;
-  double Vot_Leakage = 0.0;
-  double Vot_Excitatory = 14.0/3.0;
-  double Vot_Inhibitory = -2.0/3.0;
-  double Time_ExCon    = 2.0;
-  double Time_ExConR   = 0.5;
-  double Time_InCon    = 5.0;
-  double Time_InConR   = 0.8;
+  double Vot_Threshold   = 1.0;
+  double VOT_RESET       = 0.0;
+  double Con_Leakage     = 0.05;
+  double Vot_Leakage     = 0.0;
+  double Vot_Excitatory  = 14.0/3.0;
+  double Vot_Inhibitory  = -2.0/3.0;
+  double Time_ExCon      = 2.0;
+  double Time_InCon      = 5.0;
   double TIME_REFRACTORY = 2.0;  // ms
   static const int n_var = 3;  // number of dynamical variables
   static const int id_V  = 0;  // index of V variable
   static const int id_gE = 1;  // index of gE variable
   static const int id_gI = 2;  // index of gI variable
-  static const int id_gEInject = 1;  // index of gE injection variable
-  static const int id_gIInject = 2;  // index of gI injection variable
+  static const int id_gEInject = id_gE;  // index of gE injection variable
+  static const int id_gIInject = id_gI;  // index of gI injection variable
 
-  // evolve condunctance only
+  // Evolve conductance only
   void NextDtConductance(double *dym_val, double dt) const
   {
     dym_val[id_gE] *= fmath::expd(-dt / Time_ExCon);
@@ -100,6 +98,111 @@ struct TyLIFParam
     dym_val[id_V ] = v_n + dt * k3;
     dym_val[id_gE] *= exp_E;
     dym_val[id_gI] *= exp_I;
+    // k4 = f(t+dt, y_n + k3*dt)
+    k4 = LIFGetDv(dym_val);
+
+    dym_val[id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
+
+    return k1;
+  }
+};
+
+struct Ty_LIF_GH
+{
+  double Vot_Threshold   = 1.0;
+  double VOT_RESET       = 0.0;
+  double Con_Leakage     = 0.05;
+  double Vot_Leakage     = 0.0;
+  double Vot_Excitatory  = 14.0/3.0;
+  double Vot_Inhibitory  = -2.0/3.0;
+  double Time_ExCon      = 2.0;
+  double Time_ExConR     = 0.5;
+  double Time_InCon      = 5.0;
+  double Time_InConR     = 0.8;
+  double TIME_REFRACTORY = 2.0;  // ms
+  static const int n_var = 5;  // number of dynamical variables
+  static const int id_V  = 0;  // index of V variable
+  static const int id_gE = 1;  // index of gE variable
+  static const int id_gI = 2;  // index of gI variable
+  static const int id_gE_s1 = 3;  // index of derivative of gE
+  static const int id_gI_s1 = 4;  // index of derivative of gI
+  static const int id_gEInject = id_gE_s1;  // index of gE injection variable
+  static const int id_gIInject = id_gI_s1;  // index of gI injection variable
+
+  // Evolve conductance only
+  void NextDtConductance(double *dym_val, double dt) const
+  {
+    /**
+      ODE:
+        g '[t] == -1/tC  * g [t] + gR[t]
+        gR'[t] == -1/tCR * gR[t]
+      Solution:
+        g [t] = exp(-t/tC) * g[0] + (exp(-t/tC) - exp(-t/tCR)) * gR[0] * tC * tCR / (tC - tCR)
+        gR[t] = exp(-t/tCR) * gR[0]
+      Another form (hopefully more accurate, note exp(x)-1 is expm1(x) ):
+        g [t] = exp(-t/tC) * (g[0] + gR[0] * (exp((1/tC-1/tCR)*t) - 1) / (1/tC - 1/tCR))
+      Or
+        g [t] = exp(-t/tC) * g[0] + exp(-t/tCR) * gR[0] * (exp((1/tCR-1/tC)*t) - 1) / (1/tCR-1/tC)
+    */
+    // Excitatory
+    double expC  = fmath::expd(-dt / Time_ExCon);
+    double expCR = fmath::expd(-dt / Time_ExConR);
+    dym_val[id_gE] = expC*dym_val[id_gE] + (expC - expCR) * dym_val[id_gE_s1] * Time_ExCon * Time_ExConR / (Time_ExCon - Time_ExConR);
+    dym_val[id_gE_s1] *= expCR;
+    // Inhibitory
+    expC  = fmath::expd(-dt / Time_InCon);
+    expCR = fmath::expd(-dt / Time_InConR);
+    dym_val[id_gI] = expC*dym_val[id_gI] + (expC - expCR) * dym_val[id_gI_s1] * Time_InCon * Time_InConR / (Time_InCon - Time_InConR);
+    dym_val[id_gI_s1] *= expCR;
+  }
+
+  // Get instantaneous dv/dt for LIF model
+  double LIFGetDv(const double *dym_val) const
+  {
+    return - Con_Leakage * (dym_val[id_V] - Vot_Leakage)
+           - dym_val[id_gE] * (dym_val[id_V] - Vot_Excitatory)
+           - dym_val[id_gI] * (dym_val[id_V] - Vot_Inhibitory);
+  }
+
+  // Evolve the ODE assume not reset, not external input at all.
+  // Return derivative k1 at t_n, for later interpolation.
+  __attribute__ ((noinline)) double LIFDymRK4Step(double *dym_val, double dt) const
+  {
+    // classical Runge Kutta 4 (for voltage)
+    // conductance evolve exactly use exp()
+
+    double v_n = dym_val[id_V];
+    double k1, k2, k3, k4;
+    double expEC  = fmath::expd(-0.5 * dt / Time_ExCon);
+    double expECR = fmath::expd(-0.5 * dt / Time_ExConR);
+    double expIC  = fmath::expd(-0.5 * dt / Time_InCon);
+    double expICR = fmath::expd(-0.5 * dt / Time_InConR);
+    double gE_s_coef = (expEC - expECR) * Time_ExCon * Time_ExConR / (Time_ExCon - Time_ExConR);
+    double gI_s_coef = (expIC - expICR) * Time_InCon * Time_InConR / (Time_InCon - Time_InConR);
+
+    // k1 = f(t_n, y_n)
+    k1 = LIFGetDv(dym_val);
+
+    // y_n + 0.5*k1*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k1;
+    dym_val[id_gE] = expEC * dym_val[id_gE] + gE_s_coef * dym_val[id_gE_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI] = expIC * dym_val[id_gI] + gI_s_coef * dym_val[id_gI_s1];
+    dym_val[id_gI_s1] *= expICR;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k2 = LIFGetDv(dym_val);
+
+    // y_n + 0.5*k2*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k2;
+    // k3 = f(t+dt/2, y_n + 0.5*k2*dt)
+    k3 = LIFGetDv(dym_val);
+
+    // y_n + k3*dt
+    dym_val[id_V ] = v_n + dt * k3;
+    dym_val[id_gE] = expEC * dym_val[id_gE] + gE_s_coef * dym_val[id_gE_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI] = expIC * dym_val[id_gI] + gI_s_coef * dym_val[id_gI_s1];
+    dym_val[id_gI_s1] *= expICR;
     // k4 = f(t+dt, y_n + k3*dt)
     k4 = LIFGetDv(dym_val);
 
@@ -839,6 +942,8 @@ int main(int argc, char *argv[])
   po::options_description desc("Options");
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
+      ("neuron-model",  po::value<std::string>(),
+       "One of LIF-G, LIF-GH")
       ("help,h",
        "produce help message")
       ("t",    po::value<double>()->default_value(1e4),
@@ -890,19 +995,38 @@ int main(int argc, char *argv[])
   po::notify(vm);
 
   if (vm.count("help")) {
-      cout << desc << "\n";
-      return 1;
+    cout << desc << "\n";
+    return 1;
   }
 
+  // Set neuron model
   eNeuronModel e_neuron_model = LIF_G;
+  if (vm.count("neuron-model")) {
+    const std::string &str_nm = vm["neuron-model"].as<std::string>();
+    if (str_nm == "LIF-G") {
+      e_neuron_model = LIF_G;
+    } else if (str_nm == "LIF-GH") {
+      e_neuron_model = LIF_GH;
+    } else {
+      cerr << "Unrecognized neuron model. See help\n";
+      return -1;
+    }
+  } else {
+    cout << "Warning: Neuron model not specified, using LIF G model\n";
+    e_neuron_model = LIF_G;
+  }
+
   int rt = 0;
   switch (e_neuron_model) {
     case LIF_G:
       rt = MainLoop<TyLIFParam>(vm);
       break;
+    case LIF_GH:
+      rt = MainLoop<Ty_LIF_GH>(vm);
+      break;
     default:
       rt = -1;
-      cerr << "Unrecognized neuronal model enum \n";
+      cerr << "Unrecognized neuron model enum \n";
   }
 
   return rt;
