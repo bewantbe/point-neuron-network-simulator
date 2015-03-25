@@ -36,6 +36,7 @@
 			<Add library="boost_program_options" />
 		</Linker>
 		<Unit filename="common_header.h" />
+		<Unit filename="fmath.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="math_helper.cpp" />
 		<Unit filename="math_helper.h" />
