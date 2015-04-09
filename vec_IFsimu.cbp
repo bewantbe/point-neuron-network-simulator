@@ -40,7 +40,6 @@
 		<Unit filename="main.cpp" />
 		<Unit filename="math_helper.cpp" />
 		<Unit filename="math_helper.h" />
-		<Unit filename="simulator_v0.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />

@@ -15,7 +15,7 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-const bool g_b_debug = false;
+//const bool g_b_debug = false;
 #ifdef NDEBUG
 #define dbg_printf(...) ((void)0);
 #else
@@ -42,14 +42,14 @@ struct Ty_LIF_G
   // The neuron model named LIF-G in this code.
   // This is the Leaky Integrate-and-Fire model with jump conductance.
   double Vot_Threshold   = 1.0;  // voltages are in dimensionless unit
-  double VOT_RESET       = 0.0;
+  double Vot_Reset       = 0.0;
   double Vot_Leakage     = 0.0;
   double Vot_Excitatory  = 14.0/3.0;
   double Vot_Inhibitory  = -2.0/3.0;
   double Con_Leakage     = 0.05;  // ms^-1
   double Time_ExCon      = 2.0;   // ms
   double Time_InCon      = 5.0;   // ms
-  double TIME_REFRACTORY = 2.0;   // ms
+  double Time_Refractory = 2.0;   // ms
   static const int n_var = 3;  // number of dynamical variables
   static const int id_V  = 0;  // index of V variable
   static const int id_gE = 1;  // index of gE variable
@@ -117,7 +117,7 @@ struct Ty_LIF_GH
   // The neuron model named LIF-GH in this code.
   // This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance.
   double Vot_Threshold   = 1.0;  // voltages are in dimensionless unit
-  double VOT_RESET       = 0.0;
+  double Vot_Reset       = 0.0;
   double Vot_Leakage     = 0.0;
   double Vot_Excitatory  = 14.0/3.0;
   double Vot_Inhibitory  = -2.0/3.0;
@@ -126,7 +126,7 @@ struct Ty_LIF_GH
   double Time_ExConR     = 0.5;   // ms
   double Time_InCon      = 5.0;   // ms
   double Time_InConR     = 0.8;   // ms
-  double TIME_REFRACTORY = 2.0;   // ms
+  double Time_Refractory = 2.0;   // ms
   static const int n_var    = 5;  // number of dynamical variables
   static const int id_V     = 0;  // index of V variable
   static const int id_gE    = 1;  // index of gE variable
@@ -538,11 +538,11 @@ protected:
         // Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
         t_in_refractory = dt_local - spike_time_local
                           + std::numeric_limits<double>::min();
-        dym_val[neuron_model.id_V] = neuron_model.VOT_RESET;
+        dym_val[neuron_model.id_V] = neuron_model.Vot_Reset;
         dbg_printf("Reach threshold detected\n");
-        if (t_in_refractory >= neuron_model.TIME_REFRACTORY) {
+        if (t_in_refractory >= neuron_model.Time_Refractory) {
           // Short refractory period (< dt_local), neuron will active again.
-          dt_local = t_in_refractory - neuron_model.TIME_REFRACTORY;
+          dt_local = t_in_refractory - neuron_model.Time_Refractory;
           t_in_refractory = 0;
           // Back to the activation time.
           neuron_model.NextDtConductance(dym_val, -dt_local);
@@ -561,12 +561,12 @@ protected:
       }
     } else {
       // Neuron in refractory period.
-      double dt_refractory_remain = neuron_model.TIME_REFRACTORY
+      double dt_refractory_remain = neuron_model.Time_Refractory
                                  - t_in_refractory;
       if (dt_refractory_remain < dt_local) {
         // neuron will awake after dt_refractory_remain which is in this dt_local
         neuron_model.NextDtConductance(dym_val, dt_refractory_remain);
-        assert( dym_val[neuron_model.id_V] == neuron_model.VOT_RESET );
+        assert( dym_val[neuron_model.id_V] == neuron_model.Vot_Reset );
         t_in_refractory = 0;
         NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
                             spike_time_local, dt_local - dt_refractory_remain);
@@ -659,7 +659,7 @@ public:
         }
         // Force the neuron to spike, if not already
         if (!b_heading_spike_pushed) {
-          neu_state.dym_vals(heading_spike_event.id, neuron_model.id_V) = neuron_model.VOT_RESET;
+          neu_state.dym_vals(heading_spike_event.id, neuron_model.id_V) = neuron_model.Vot_Reset;
           neu_state.time_in_refractory[heading_spike_event.id] =
             std::numeric_limits<double>::min();
           ras.emplace_back(heading_spike_event);

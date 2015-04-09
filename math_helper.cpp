@@ -1,4 +1,4 @@
-#include <iostream>
+#include <cstdio>
 #include <cmath>
 
 /* poly/solve_cubic.c
