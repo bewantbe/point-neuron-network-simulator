@@ -34,14 +34,14 @@ enum eNeuronModel
 {
   LIF_G,
   LIF_GH,
-  HH
+  HH_GH
 };
 
-struct Ty_LIF_G
+struct Ty_LIF_G_core
 {
   // The neuron model named LIF-G in this code.
   // This is the Leaky Integrate-and-Fire model with jump conductance.
-  double Vot_Threshold   = 1.0;  // voltages are in dimensionless unit
+  double V_threshold   = 1.0;  // voltages are in dimensionless unit
   double Vot_Reset       = 0.0;
   double Vot_Leakage     = 0.0;
   double Vot_Excitatory  = 14.0/3.0;
@@ -112,11 +112,11 @@ struct Ty_LIF_G
   }
 };
 
-struct Ty_LIF_GH
+struct Ty_LIF_GH_core
 {
   // The neuron model named LIF-GH in this code.
   // This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance.
-  double Vot_Threshold   = 1.0;  // voltages are in dimensionless unit
+  double V_threshold   = 1.0;  // voltages are in dimensionless unit
   double Vot_Reset       = 0.0;
   double Vot_Leakage     = 0.0;
   double Vot_Excitatory  = 14.0/3.0;
@@ -218,6 +218,128 @@ struct Ty_LIF_GH
   }
 };
 
+template<typename TyNeuronModel>
+struct Ty_LIF_stepper: public TyNeuronModel
+{
+  using TyNeuronModel::id_V;
+  using TyNeuronModel::id_gE;
+  using TyNeuronModel::V_threshold;
+  using TyNeuronModel::Vot_Reset;
+  using TyNeuronModel::Time_Refractory;
+  using TyNeuronModel::DymInplaceRK4;
+  using TyNeuronModel::NextDtConductance;
+  using TyNeuronModel::GetDv;
+
+  void VoltHandReset(double *dym_val)
+  {
+    dym_val[id_V] = Vot_Reset;
+  }
+
+  // Evolve the ODE and note down the spike time, assuming no reset and no external input.
+  // `spike_time_local' should be guaranteed to be with in [0, dt] or NAN.
+  __attribute__ ((noinline)) void NextStepSingleNeuronContinuous(double *dym_val, double &spike_time_local, double dt) const
+  {
+    double v_n = dym_val[id_V];
+    double k1  = DymInplaceRK4(dym_val, dt);
+
+    if (v_n <= V_threshold
+        && dym_val[id_V ] > V_threshold) {
+      spike_time_local = cubic_hermit_real_root(dt,
+        v_n, dym_val[id_V ],
+        k1, GetDv(dym_val), V_threshold);
+    } else {
+      if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms, LIF,G model
+        // Try capture some missing spikes that the intermediate value passes
+        // threshold, but both ends are lower than threshold.
+        // Get quadratic curve from value of both ends and derivative from left end
+        // Return the maximum point as `t_max_guess'
+        double c = v_n;
+        double b = k1;
+        double a = (dym_val[id_V ] - c - b*dt)/(dt*dt);
+        double t_max_guess = -b/(2*a);
+        // In LIF-G, it can guarantee that a<0 (concave),
+        // hence t_max_guess > 0. But in LIF-G model, we still need to
+        // check 0 < t_max_guess
+        if (0 < t_max_guess && t_max_guess < dt
+            && (b*b)/(-4*a)+c >= V_threshold) {
+          //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
+          dbg_printf("NextStepSingleNeuronContinuous(): possible mid-dt spike detected:\n");
+          dbg_printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
+          // root should in [0, t_max_guess]
+          spike_time_local = cubic_hermit_real_root(dt,
+            v_n, dym_val[id_V ],
+            k1, GetDv(dym_val), V_threshold);
+        } else {
+          spike_time_local = std::numeric_limits<double>::quiet_NaN();
+        }
+      } else {
+        spike_time_local = std::numeric_limits<double>::quiet_NaN();
+      }
+    }
+  }
+
+  // Evolve single neuron as if no external input.
+  // Return first spike time in `spike_time_local', if any.
+  __attribute__ ((noinline)) void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+                           double &spike_time_local, double dt_local)
+  {
+    //! at most one spike allowed during this dt_local
+    if (t_in_refractory == 0) {
+      dbg_printf("NextStepSingleNeuronQuiet(): dt_local = %f:\n", dt_local);
+      dbg_printf("NextStepSingleNeuronQuiet(): begin state=%f,%f,%f\n",
+                 dym_val[0], dym_val[1], dym_val[2]);
+      NextStepSingleNeuronContinuous(dym_val, spike_time_local, dt_local);
+      dbg_printf("NextStepSingleNeuronQuiet(): end   state=%f,%f,%f\n",
+                 dym_val[0], dym_val[1], dym_val[2]);
+      if (!std::isnan(spike_time_local)) {
+        // Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
+        t_in_refractory = dt_local - spike_time_local
+                          + std::numeric_limits<double>::min();
+        dym_val[id_V] = Vot_Reset;
+        dbg_printf("Reach threshold detected\n");
+        if (t_in_refractory >= Time_Refractory) {
+          // Short refractory period (< dt_local), neuron will active again.
+          dt_local = t_in_refractory - Time_Refractory;
+          t_in_refractory = 0;
+          // Back to the activation time.
+          NextDtConductance(dym_val, -dt_local);
+          double spike_time_local_tmp;
+          NextStepSingleNeuronContinuous(dym_val, spike_time_local_tmp, dt_local);
+          if (!std::isnan(spike_time_local_tmp)) {
+            cerr << "NextStepSingleNeuronQuiet(): Multiple spikes in one dt. Interaction dropped." << endl;
+            cerr << "  dt_local = " << dt_local << '\n';
+            cerr << "  spike_time_local = " << spike_time_local << '\n';
+            cerr << "  t_in_refractory = " << t_in_refractory << '\n';
+            cerr << "  dym_val[id_V] = " << dym_val[id_V] << '\n';
+            cerr << "  dym_val[id_gE] = " << dym_val[id_gE] << '\n';
+            throw "Multiple spikes in one dt.";
+          }
+        }
+      }
+    } else {
+      // Neuron in refractory period.
+      double dt_refractory_remain = Time_Refractory
+                                 - t_in_refractory;
+      if (dt_refractory_remain < dt_local) {
+        // neuron will awake after dt_refractory_remain which is in this dt_local
+        NextDtConductance(dym_val, dt_refractory_remain);
+        assert( dym_val[id_V] == Vot_Reset );
+        t_in_refractory = 0;
+        NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
+                            spike_time_local, dt_local - dt_refractory_remain);
+      } else {
+        spike_time_local = std::numeric_limits<double>::quiet_NaN();
+        NextDtConductance(dym_val, dt_local);
+        t_in_refractory += dt_local;
+      }
+    }
+  }
+
+};
+
+typedef Ty_LIF_stepper<Ty_LIF_G_core>  Ty_LIF_G;
+typedef Ty_LIF_stepper<Ty_LIF_GH_core> Ty_LIF_GH;
+
 // Model of HH neuron, with two DE for G
 struct Ty_HH_GH
 {
@@ -318,6 +440,11 @@ struct Ty_HH_GH
     return k1[id_V];
   };
 
+  void VoltHandReset(double *dym_val)
+  {
+    // no force reset required for HH
+  }
+
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const
   {
@@ -327,6 +454,7 @@ struct Ty_HH_GH
     double k1 = DymInplaceRK4(dym_val, dt_local);
     double &v1 = dym_val[id_V];
     if (v0 <= V_threshold && v1 > V_threshold) {
+      printf("what?\n");
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val), V_threshold);
     }
@@ -593,106 +721,6 @@ protected:
     }
   }
 
-  // Evolve the ODE and note down the spike time, assuming no reset and no external input.
-  // `spike_time_local' should be guaranteed to be with in [0, dt] or NAN.
-  __attribute__ ((noinline)) void NextStepSingleNeuronContinuous(double *dym_val, double &spike_time_local, double dt) const
-  {
-    double v_n = dym_val[neuron_model.id_V];
-    double k1  = neuron_model.DymInplaceRK4(dym_val, dt);
-
-    if (v_n <= neuron_model.Vot_Threshold
-        && dym_val[neuron_model.id_V ] > neuron_model.Vot_Threshold) {
-      spike_time_local = cubic_hermit_real_root(dt,
-        v_n, dym_val[neuron_model.id_V ],
-        k1, neuron_model.GetDv(dym_val), neuron_model.Vot_Threshold);
-    } else {
-      if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms, LIF,G model
-        // Try capture some missing spikes that the intermediate value passes
-        // threshold, but both ends are lower than threshold.
-        // Get quadratic curve from value of both ends and derivative from left end
-        // Return the maximum point as `t_max_guess'
-        double c = v_n;
-        double b = k1;
-        double a = (dym_val[neuron_model.id_V ] - c - b*dt)/(dt*dt);
-        double t_max_guess = -b/(2*a);
-        // In LIF-G, it can guarantee that a<0 (concave),
-        // hence t_max_guess > 0. But in LIF-G model, we still need to
-        // check 0 < t_max_guess
-        if (0 < t_max_guess && t_max_guess < dt
-            && (b*b)/(-4*a)+c >= neuron_model.Vot_Threshold) {
-          //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
-          dbg_printf("NextStepSingleNeuronContinuous(): possible mid-dt spike detected:\n");
-          dbg_printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
-          // root should in [0, t_max_guess]
-          spike_time_local = cubic_hermit_real_root(dt,
-            v_n, dym_val[neuron_model.id_V ],
-            k1, neuron_model.GetDv(dym_val), neuron_model.Vot_Threshold);
-        } else {
-          spike_time_local = std::numeric_limits<double>::quiet_NaN();
-        }
-      } else {
-        spike_time_local = std::numeric_limits<double>::quiet_NaN();
-      }
-    }
-  }
-
-  // Evolve single neuron as if no external input.
-  // Return first spike time in `spike_time_local', if any.
-  __attribute__ ((noinline)) void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
-                           double &spike_time_local, double dt_local)
-  {
-    //! at most one spike allowed during this dt_local
-    if (t_in_refractory == 0) {
-      dbg_printf("NextStepSingleNeuronQuiet(): dt_local = %f:\n", dt_local);
-      dbg_printf("NextStepSingleNeuronQuiet(): begin state=%f,%f,%f\n",
-                 dym_val[0], dym_val[1], dym_val[2]);
-      NextStepSingleNeuronContinuous(dym_val, spike_time_local, dt_local);
-      dbg_printf("NextStepSingleNeuronQuiet(): end   state=%f,%f,%f\n",
-                 dym_val[0], dym_val[1], dym_val[2]);
-      if (!std::isnan(spike_time_local)) {
-        // Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
-        t_in_refractory = dt_local - spike_time_local
-                          + std::numeric_limits<double>::min();
-        dym_val[neuron_model.id_V] = neuron_model.Vot_Reset;
-        dbg_printf("Reach threshold detected\n");
-        if (t_in_refractory >= neuron_model.Time_Refractory) {
-          // Short refractory period (< dt_local), neuron will active again.
-          dt_local = t_in_refractory - neuron_model.Time_Refractory;
-          t_in_refractory = 0;
-          // Back to the activation time.
-          neuron_model.NextDtConductance(dym_val, -dt_local);
-          double spike_time_local_tmp;
-          NextStepSingleNeuronContinuous(dym_val, spike_time_local_tmp, dt_local);
-          if (!std::isnan(spike_time_local_tmp)) {
-            cerr << "NextStepSingleNeuronQuiet(): Multiple spikes in one dt. Interaction dropped." << endl;
-            cerr << "  dt_local = " << dt_local << '\n';
-            cerr << "  spike_time_local = " << spike_time_local << '\n';
-            cerr << "  t_in_refractory = " << t_in_refractory << '\n';
-            cerr << "  dym_val[neuron_model.id_V] = " << dym_val[neuron_model.id_V] << '\n';
-            cerr << "  dym_val[neuron_model.id_gE] = " << dym_val[neuron_model.id_gE] << '\n';
-            throw "Multiple spikes in one dt.";
-          }
-        }
-      }
-    } else {
-      // Neuron in refractory period.
-      double dt_refractory_remain = neuron_model.Time_Refractory
-                                 - t_in_refractory;
-      if (dt_refractory_remain < dt_local) {
-        // neuron will awake after dt_refractory_remain which is in this dt_local
-        neuron_model.NextDtConductance(dym_val, dt_refractory_remain);
-        assert( dym_val[neuron_model.id_V] == neuron_model.Vot_Reset );
-        t_in_refractory = 0;
-        NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
-                            spike_time_local, dt_local - dt_refractory_remain);
-      } else {
-        spike_time_local = std::numeric_limits<double>::quiet_NaN();
-        neuron_model.NextDtConductance(dym_val, dt_local);
-        t_in_refractory += dt_local;
-      }
-    }
-  }
-
   // Evolve all neurons without synaptic interaction
   __attribute__ ((noinline)) void NextStepNoInteract(struct TyNeuronalDymState<TyNeuronModel> &tmp_neu_state,
               TySpikeEventVec &spike_events, double dt)
@@ -710,7 +738,7 @@ protected:
                    j, poisson_time_seq.id_seq, poisson_time_seq.size(),
                    poisson_time_seq.Front());
         dbg_printf("Time from %f to %f\n", t_local, poisson_time_seq.Front());
-        NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
+        neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, poisson_time_seq.Front() - t_local);
         if (!std::isnan(spike_time_local)) {
           spike_events.emplace_back(t_local + spike_time_local, j);
@@ -720,7 +748,7 @@ protected:
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
       }
       dbg_printf("Time from %f to %f\n", t_local, t_step_end);
-      NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
+      neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                           spike_time_local, t_step_end - t_local);
       if (!std::isnan(spike_time_local)) {
         spike_events.emplace_back(t_local + spike_time_local, j);
@@ -774,7 +802,7 @@ public:
         }
         // Force the neuron to spike, if not already
         if (!b_heading_spike_pushed) {
-          neu_state.dym_vals(heading_spike_event.id, neuron_model.id_V) = neuron_model.Vot_Reset;
+          neuron_model.VoltHandReset(neu_state.StatePtr(heading_spike_event.id));
           neu_state.time_in_refractory[heading_spike_event.id] =
             std::numeric_limits<double>::min();
           ras.emplace_back(heading_spike_event);
@@ -791,7 +819,7 @@ public:
   void SaneTestVolt()
   {
     for (int j = 0; j < pm.n_total(); j++) {
-      if (neu_state.dym_vals(j, neuron_model.id_V) > neuron_model.Vot_Threshold) {
+      if (neu_state.dym_vals(j, neuron_model.id_V) > neuron_model.V_threshold) {
         neu_state.dym_vals(j, neuron_model.id_V) = 0;
         neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();
       }
@@ -893,6 +921,7 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
   pm.net.makeCompressed();
 }
 
+// Fixme: The template here is a result of bad design (code bloat)
 template<typename TyNeuronModel>
 int MainLoop(const po::variables_map &vm)
 {
@@ -1115,6 +1144,8 @@ int main(int argc, char *argv[])
       e_neuron_model = LIF_G;
     } else if (str_nm == "LIF-GH") {
       e_neuron_model = LIF_GH;
+    } else if (str_nm == "HH-GH") {
+      e_neuron_model = HH_GH;
     } else {
       cerr << "Unrecognized neuron model. See help\n";
       return -1;
@@ -1131,6 +1162,9 @@ int main(int argc, char *argv[])
       break;
     case LIF_GH:
       rt = MainLoop<Ty_LIF_GH>(vm);
+      break;
+    case HH_GH:
+      rt = MainLoop<Ty_HH_GH>(vm);
       break;
     default:
       rt = -1;
