@@ -264,7 +264,7 @@ struct Ty_LIF_stepper: public TyNeuronModel
             && (b*b)/(-4*a)+c >= V_threshold) {
           //dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
           dbg_printf("NextStepSingleNeuronContinuous(): possible mid-dt spike detected:\n");
-          dbg_printf("  Guessed max time: %f, t = %f, dt = %f\n", t_max_guess, t, dt);
+          dbg_printf("  Guessed max time: %f, dt = %f\n", t_max_guess, dt);
           // root should in [0, t_max_guess]
           spike_time_local = cubic_hermit_real_root(dt,
             v_n, dym_val[id_V ],
@@ -345,7 +345,7 @@ struct Ty_HH_GH
 {
   double V_Na = 115;             // mV
   double V_K  = -12;
-  double V_L  =  10.5;
+  double V_L  =  10.6;
   double G_Na = 120;             // mS cm^-2
   double G_K  =  36;
   double G_L  =   0.3;
@@ -356,11 +356,12 @@ struct Ty_HH_GH
   double time_gI    = 0.5;       // ms
   double time_gI_s1 = 7.0;       // ms
   double V_threshold = 15;       // mV, used to determine the spike timing
+  double Time_Refractory = 1.0;  // ms, hard refractory period. Used for correctly locate the firing when change time step
   static const int n_var = 8;
   static const int n_var_soma = 4;
   static const int id_V = 0;
-  static const int id_m = 1;
-  static const int id_h = 2;
+  static const int id_h = 1;
+  static const int id_m = 2;
   static const int id_n = 3;
   static const int id_gE = 4;
   static const int id_gI = 5;
@@ -386,14 +387,14 @@ struct Ty_HH_GH
   void ODE_RHS(const double *dym_val, double *dym_d_val) const
   {
     dym_d_val[id_V] = GetDv(dym_val);
+    dym_d_val[id_h] = (1-dym_val[id_h]) * (0.07*exp(-dym_val[id_V]/20))
+      - dym_val[id_h] / (exp(3-0.1*dym_val[id_V])+1);
     dym_d_val[id_m] = (1-dym_val[id_m])
-        * ((0.1-0.01*dym_val[id_V])/(exp(1-0.1*dym_val[id_V])-1))
-      - dym_val[id_m] * (0.125*exp(-dym_val[id_V]/80));
-    dym_d_val[id_h] = (1-dym_val[id_h])
         * ((2.5-0.1*dym_val[id_V])/(exp(2.5-0.1*dym_val[id_V])-1))
-      - dym_val[id_h] * (4*exp(-dym_val[id_V]/18));
-    dym_d_val[id_n] = (1-dym_val[id_n]) * (0.07*exp(-dym_val[id_V]/20))
-      - dym_val[id_n] / (exp(3-0.1*dym_val[id_V])+1);
+      - dym_val[id_m] * (4*exp(-dym_val[id_V]/18));
+    dym_d_val[id_n] = (1-dym_val[id_n])
+        * ((0.1-0.01*dym_val[id_V])/(exp(1-0.1*dym_val[id_V])-1))
+      - dym_val[id_n] * (0.125*exp(-dym_val[id_V]/80));
     // No RHS for G
   }
 
@@ -448,16 +449,21 @@ struct Ty_HH_GH
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const
   {
-    t_in_refractory = 0;  // pretend no refractory period
     spike_time_local = std::numeric_limits<double>::quiet_NaN();
     double v0 = dym_val[id_V];
     double k1 = DymInplaceRK4(dym_val, dt_local);
     double &v1 = dym_val[id_V];
-    if (v0 <= V_threshold && v1 > V_threshold) {
-      printf("what?\n");
+    //printf("V, m, h, n, gE = %.2f, %.2f, %.2f, %.2f, %.2f\n", dym_val[id_V], dym_val[id_m], dym_val[id_h], dym_val[id_n], dym_val[id_gE]);
+    if (v0 <= V_threshold && v1 > V_threshold && t_in_refractory == 0) {
+      // t_in_refractory == 0 means the neuron is not in hand set refractory period.
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val), V_threshold);
     }
+    t_in_refractory = 0;  // not 100% mathematically safe. Use the hard refractory for that.
+    //t_in_refractory += dt_local;
+    //if (t_in_refractory > Time_Refractory) {
+    //t_in_refractory = 0;
+    //}
   }
 };
 
