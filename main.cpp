@@ -218,6 +218,121 @@ struct Ty_LIF_GH
   }
 };
 
+// Model of HH neuron, with two DE for G
+struct Ty_HH_GH
+{
+  double V_Na = 115;             // mV
+  double V_K  = -12;
+  double V_L  =  10.5;
+  double G_Na = 120;             // mS cm^-2
+  double G_K  =  36;
+  double G_L  =   0.3;
+  double V_gE =  65;             // mV
+  double V_gI = -15;             // mV        
+  double time_gE    = 0.5;       // ms
+  double time_gE_s1 = 3.0;       // ms
+  double time_gI    = 0.5;       // ms
+  double time_gI_s1 = 7.0;       // ms
+  double V_threshold = 15;       // mV, used to determine the spike timing
+  static const int n_var = 8;
+  static const int n_var_soma = 4;
+  static const int id_V = 0;
+  static const int id_m = 1;
+  static const int id_h = 2;
+  static const int id_n = 3;
+  static const int id_gE = 4;
+  static const int id_gI = 5;
+  static const int id_gE_s1 = 6;
+  static const int id_gI_s1 = 7;
+  static const int id_gEInject = id_gE_s1;
+  static const int id_gIInject = id_gI_s1;
+
+  // should be inlined
+  double GetDv(const double *dym_val) const
+  {
+    return
+      -(dym_val[id_V]-V_Na) * G_Na
+        * dym_val[id_h] * dym_val[id_m] * dym_val[id_m] * dym_val[id_m]
+      -(dym_val[id_V]-V_K ) * G_K
+        * dym_val[id_n] * dym_val[id_n] * dym_val[id_n] * dym_val[id_n]
+      -(dym_val[id_V]-V_L ) * G_L
+      -(dym_val[id_V]-V_gE) * dym_val[id_gE]
+      -(dym_val[id_V]-V_gI) * dym_val[id_gI];
+
+  }
+
+  void ODE_RHS(const double *dym_val, double *dym_d_val) const
+  {
+    dym_d_val[id_V] = GetDv(dym_val);
+    dym_d_val[id_m] = (1-dym_val[id_m])
+        * ((0.1-0.01*dym_val[id_V])/(exp(1-0.1*dym_val[id_V])-1))
+      - dym_val[id_m] * (0.125*exp(-dym_val[id_V]/80));
+    dym_d_val[id_h] = (1-dym_val[id_h])
+        * ((2.5-0.1*dym_val[id_V])/(exp(2.5-0.1*dym_val[id_V])-1))
+      - dym_val[id_h] * (4*exp(-dym_val[id_V]/18));
+    dym_d_val[id_n] = (1-dym_val[id_n]) * (0.07*exp(-dym_val[id_V]/20))
+      - dym_val[id_n] / (exp(3-0.1*dym_val[id_V])+1);
+    // No RHS for G
+  }
+
+  double DymInplaceRK4(double *dym_val, double dt) const
+  {
+    double expEC  = exp(-0.5 * dt / time_gE);
+    double expECR = exp(-0.5 * dt / time_gE_s1);
+    double expIC  = exp(-0.5 * dt / time_gI);
+    double expICR = exp(-0.5 * dt / time_gI_s1);
+    double gE_s_coef = (expEC - expECR) * time_gE * time_gE_s1 / (time_gE - time_gE_s1);
+    double gI_s_coef = (expIC - expICR) * time_gI * time_gI_s1 / (time_gI - time_gE_s1);
+
+    double k1[n_var_soma], k2[n_var_soma], k3[n_var_soma], k4[n_var_soma];
+    double dym_val0[n_var_soma];
+    Eigen::Map< Eigen::RowVectorXd > dym_val0_v(dym_val0, n_var_soma);
+    Eigen::Map< Eigen::RowVectorXd > dym_val_v (dym_val , n_var_soma);
+    Eigen::Map< Eigen::RowVectorXd > k1_v(k1, n_var_soma);
+    Eigen::Map< Eigen::RowVectorXd > k2_v(k2, n_var_soma);
+    Eigen::Map< Eigen::RowVectorXd > k3_v(k3, n_var_soma);
+    Eigen::Map< Eigen::RowVectorXd > k4_v(k4, n_var_soma);
+
+    dym_val0_v = dym_val_v;
+    ODE_RHS(dym_val, k1);
+
+    dym_val_v = dym_val0_v + 0.5*dt*k1_v;
+    dym_val[id_gE] = expEC*dym_val[id_gE] + gE_s_coef*dym_val[id_gE_s1];
+    dym_val[id_gI] = expIC*dym_val[id_gI] + gI_s_coef*dym_val[id_gI_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI_s1] *= expICR;
+    ODE_RHS(dym_val, k2);
+
+    dym_val_v = dym_val0_v + 0.5*dt*k2_v;
+    ODE_RHS(dym_val, k3);
+
+    dym_val_v = dym_val0_v + dt*k3_v;
+    dym_val[id_gE] = expEC*dym_val[id_gE] + gE_s_coef*dym_val[id_gE_s1];
+    dym_val[id_gI] = expIC*dym_val[id_gI] + gI_s_coef*dym_val[id_gI_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI_s1] *= expICR;
+    ODE_RHS(dym_val, k4);
+
+    dym_val_v = dym_val0_v + dt/6.0 * (k1_v + 2*k2_v + 2*k3_v + k4_v);
+
+    return k1[id_V];
+  };
+
+  void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+    double &spike_time_local, double dt_local) const
+  {
+    t_in_refractory = 0;  // pretend no refractory period
+    spike_time_local = std::numeric_limits<double>::quiet_NaN();
+    double v0 = dym_val[id_V];
+    double k1 = DymInplaceRK4(dym_val, dt_local);
+    double &v1 = dym_val[id_V];
+    if (v0 <= V_threshold && v1 > V_threshold) {
+      spike_time_local = cubic_hermit_real_root(dt_local,
+        v0, v1, k1, GetDv(dym_val), V_threshold);
+    }
+  }
+};
+
 // Parameters about neuronal system
 struct TyNeuronalParams
 {
