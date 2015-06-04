@@ -16,6 +16,10 @@ $(BIN): $(OBJS)
 	mkdir -p `dirname $(BIN)`
 	$(CXX) $(LDFLAGS) -o $(BIN) $(OBJS) $(LDLIBS)
 
+.PHONY : debug
+debug: CXXFLAGS = -g
+debug: $(BIN)
+
 # Generate prerequisites automatically
 %.d: %.cpp
 	@set -e; rm -f $@; \
@@ -27,5 +31,5 @@ include $(SRCS:.cpp=.d)
 
 .PHONY : clean
 clean:
-	rm $(OBJS) $(BIN)
+	rm -f $(OBJS) $(BIN)
 
