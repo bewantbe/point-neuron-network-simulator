@@ -2,7 +2,24 @@
 //Could faster:
 // g++ -g -O2 -falign-functions=16 -falign-loops=16
 
-#define NDEBUG
+/*
+TODO:
+   1. write a matlab script to call this progrom, e.g. adopt gen_HH()
+   2. correctness check.
+   3. add an interface to convert the parameters from mV to strength. (so easier to read)
+   4. divide NDEBUG to multiple levels.
+   5. speed/accuracy benchmark.
+   6. HH model: use the time of spike top instead of threshold for synaptic interaction.
+   7. split this file?
+   8. speed up GetDv() in HH model. vectorize the exp() for further speed up.
+   9. use sorted spike detection to speed up?
+   10. merge t_in_ref to dym_val?
+   11. possibility to add synaptic delay? add to Poisson event queue?
+   12. isomerisom of neurons in a network?
+
+   */
+
+#define NDEBUG  // disable assert() and disable checks in Eigen
 
 #include <cassert>
 #include "common_header.h"
@@ -164,7 +181,7 @@ struct Ty_LIF_GH_core
   }
 
   // Get instantaneous dv/dt for current dynamical state
-  double GetDv(const double *dym_val) const
+  inline double GetDv(const double *dym_val) const
   {
     return - Con_Leakage * (dym_val[id_V] - Vot_Leakage)
            - dym_val[id_gE] * (dym_val[id_V] - Vot_Excitatory)
@@ -218,19 +235,22 @@ struct Ty_LIF_GH_core
   }
 };
 
+// Adaper for IF type models (only sub-threshold dynamics and need hand reset)
 template<typename TyNeuronModel>
 struct Ty_LIF_stepper: public TyNeuronModel
 {
+  // for template class we need these "using"s. It's a requirement for TyNeuronModel.
   using TyNeuronModel::id_V;
   using TyNeuronModel::id_gE;
   using TyNeuronModel::V_threshold;
   using TyNeuronModel::Vot_Reset;
   using TyNeuronModel::Time_Refractory;
-  using TyNeuronModel::DymInplaceRK4;
-  using TyNeuronModel::NextDtConductance;
   using TyNeuronModel::GetDv;
+  using TyNeuronModel::NextDtConductance;
+  using TyNeuronModel::DymInplaceRK4;
 
-  void VoltHandReset(double *dym_val)
+  // Used when reset the voltage by hand. (e.g. outside this class)
+  inline void VoltHandReset(double *dym_val)
   {
     dym_val[id_V] = Vot_Reset;
   }
@@ -340,7 +360,9 @@ struct Ty_LIF_stepper: public TyNeuronModel
 typedef Ty_LIF_stepper<Ty_LIF_G_core>  Ty_LIF_G;
 typedef Ty_LIF_stepper<Ty_LIF_GH_core> Ty_LIF_GH;
 
-// Model of HH neuron, with two DE for G
+// Model of classical HH neuron,
+// with two ODE for G (See Ty_LIF_GH_core::NextDtConductance() for details).
+// The parameters for G comes from unknown source.
 struct Ty_HH_GH
 {
   double V_Na = 115;             // mV
@@ -349,16 +371,16 @@ struct Ty_HH_GH
   double G_Na = 120;             // mS cm^-2
   double G_K  =  36;
   double G_L  =   0.3;
-  double V_gE =  65;             // mV
+  double V_gE =  65;             // mV, for synaptic
   double V_gI = -15;             // mV        
-  double time_gE    = 0.5;       // ms
-  double time_gE_s1 = 3.0;       // ms
-  double time_gI    = 0.5;       // ms
-  double time_gI_s1 = 7.0;       // ms
-  double V_threshold = 15;       // mV, used to determine the spike timing
-  double Time_Refractory = 1.0;  // ms, hard refractory period. Used for correctly locate the firing when change time step
+  double tau_gE    = 0.5;        // ms, decay time for gE equation
+  double tau_gE_s1 = 3.0;        // ms, decay time for gE_H equation.
+  double tau_gI    = 0.5;        // ms
+  double tau_gI_s1 = 7.0;        // ms
+  double V_threshold = 50;       // mV, determine the spike time for synaptic interaction.
+  //double Time_Refractory = 1.0;  // ms, hard refractory period. Used for correctly locate the firing when change time step
   static const int n_var = 8;
-  static const int n_var_soma = 4;
+  static const int n_var_soma = 4;  // number of variables for soma -- without external G
   static const int id_V = 0;
   static const int id_h = 1;
   static const int id_m = 2;
@@ -370,8 +392,8 @@ struct Ty_HH_GH
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
 
-  // should be inlined
-  double GetDv(const double *dym_val) const
+  // dV/dt term
+  inline double GetDv(const double *dym_val) const
   {
     return
       -(dym_val[id_V]-V_Na) * G_Na
@@ -384,6 +406,7 @@ struct Ty_HH_GH
 
   }
 
+  // Classical HH neuron equations goes here
   void ODE_RHS(const double *dym_val, double *dym_d_val) const
   {
     dym_d_val[id_V] = GetDv(dym_val);
@@ -395,26 +418,29 @@ struct Ty_HH_GH
     dym_d_val[id_n] = (1-dym_val[id_n])
         * ((0.1-0.01*dym_val[id_V])/(exp(1-0.1*dym_val[id_V])-1))
       - dym_val[id_n] * (0.125*exp(-dym_val[id_V]/80));
-    // No RHS for G
+    // No RHS for G here, that is solved explicitly.
   }
 
   double DymInplaceRK4(double *dym_val, double dt) const
   {
-    double expEC  = exp(-0.5 * dt / time_gE);
-    double expECR = exp(-0.5 * dt / time_gE_s1);
-    double expIC  = exp(-0.5 * dt / time_gI);
-    double expICR = exp(-0.5 * dt / time_gI_s1);
-    double gE_s_coef = (expEC - expECR) * time_gE * time_gE_s1 / (time_gE - time_gE_s1);
-    double gI_s_coef = (expIC - expICR) * time_gI * time_gI_s1 / (time_gI - time_gE_s1);
+    // for G. See Ty_LIF_GH_core::NextDtConductance().
+    double expEC  = exp(-0.5 * dt / tau_gE);
+    double expECR = exp(-0.5 * dt / tau_gE_s1);
+    double expIC  = exp(-0.5 * dt / tau_gI);
+    double expICR = exp(-0.5 * dt / tau_gI_s1);
+    double gE_s_coef = (expEC - expECR) * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+    double gI_s_coef = (expIC - expICR) * tau_gI * tau_gI_s1 / (tau_gI - tau_gE_s1);
 
     double k1[n_var_soma], k2[n_var_soma], k3[n_var_soma], k4[n_var_soma];
     double dym_val0[n_var_soma];
-    Eigen::Map< Eigen::RowVectorXd > dym_val0_v(dym_val0, n_var_soma);
-    Eigen::Map< Eigen::RowVectorXd > dym_val_v (dym_val , n_var_soma);
-    Eigen::Map< Eigen::RowVectorXd > k1_v(k1, n_var_soma);
-    Eigen::Map< Eigen::RowVectorXd > k2_v(k2, n_var_soma);
-    Eigen::Map< Eigen::RowVectorXd > k3_v(k3, n_var_soma);
-    Eigen::Map< Eigen::RowVectorXd > k4_v(k4, n_var_soma);
+    // Use template BLAS lib, so some expressions can be written in vector form.
+    typedef Eigen::Map< Eigen::RowVectorXd > TyMapVec;
+    TyMapVec dym_val0_v(dym_val0, n_var_soma);
+    TyMapVec dym_val_v (dym_val , n_var_soma);
+    TyMapVec k1_v(k1, n_var_soma);
+    TyMapVec k2_v(k2, n_var_soma);
+    TyMapVec k3_v(k3, n_var_soma);
+    TyMapVec k4_v(k4, n_var_soma);
 
     dym_val0_v = dym_val_v;
     ODE_RHS(dym_val, k1);
@@ -453,11 +479,12 @@ struct Ty_HH_GH
     double v0 = dym_val[id_V];
     double k1 = DymInplaceRK4(dym_val, dt_local);
     double &v1 = dym_val[id_V];
-    //printf("V, m, h, n, gE = %.2f, %.2f, %.2f, %.2f, %.2f\n", dym_val[id_V], dym_val[id_m], dym_val[id_h], dym_val[id_n], dym_val[id_gE]);
+    // See if neuron is firing. t_in_refractory == 0 means the neuron 
+    // is not in hand set refractory period, avoids kind of infinite loop.
     if (v0 <= V_threshold && v1 > V_threshold && t_in_refractory == 0) {
-      // t_in_refractory == 0 means the neuron is not in hand set refractory period.
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val), V_threshold);
+      // Some redundant calculation of GetDv(). Let's leave it.
     }
     t_in_refractory = 0;  // not 100% mathematically safe. Use the hard refractory for that.
     //t_in_refractory += dt_local;
@@ -467,7 +494,7 @@ struct Ty_HH_GH
   }
 };
 
-// Parameters about neuronal system
+// Parameters about neuronal system, Especially the interactions.
 struct TyNeuronalParams
 {
   int n_E, n_I;    // Number of neurons, Excitatory and Inhibitory type
@@ -478,7 +505,7 @@ struct TyNeuronalParams
   // TODO: maybe add Inhibitory Poisson input?
   //TyArrVals arr_psi;
 
-  int n_total() const
+  inline int n_total() const
   { return n_E + n_I; }
 
   // should use this this function to initialize neurons
@@ -498,7 +525,7 @@ struct TyNeuronalParams
   }
 };
 
-// Dynamical variables (V and G etc) for the neuron system
+// All dynamical variables (V and G etc) for the neuron system
 template<typename TyNeuronModel>
 struct TyNeuronalDymState
 {
@@ -565,6 +592,7 @@ struct TySpikeEvent
   { return time == b.time && id == b.id; }
 };
 
+// Can be used to sort spikes increasely.
 typedef std::priority_queue<
     TySpikeEvent,
     std::vector<TySpikeEvent>,
@@ -680,10 +708,11 @@ public:
 
 /**
   Solver for pulsed coupled neuron model:
-    After a test step (without synaptic interaction), then evolve the system
+    After a test step (without synaptic interaction), evolve the system
     to the time of the first spike in this delta-t step, perform the synaptic
     interaction. Then start another test step for the remaining interval,
     recursively until there is no spike in the remaining interval.
+  The template parameter TyNeuronModel fully describes the single neuron dynamics.
 */
 template<typename TyNeuronModel>
 class NeuronSimulatorExactSpikeSeqEvolve
@@ -768,16 +797,16 @@ public:
   __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
-    struct TySpikeEvent heading_spike_event(std::numeric_limits<double>::quiet_NaN(), -1);
     struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
+    struct TySpikeEvent heading_spike_event(std::numeric_limits<double>::quiet_NaN(), -1);
     TySpikeEventVec spike_events;
 
     dbg_printf("===== NextDt(): t = %f .. %f\n", t, t_end);
     poisson_time_vec.SaveIdxAndClean();
     while (true) {
       spike_events.clear();
-      bk_neu_state = neu_state;                    // make a backup
-      NextStepNoInteract(neu_state, spike_events, t_end - t);  // Try evolve till the end
+      bk_neu_state = neu_state;
+      NextStepNoInteract(neu_state, spike_events, t_end - t);  // Try evolve till the step end
       if (spike_events.empty()) {
         t = t_end;
         break;
@@ -787,18 +816,18 @@ public:
         dbg_printf("Neuron [%d] spike at t = %f\n",
                    heading_spike_event.id, heading_spike_event.time);
         // Really evolve the whole system.
-        poisson_time_vec.RestoreIdx();
+        poisson_time_vec.RestoreIdx();             // replay the poisson events
         spike_events.clear();
         neu_state = bk_neu_state;
         NextStepNoInteract(neu_state, spike_events, heading_spike_event.time - t);
-        // Record all spike events during the time step above
-        // Ideally, there should be only one event: heading_spike_event
+        // Record all spike events during the time step above.
+        // Ideally, there should be only one event: heading_spike_event.
         bool b_heading_spike_pushed = false;
         for (size_t i = 0; i < spike_events.size(); i ++) {
           if (spike_events[i].id == heading_spike_event.id) {
             b_heading_spike_pushed = true;
           } else {
-            cout << "Unexpected spike (spike before \"first\" spike):  [" << i << "] id = " << spike_events[i].id << " time = " << spike_events[i].time << "\n";
+            cerr << "Unexpected spike (spike before \"first\" spike):  [" << i << "] id = " << spike_events[i].id << " time = " << spike_events[i].time << "\n";
           }
           // Here does not do `ras.emplace_back(spike_events[i])' because
           // effectively the spike interaction are done at the same time.
@@ -806,7 +835,7 @@ public:
           vec_n_spike[spike_events[i].id]++;
           SynapticInteraction(neu_state, spike_events[i]);
         }
-        // Force the neuron to spike, if not already
+        // Force the neuron to spike, if not already.
         if (!b_heading_spike_pushed) {
           neuron_model.VoltHandReset(neu_state.StatePtr(heading_spike_event.id));
           neu_state.time_in_refractory[heading_spike_event.id] =
