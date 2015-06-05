@@ -24,6 +24,7 @@ TODO:
 #include <cassert>
 #include "common_header.h"
 #include "math_helper.h"
+#include "legacy_lib.h"
 
 // Fast function calculation for exp(x)
 #include "fmath.hpp"
@@ -1014,17 +1015,40 @@ int MainLoop(const po::variables_map &vm)
     return 2;
   }
 
+  auto fout_try_open = [&vm](const std::string &st_id, std::fstream fs)
+    -> bool {
+      if (vm.count(st_id)) {
+        std::string st_path = vm[st_id].as<std::string>();
+        CheckDirAndCreate( st_path );
+        fs.open( st_path );
+        if (!fs) {
+          cerr << "Error: Failed to open file \"" << st_path << "\" for output." << "\n";
+          throw "Failed to open file";
+        }
+        return true;
+      } else {
+        return false;
+      }
+    };
+
   std::ofstream fout_volt;
   bool output_volt = false;
   if (vm.count("volt-path")) {
     output_volt = true;
-    fout_volt.open( vm["volt-path"].as<std::string>() );
+    std::string st_path = vm["volt-path"].as<std::string>();
+    //CheckDirAndCreate( st_path );
+    fout_volt.open( st_path );
+    if (!fout_volt) {
+      cerr << "Error: Failed to open file \"" << st_path << "\" for output." << "\n";
+      throw "Failed to open file";
+    }
   }
 
   std::ofstream fout_G;    // G: conductance
   bool output_G = false;
   if (vm.count("conductance-path")) {
     output_G = true;
+    //CheckDirAndCreate( vm["conductance-path"].as<std::string>() );
     fout_G.open( vm["conductance-path"].as<std::string>() );
   }
 
@@ -1032,6 +1056,7 @@ int MainLoop(const po::variables_map &vm)
   bool output_ras = false;
   if (vm.count("ras-path")) {
     output_ras = true;
+    //CheckDirAndCreate( vm["ras-path"].as<std::string>() );
     fout_ras.open( vm["ras-path"].as<std::string>() );
     fout_ras.precision(17);
   }
@@ -1115,7 +1140,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH")
+       "One of LIF-G, LIF-GH, HH-GH")
       ("help,h",
        "produce help message")
       ("t",    po::value<double>()->default_value(1e4),
@@ -1148,6 +1173,10 @@ int main(int argc, char *argv[])
        "Poisson input rate, inhibitory type")
       ("pr-mul", po::value<double>()->multitoken(),
        "Poisson input rate multiper")
+      ("seed",   po::value<unsigned int>()->default_value(1),
+       "Random seed for Poisson events. An unsigned integer (0~2^32-1).")
+      ("seed-auto",
+       "Auto set random seed. This option overrides --seed.")
       ("volt-path,o",      po::value<std::string>(),
        "volt output file path")
       ("ras-path",         po::value<std::string>(),
@@ -1161,6 +1190,9 @@ int main(int argc, char *argv[])
       ("input-event-path", po::value<std::string>(),
        "Input event file path")
   ;
+  // ps-mul
+  // verbose : for progress percentage
+  // filter
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -1169,6 +1201,15 @@ int main(int argc, char *argv[])
   if (vm.count("help")) {
     cout << desc << "\n";
     return 1;
+  }
+
+  if (vm.count("seed")) {
+    rand_eng.seed( vm["seed"].as<unsigned int>() );
+  }
+  if (vm.count("seed-auto")) {
+    std::random_device rd;
+    std::seed_seq sseq{rd(), rd()};
+    rand_eng.seed( sseq );
   }
 
   // Set neuron model

@@ -8,8 +8,8 @@ LDFLAGS =
 LDLIBS = -lboost_program_options
 
 # Targets and source files
-BIN = bin/vec_IFsimu
-SRCS = main.cpp math_helper.cpp
+BIN = bin/gen_neu
+SRCS = main.cpp math_helper.cpp legacy_lib.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 $(BIN): $(OBJS)
@@ -27,9 +27,10 @@ debug: $(BIN)
 	  sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	  rm -f $@.$$$$
 
-include $(SRCS:.cpp=.d)
+SRCDEP = $(SRCS:.cpp=.d)
+include $(SRCDEP)
 
 .PHONY : clean
 clean:
-	rm -f $(OBJS) $(BIN)
+	rm -f $(OBJS) $(BIN) $(SRCDEP)
 
