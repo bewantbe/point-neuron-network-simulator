@@ -4,7 +4,7 @@
 
 /*
 TODO:
-   1. write a matlab script to call this progrom, e.g. adopt gen_HH()
+   1. write a matlab script to call this progrom, e.g. adopt gen_HH()--done
    2. correctness check.
    3. add an interface to convert the parameters from mV(PSP) to strength. (so easier to read)
    4. divide NDEBUG to multiple levels.
@@ -1015,7 +1015,7 @@ int MainLoop(const po::variables_map &vm)
     return 2;
   }
 
-  auto fout_try_open = [&vm](const std::string &st_id, std::fstream fs)
+  auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
     -> bool {
       if (vm.count(st_id)) {
         std::string st_path = vm[st_id].as<std::string>();
@@ -1032,32 +1032,14 @@ int MainLoop(const po::variables_map &vm)
     };
 
   std::ofstream fout_volt;
-  bool output_volt = false;
-  if (vm.count("volt-path")) {
-    output_volt = true;
-    std::string st_path = vm["volt-path"].as<std::string>();
-    //CheckDirAndCreate( st_path );
-    fout_volt.open( st_path );
-    if (!fout_volt) {
-      cerr << "Error: Failed to open file \"" << st_path << "\" for output." << "\n";
-      throw "Failed to open file";
-    }
-  }
+  bool output_volt = fout_try_open("volt-path", fout_volt);
 
   std::ofstream fout_G;    // G: conductance
-  bool output_G = false;
-  if (vm.count("conductance-path")) {
-    output_G = true;
-    //CheckDirAndCreate( vm["conductance-path"].as<std::string>() );
-    fout_G.open( vm["conductance-path"].as<std::string>() );
-  }
+  bool output_G = fout_try_open("conductance-path", fout_G);
 
   std::ofstream fout_ras;
-  bool output_ras = false;
-  if (vm.count("ras-path")) {
-    output_ras = true;
-    //CheckDirAndCreate( vm["ras-path"].as<std::string>() );
-    fout_ras.open( vm["ras-path"].as<std::string>() );
+  bool output_ras = fout_try_open("ras-path", fout_ras);
+  if (output_ras) {
     fout_ras.precision(17);
   }
 
@@ -1077,15 +1059,18 @@ int MainLoop(const po::variables_map &vm)
     cout << "input event loaded!" << endl;
   }
 
-  if (output_volt) {
-    for (int j = 0; j < pm.n_total(); j++) {
-      fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_V), sizeof(double));
+  if (vm.count("output-first-data-point"))
+  {
+    if (output_volt) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_V), sizeof(double));
+      }
     }
-  }
-  if (output_G) {
-    for (int j = 0; j < pm.n_total(); j++) {
-      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gE), sizeof(double));
-      fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gI), sizeof(double));
+    if (output_G) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gE), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gI), sizeof(double));
+      }
     }
   }
 
@@ -1140,9 +1125,11 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-GH")
+       "one of LIF-G, LIF-GH, HH-GH")
       ("help,h",
        "produce help message")
+      ("verbose,v",
+       "show progress.")
       ("t",    po::value<double>()->default_value(1e4),
        "simulation time")
       ("dt",   po::value<double>()->default_value(1.0/2),
@@ -1189,10 +1176,13 @@ int main(int argc, char *argv[])
        "initial state file path")
       ("input-event-path", po::value<std::string>(),
        "Input event file path")
+      ("output-first-data-point",
+       "Also output initial condition in volt-path or conductance-path.")
   ;
   // ps-mul
   // verbose : for progress percentage
   // filter
+  // vector input
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -1203,6 +1193,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  // Set random seed for Poisson event generator.
   if (vm.count("seed")) {
     rand_eng.seed( vm["seed"].as<unsigned int>() );
   }

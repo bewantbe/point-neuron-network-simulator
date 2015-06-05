@@ -1,4 +1,4 @@
-# Project: vec_IFsimu
+# Project: point-neuron-network-simulator
 
 # variables for implicit rules
 CXX = g++
