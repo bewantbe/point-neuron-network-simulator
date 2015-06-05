@@ -6,7 +6,7 @@
 TODO:
    1. write a matlab script to call this progrom, e.g. adopt gen_HH()
    2. correctness check.
-   3. add an interface to convert the parameters from mV to strength. (so easier to read)
+   3. add an interface to convert the parameters from mV(PSP) to strength. (so easier to read)
    4. divide NDEBUG to multiple levels.
    5. speed/accuracy benchmark.
    6. HH model: use the time of spike top instead of threshold for synaptic interaction.
@@ -17,7 +17,7 @@ TODO:
    11. possibility to add synaptic delay? add to Poisson event queue?
    12. isomerisom of neurons in a network?
 
-   */
+*/
 
 #define NDEBUG  // disable assert() and disable checks in Eigen
 
