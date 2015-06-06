@@ -9,7 +9,7 @@ LDLIBS = -lboost_program_options
 
 # Targets and source files
 BIN = bin/gen_neu
-SRCS = main.cpp math_helper.cpp legacy_lib.cpp
+SRCS = main.cpp math_helper.cpp legacy_lib.cpp neuron_system_utils.cpp poisson_generator.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 $(BIN): $(OBJS)
