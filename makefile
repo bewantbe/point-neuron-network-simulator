@@ -20,6 +20,15 @@ $(BIN): $(OBJS)
 debug: CXXFLAGS = -g
 debug: $(BIN)
 
+.PHONY : debug-O2
+debug-O2: CXXFLAGS = -g -O2 -fno-omit-frame-pointer
+debug-O2: $(BIN)
+
+.PHONY : debug-O2-gprof
+debug-O2-gprof: CXXFLAGS = -pg -g -O2
+debug-O2-gprof: LDFLAGS = -pg -g -O2
+debug-O2-gprof: $(BIN)
+
 # Generate prerequisites automatically
 %.d: %.cpp
 	@set -e; rm -f $@; \

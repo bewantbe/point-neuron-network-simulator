@@ -7,7 +7,7 @@ TODO:
    1. write a matlab script to call this progrom, e.g. adopt gen_HH()--done
    2. correctness check.
    3. add an interface to convert the parameters from mV(PSP) to strength. (so easier to read)
-   4. divide NDEBUG to multiple levels.
+   4. divide NDEBUG in to multiple levels.
    5. speed/accuracy benchmark.
    6. HH model: use the time of spike top instead of threshold for synaptic interaction.
    7. split this file?
@@ -361,7 +361,7 @@ struct Ty_LIF_stepper: public TyNeuronModel
 typedef Ty_LIF_stepper<Ty_LIF_G_core>  Ty_LIF_G;
 typedef Ty_LIF_stepper<Ty_LIF_GH_core> Ty_LIF_GH;
 
-// Model of classical HH neuron,
+// Model of classical Hodgkin-Huxley (HH) neuron,
 // with two ODE for G (See Ty_LIF_GH_core::NextDtConductance() for details).
 // The parameters for G comes from unknown source.
 struct Ty_HH_GH
@@ -381,7 +381,7 @@ struct Ty_HH_GH
   double V_threshold = 50;       // mV, determine the spike time for synaptic interaction.
   //double Time_Refractory = 1.0;  // ms, hard refractory period. Used for correctly locate the firing when change time step
   static const int n_var = 8;
-  static const int n_var_soma = 4;  // number of variables for soma -- without external G
+  static const int n_var_soma = 4;  // number of variables for non- G part
   static const int id_V = 0;
   static const int id_h = 1;
   static const int id_m = 2;
@@ -795,6 +795,10 @@ protected:
 
 public:
   // Evolve the whole system one dt, with interaction
+  // Time cost:
+  //   # calls to NextStepSingleNeuronQuiet(): p*T/dt + p*pr*T + 2*p*p*fr*T
+  //   synaptic interaction: (# of edges)*fr*T.
+  // where the fr is mean firing rate over all neurons.
   __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
