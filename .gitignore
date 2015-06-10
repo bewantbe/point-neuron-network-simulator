@@ -3,9 +3,14 @@
 \#*\#
 tags
 *.o
+*.d
 *.layout
+*.mex
 .cccc/
 .ycm_extra_conf.pyc
+gmon.out
+perf.data
+perf.data.old
 bin/
 obj/
 eigen3/

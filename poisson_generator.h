@@ -96,6 +96,13 @@ public:
     }
   }
 
+  void RestoreIdx(const std::vector<int> &ids)
+  {
+    for (const int &id : ids) {
+      operator[](id).id_seq = id_seq_vec[id];
+    }
+  }
+
   void SaveIdxAndClean()
   {
     int j = 0;
@@ -105,6 +112,18 @@ public:
         dbg_printf("  ( %d-th TyPoissonTimeSeq size shrinked )\n", j);
       }
       id_seq_vec[j] = it->id_seq;
+    }
+  }
+
+  void SaveIdxAndClean(const std::vector<int> &ids)
+  {
+    for (const int &id : ids) {
+      auto it = begin() + id;
+      if (it->size() - it->id_seq < it->id_seq / 7) {  // The factor here is non-critical
+        it->Shrink();
+        dbg_printf("  ( %d-th TyPoissonTimeSeq size shrinked )\n", id);
+      }
+      id_seq_vec[id] = it->id_seq;
     }
   }
 };

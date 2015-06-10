@@ -38,7 +38,7 @@ double g_rand()
 }
 
 // Fixme: The template here is a result of bad design (code bloat)
-template<typename TyNeuronModel>
+template<template<typename> class NeuronSimulator, typename TyNeuronModel>
 int MainLoop(const po::variables_map &vm)
 {
   TyNeuronModel neuron_model;
@@ -124,7 +124,7 @@ int MainLoop(const po::variables_map &vm)
   }
 
   // simulator for the neural network
-  NeuronSimulatorExactSpikeSeqEvolve<TyNeuronModel> neu_simu(neuron_model, pm, e_dt);
+  NeuronSimulator<TyNeuronModel> neu_simu(neuron_model, pm, e_dt);
 
   if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(neu_simu.neu_state,
@@ -305,13 +305,13 @@ int main(int argc, char *argv[])
   int rt = 0;
   switch (e_neuron_model) {
     case LIF_G:
-      rt = MainLoop<Ty_LIF_G>(vm);
+      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_G>(vm);
       break;
     case LIF_GH:
-      rt = MainLoop<Ty_LIF_GH>(vm);
+      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_GH>(vm);
       break;
     case HH_GH:
-      rt = MainLoop<Ty_HH_GH>(vm);
+      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_HH_GH>(vm);
       break;
     default:
       rt = -1;

@@ -57,7 +57,12 @@ struct TyNeuronalDymState
   }
 
   // Pointer to the state of j-th neuron
-  double *StatePtr(int j)
+  inline double *StatePtr(int j)
+  {
+    return dym_vals.data() + j * dym_vals.cols();
+  }
+
+  inline const double *StatePtr(int j) const
   {
     return dym_vals.data() + j * dym_vals.cols();
   }
@@ -67,6 +72,15 @@ struct TyNeuronalDymState
     dym_vals.resize(pm.n_total(), TyNeuronModel::n_var);
     time_in_refractory.resize(pm.n_total());
     Zeros();
+  }
+  
+  void ScatterCopy(const struct TyNeuronalDymState<TyNeuronModel> &nd,
+      const std::vector<int> &ids)
+  {
+    for (size_t i = 0; i < ids.size(); i++) {
+      memcpy(StatePtr(ids[i]), nd.StatePtr(ids[i]),
+          sizeof(double)*TyNeuronModel::n_var);
+    }
   }
 
   TyNeuronalDymState()
