@@ -253,20 +253,26 @@ public:
   // Save spike events in this `dt' in `ras',
   // and add spike count to `vec_n_spike'.
   // This version also roll back the firing neuron
+
+  std::vector<int> ids_affected;             // index of affected neurons
+  std::vector<bool> bool_affected;           // hash for `ids_affected'
+
+  // `bk_neu_state' is state at time `bk_state_time'
+  TyArrVals bk_state_time;
+  struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
+
   __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
 
     struct TySpikeEvent heading_spike_event(qNaN, -1);
-    std::vector<int> ids_affected;             // index of affected neurons
-    std::vector<bool> bool_affected;           // hash for `ids_affected'
+    ids_affected.clear();
+    bool_affected.clear();
     for (int i = 0; i < pm.n_total(); i++) {
       bool_affected.push_back(false);
     }
 
-    // `bk_neu_state' is state at time `bk_state_time'
-    TyArrVals bk_state_time(pm.n_total());
-    struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
+    bk_state_time.resize(pm.n_total());
 
     // `spike_events' holds spike events between `bk_state_time' and `t_end'
     TySpikeEventVec spike_events;
