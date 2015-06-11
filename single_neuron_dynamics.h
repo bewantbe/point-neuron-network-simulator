@@ -278,7 +278,7 @@ struct Ty_LIF_stepper: public TyNeuronModel
         t_in_refractory = dt_local - spike_time_local
                           + std::numeric_limits<double>::min();
         dym_val[id_V] = Vot_Reset;
-        dbg_printf("Reach threshold detected\n");
+        dbg_printf("Reach threshold detected. Neuron reseted.\n");
         if (t_in_refractory >= Time_Refractory) {
           // Short refractory period (< dt_local), neuron will active again.
           dt_local = t_in_refractory - Time_Refractory;

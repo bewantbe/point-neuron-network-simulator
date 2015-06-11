@@ -33,15 +33,18 @@ s_cmd_speed_target = {
 
 %system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G-Sparse ' s_cmd_speed_target{1}]);
 
-pam = '--t 1e3 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012 -o r_volt.dat --conductance-path=r_cond.dat --ras-path=r_ras.txt';
-system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G ' pam]);
+pamcomm = '--t 1e4 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012';
 
-pam = '--t 1e3 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012 -o v_volt.dat --conductance-path=v_cond.dat --ras-path=v_ras.txt';
-system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G-Sparse ' pam]);
+pamcomm = '--t 1e4 --dt 0.5 --stv 0.5 --nE 200 --net - --scee 0.0001e-299 --scie 0.0001e-299 --scei 0.0002e-299 --scii 0.0002e-299 --ps 0.012';
 
-p = 2;
+pam0 = ' -o r_volt.dat --conductance-path=r_cond.dat --ras-path=r_ras.txt';
+system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G ' pamcomm pam0]);
+pam1 = ' -o v_volt.dat --conductance-path=v_cond.dat --ras-path=v_ras.txt';
+system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G-Sparse ' pamcomm pam1]);
+
+p = 200;
 stv = 0.5;
-len = 1e3/stv;
+len = 1e4/stv;
 
 s_t = stv*(1:len);
 X0 = ReadDouble('r_volt.dat', p);
@@ -58,13 +61,4 @@ aX1 = X1 + cumsum(ST1, 2);
 figure(1);
 plot(s_t, aX0-aX1);
 title('X0-X1');
-
-
-figure(1);
-plot(s_t, X0-X1, s_t, ST0, s_t, ST1);
-title('X0-X1');
-
-figure(2);
-plot(s_t, X0, s_t, ST0);
-title('X0');
 

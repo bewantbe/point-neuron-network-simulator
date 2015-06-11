@@ -76,12 +76,14 @@ struct TyNeuronalDymState
     Zeros();
   }
   
+  // this[ids] = nd[ids]
   void ScatterCopy(const struct TyNeuronalDymState<TyNeuronModel> &nd,
       const std::vector<int> &ids)
   {
-    for (size_t i = 0; i < ids.size(); i++) {
-      memcpy(StatePtr(ids[i]), nd.StatePtr(ids[i]),
+    for (const int &id : ids) {
+      memcpy(StatePtr(id), nd.StatePtr(id),
           sizeof(double)*TyNeuronModel::n_var);
+      time_in_refractory[id] = nd.time_in_refractory[id];
     }
   }
 

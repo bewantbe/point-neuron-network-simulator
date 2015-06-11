@@ -217,17 +217,17 @@ protected:
   {
     for (size_t jj = 0; jj < ids_affected.size(); jj++) {
       int j = ids_affected[jj];
-      dbg_printf("----- Trying t = %f .. %f -------\n", bk_state_time[j], t_step_end);
+      dbg_printf("----- NextStepNoInteractToTime(), Neuron %d, t = %f .. %f\n", j, bk_state_time[j], t_step_end);
       //! tmp_neu_state.dym_vals must be Row major !
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
       double *dym_val = tmp_neu_state.StatePtr(j);
       double t_local = bk_state_time[j];
       double spike_time_local = qNaN;
       while (poisson_time_seq.Front() < t_step_end) {
-        dbg_printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
-                   j, poisson_time_seq.id_seq, poisson_time_seq.size(),
+        dbg_printf("  receive %lu-th (%lu) Poisson input at %f\n",
+                   poisson_time_seq.id_seq, poisson_time_seq.size(),
                    poisson_time_seq.Front());
-        dbg_printf("Time from %f to %f\n", t_local, poisson_time_seq.Front());
+        dbg_printf("  time from %f to %f\n", t_local, poisson_time_seq.Front());
         neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, poisson_time_seq.Front() - t_local);
         if (!std::isnan(spike_time_local)) {
@@ -237,13 +237,13 @@ protected:
         dym_val[neuron_model.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
       }
-      dbg_printf("Time from %f to %f\n", t_local, t_step_end);
+      dbg_printf("  time from %f to %f\n", t_local, t_step_end);
       neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                           spike_time_local, t_step_end - t_local);
       if (!std::isnan(spike_time_local)) {
         spike_events.emplace_back(t_local + spike_time_local, j);
       }
-      dbg_printf("Neuron %d @t=%f end state %f, %f, %f\n", j, t_step_end, dym_val[0], dym_val[1], dym_val[2]);
+      dbg_printf("  t=%f end state: %f, %f, %f\n", t_step_end, dym_val[0], dym_val[1], dym_val[2]);
     }
   }
 
@@ -258,8 +258,11 @@ public:
     struct TySpikeEvent heading_spike_event(qNaN, -1);
     std::vector<int> ids_affected;             // index of affected neurons
     std::vector<bool> bool_affected;           // hash for `ids_affected'
-    for (int i = 0; i < pm.n_total(); i++)
+    std::vector<bool> bool_fired;  // assume one neuron can not fire twice in one dt
+    for (int i = 0; i < pm.n_total(); i++) {
       bool_affected.push_back(false);
+      bool_fired.push_back(false);
+    }
 
     // `bk_neu_state' is state at time `bk_state_time'
     TyArrVals bk_state_time(pm.n_total());
@@ -284,17 +287,21 @@ public:
       auto heading_it = std::min_element(spike_events.begin(), spike_events.end());
       heading_spike_event = *heading_it;
       spike_events.erase(heading_it);     // "pop" the event
-      dbg_printf("Neuron [%d] spike at t = %f\n",
-                 heading_spike_event.id, heading_spike_event.time);
+      bool_fired[heading_spike_event.id] = true;
+      dbg_printf("Dealing neuron %d spike at t = %f. Spikes left: %lu\n",
+                 heading_spike_event.id, heading_spike_event.time, spike_events.size());
 
       // Find the index of affected neurons. Not including the spiking one.
       for (const int &id : ids_affected)  // remove hash of last loop
         bool_affected[id] = false;
       ids_affected.clear();
+      dbg_printf("  Affected neurons:");
       for (SparseMat::InnerIterator it(pm.net, heading_spike_event.id); it; ++it) {
         ids_affected.push_back(it.row());
         bool_affected[it.row()] = true;
+        dbg_printf("  %d", it.row());
       }
+      dbg_printf(".\n");
 
       // Roll back the affected neurons.
       neu_state.ScatterCopy(bk_neu_state, ids_affected);
@@ -310,6 +317,8 @@ public:
         tmp_spike_events, heading_spike_event.time);
       // deal with unexpected spikes
       for (size_t i = 0; i < tmp_spike_events.size(); i++) {
+        if (bool_fired[tmp_spike_events[i].id])
+          continue;
         // possible extra spikes due to inaccurate computation
         cerr << "Unexpected spike (spike before \"first\" spike):  ["
           << i << "] id = " << tmp_spike_events[i].id
@@ -330,8 +339,14 @@ public:
       poisson_time_vec.SaveIdxAndClean(ids_affected);
 
       // Evolve the affected neurons to t_end. (test step)
+      tmp_spike_events.clear();
       NextStepNoInteractToTime(neu_state, bk_state_time, ids_affected,
-        spike_events, t_end);
+        tmp_spike_events, t_end);
+      for (size_t i = 0; i < tmp_spike_events.size(); i++) {
+        if (bool_fired[tmp_spike_events[i].id])
+          continue;
+        spike_events.emplace_back(tmp_spike_events[i]);
+      }
     }
     t = t_end;
   }
