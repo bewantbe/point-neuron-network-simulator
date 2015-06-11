@@ -2,7 +2,7 @@
 
 # variables for implicit rules
 CXX = g++
-CPPFLAGS = -std=c++11 -Wall
+CPPFLAGS = -std=c++11 -Wall --pedantic -Wextra -Wno-unused-parameter
 CXXFLAGS = -g -O2
 LDFLAGS = 
 LDLIBS = -lboost_program_options

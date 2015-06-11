@@ -3,6 +3,8 @@
 
 #include "common_header.h"
 
+static const double qNaN = std::numeric_limits<double>::quiet_NaN();
+
 /* 
  * Structures and types (i.e. container) for neuronal system.
  */
@@ -94,7 +96,7 @@ struct TySpikeEvent
 
   TySpikeEvent()
   {
-    time = std::numeric_limits<double>::quiet_NaN();
+    time = qNaN;
     id = -1;
   }
 
