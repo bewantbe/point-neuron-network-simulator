@@ -33,9 +33,9 @@ s_cmd_speed_target = {
 
 %system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G-Sparse ' s_cmd_speed_target{1}]);
 
-pamcomm = '--t 1e4 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012';
+pamcomm = '--t 1e4 --dt 0.5 --stv 0.5 --nE 200 --net - --scee 0.0 --scie 0.0 --scei 0.0 --scii 0.0 --ps 0.012';
 
-pamcomm = '--t 1e4 --dt 0.5 --stv 0.5 --nE 200 --net - --scee 0.0001e-299 --scie 0.0001e-299 --scei 0.0002e-299 --scii 0.0002e-299 --ps 0.012';
+%pamcomm = '--t 1e3 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012';
 
 pam0 = ' -o r_volt.dat --conductance-path=r_cond.dat --ras-path=r_ras.txt';
 system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G ' pamcomm pam0]);
