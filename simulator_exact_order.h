@@ -189,23 +189,33 @@ class NeuronSimulatorExactSpikeOrderSparse
 {
   // Declare member variable/function for this template class.
   typedef NeuronSimulatorExactSpikeOrder<TyNeuronModel> NSE;
+  using NSE::NextStepNoInteract;
+  using NSE::SynapticInteraction;
+
+public:
   using NSE::t;
   using NSE::dt;
   using NSE::pm;
   using NSE::neu_state;
   using NSE::neuron_model;
   using NSE::poisson_time_vec;
-  using NSE::NextStepNoInteract;
 
+  NeuronSimulatorExactSpikeOrderSparse(const TyNeuronModel &_neuron_model,
+    const TyNeuronalParams &_pm, double _dt)
+    :NeuronSimulatorExactSpikeOrder<TyNeuronModel>(_neuron_model, _pm, _dt)
+  {
+  }
+
+protected:
   // Evolve all neurons without synaptic interaction
   __attribute__ ((noinline)) void NextStepNoInteractToTime(
       struct TyNeuronalDymState<TyNeuronModel> &tmp_neu_state,
-      std::vector<int> bk_state_time,
+      const TyArrVals &bk_state_time,
       const std::vector<int> &ids_affected,
       TySpikeEventVec &spike_events,
       double t_step_end)
   {
-    for (int jj = 0; jj < ids_affected.size(); jj++) {
+    for (size_t jj = 0; jj < ids_affected.size(); jj++) {
       int j = ids_affected[jj];
       dbg_printf("----- Trying t = %f .. %f -------\n", bk_state_time[j], t_step_end);
       //! tmp_neu_state.dym_vals must be Row major !
@@ -248,7 +258,7 @@ public:
     struct TySpikeEvent heading_spike_event(qNaN, -1);
     std::vector<int> ids_affected;             // index of affected neurons
     std::vector<bool> bool_affected;           // hash for `ids_affected'
-    for (size_t i = 0; i < pm.n_total(); i++)
+    for (int i = 0; i < pm.n_total(); i++)
       bool_affected.push_back(false);
 
     // `bk_neu_state' is state at time `bk_state_time'

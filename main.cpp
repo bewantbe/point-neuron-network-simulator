@@ -16,7 +16,7 @@ TODO:
    * isomerisom of neurons in a network?
 */
 
-#define NDEBUG  // disable assert() and disable checks in Eigen
+//#define NDEBUG  // disable assert() and disable checks in Eigen
 
 #include <cassert>
 #include "common_header.h"
@@ -283,39 +283,27 @@ int main(int argc, char *argv[])
     rand_eng.seed( sseq );
   }
 
-  // Set neuron model
-  eNeuronModel e_neuron_model = LIF_G;
+  // Select neuron model.
+  int rt = -1;
   if (vm.count("neuron-model")) {
     const std::string &str_nm = vm["neuron-model"].as<std::string>();
     if (str_nm == "LIF-G") {
-      e_neuron_model = LIF_G;
+      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_G>(vm);
     } else if (str_nm == "LIF-GH") {
-      e_neuron_model = LIF_GH;
+      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_GH>(vm);
     } else if (str_nm == "HH-GH") {
-      e_neuron_model = HH_GH;
+      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_HH_GH>(vm);
+    } else if (str_nm == "LIF-G-Sparse") {
+      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_G>(vm);
+    } else if (str_nm == "LIF-GH-Sparse") {
+      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_GH>(vm);
+    } else if (str_nm == "HH-GH-Sparse") {
+      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_HH_GH>(vm);
     } else {
-      cerr << "Unrecognized neuron model. See help\n";
-      return -1;
+      cerr << "Unrecognized neuron model. See --help.\n";
     }
   } else {
-    cout << "Warning: Neuron model not specified, using LIF G model\n";
-    e_neuron_model = LIF_G;
-  }
-
-  int rt = 0;
-  switch (e_neuron_model) {
-    case LIF_G:
-      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_G>(vm);
-      break;
-    case LIF_GH:
-      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_GH>(vm);
-      break;
-    case HH_GH:
-      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_HH_GH>(vm);
-      break;
-    default:
-      rt = -1;
-      cerr << "Unrecognized neuron model enum \n";
+    cerr << "Error: Neuron model not specified. See --help.\n";
   }
 
   return rt;

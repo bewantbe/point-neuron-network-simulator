@@ -12,8 +12,8 @@ s_cmd_speed_ref = {
 '-inf - -ng -t 1e3 -dt 0.5 -stv 0.5 -n 700 300 -mat - -scee 0.002 -scei 0.002 -scie 0.004 -scii 0.004 -pr 1 -ps 0.005 --RC-filter 0 1 --bin-save -o a_volt.dat --save-spike a_ras.txt'
 };
 
-cmd_correctness_target_prog = '../bin/vec_IFsimu';
-cmd_speed_target_prog = '../bin/vec_IFsimu';
+cmd_correctness_target_prog = '../bin/gen_neu';
+cmd_speed_target_prog = '../bin/gen_neu';
 
 s_cmd_correctness_target  = {
 '--t 1e5 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012 --initial-state-path /home/xyy/code/vec_IFsimu/neu_state_init.txt --input-event-path /home/xyy/code/vec_IFsimu/poisson_events.txt -o v_volt.dat --conductance-path=v_cond.dat --ras-path=v_ras.txt'
@@ -29,5 +29,42 @@ s_cmd_speed_target = {
 
 %'--neuron-model HH-GH --t 1.48e3 --dt 0.03125 --stv 0.5 --nE 1 --nI 0 --net - --scee 0.000 --scie 0.000 --scei 0.000 --scii 0.000 --pr 1 --ps 0.040 -o v_volt.dat --ras-path=v_ras.txt --isi-path=v_isi.txt'
 
-system(['time ' cmd_speed_target_prog ' ' s_cmd_speed_target{3}]);
+%system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G ' s_cmd_speed_target{1}]);
+
+%system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G-Sparse ' s_cmd_speed_target{1}]);
+
+pam = '--t 1e3 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012 -o r_volt.dat --conductance-path=r_cond.dat --ras-path=r_ras.txt';
+system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G ' pam]);
+
+pam = '--t 1e3 --dt 0.5 --stv 0.5 --nE 2 --net - --scee 0.01 --scie 0.01 --scei 0.02 --scii 0.02 --ps 0.012 -o v_volt.dat --conductance-path=v_cond.dat --ras-path=v_ras.txt';
+system(['time ' cmd_speed_target_prog ' --neuron-model LIF-G-Sparse ' pam]);
+
+p = 2;
+stv = 0.5;
+len = 1e3/stv;
+
+s_t = stv*(1:len);
+X0 = ReadDouble('r_volt.dat', p);
+X1 = ReadDouble('v_volt.dat', p);
+ras0 = load('r_ras.txt');
+ras1 = load('v_ras.txt');
+
+ST0 = SpikeTrains(ras0, p, len, stv);
+ST1 = SpikeTrains(ras1, p, len, stv);
+
+aX0 = X0 + cumsum(ST0, 2);
+aX1 = X1 + cumsum(ST1, 2);
+
+figure(1);
+plot(s_t, aX0-aX1);
+title('X0-X1');
+
+
+figure(1);
+plot(s_t, X0-X1, s_t, ST0, s_t, ST1);
+title('X0-X1');
+
+figure(2);
+plot(s_t, X0, s_t, ST0);
+title('X0');
 
