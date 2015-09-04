@@ -6,7 +6,7 @@
 
 // Fast function calculation for exp(x)
 #include "fmath.hpp"
-#define exp(x) fmath::expd(x)
+/*#define exp(x) fmath::expd(x)*/
 
 // list of neuron models
 enum eNeuronModel
@@ -197,7 +197,7 @@ struct Ty_LIF_GH_core
   }
 };
 
-// Adaper for IF type models (only sub-threshold dynamics and need hand reset)
+// Adapter for IF type models (only sub-threshold dynamics and need hand reset)
 template<typename TyNeuronModel>
 struct Ty_LIF_stepper: public TyNeuronModel
 {
@@ -334,7 +334,7 @@ struct Ty_HH_GH
   double G_K  =  36;
   double G_L  =   0.3;
   double V_gE =  65;             // mV, for synaptic
-  double V_gI = -15;             // mV        
+  double V_gI = -15;             // mV
   double tau_gE    = 0.5;        // ms, decay time for gE equation
   double tau_gE_s1 = 3.0;        // ms, decay time for gE_H equation.
   double tau_gI    = 0.5;        // ms
@@ -441,14 +441,16 @@ struct Ty_HH_GH
     double v0 = dym_val[id_V];
     double k1 = DymInplaceRK4(dym_val, dt_local);
     double &v1 = dym_val[id_V];
-    // See if neuron is firing. t_in_refractory == 0 means the neuron 
+    // See if neuron is firing. t_in_refractory == 0 means the neuron
     // is not in hand set refractory period, avoids kind of infinite loop.
-    if (v0 <= V_threshold && v1 > V_threshold && t_in_refractory == 0) {
+    if (v0 <= V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val), V_threshold);
       // Some redundant calculation of GetDv(). Let's leave it.
     }
-    t_in_refractory = 0;  // not 100% mathematically safe. Use the hard refractory for that.
+    if (dt_local>0) {
+      t_in_refractory = 0;  // not 100% mathematically safe. Use the hard refractory for that.
+    }
     //t_in_refractory += dt_local;
     //if (t_in_refractory > Time_Refractory) {
     //t_in_refractory = 0;

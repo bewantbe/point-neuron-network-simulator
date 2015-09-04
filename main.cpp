@@ -16,7 +16,7 @@ TODO:
    * isomerisom of neurons in a network?
 */
 
-#define NDEBUG  // disable assert() and disable checks in Eigen
+//#define NDEBUG  // disable assert() and disable checks in Eigen
 
 #include <cassert>
 #include "common_header.h"
@@ -162,6 +162,7 @@ int MainLoop(const po::variables_map &vm)
   // Main loop
   for (size_t i = 0; i < n_step; i++) {
     neu_simu.NextDt(ras, vec_n_spike);
+    neu_simu.SaneTestState();
     if (output_ras) {
       for (size_t j = 0; j < ras.size(); j++) {
         fout_ras << ras[j].id + 1 << '\t' << ras[j].time << '\n';

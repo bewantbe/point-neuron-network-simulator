@@ -5,6 +5,8 @@
 #include "poisson_generator.h"
 #include "neuron_system_utils.h"
 
+#include <iomanip>
+
 /**
   Solver for pulse-coupled neuron model:
     After a test step (without synaptic interaction), evolve the system
@@ -120,7 +122,7 @@ public:
         dbg_printf("Neuron [%d] spike at t = %f\n",
                    heading_spike_event.id, heading_spike_event.time);
         // Really evolve the whole system.
-        poisson_time_vec.RestoreIdx();             // replay the poisson events
+        poisson_time_vec.RestoreIdx();          // replay the poisson events
         spike_events.clear();
         neu_state = bk_neu_state;
         NextStepNoInteract(neu_state, spike_events, heading_spike_event.time - t);
@@ -167,6 +169,34 @@ public:
         neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();
       }
     }
+  }
+
+  // Test if the calculation blow up
+  void SaneTestState()
+  {
+    for (int j = 0; j < pm.n_total(); j++) {
+      if ( !(fabs(neu_state.dym_vals(j, neuron_model.id_V))<500) ) {  // 500mV
+        cerr << "\nNon-finite state value! V = " << neu_state.dym_vals(j, neuron_model.id_V)
+          << "\n  Possible reason: time step too large.\n\n";
+        throw "Non-finite state value!";
+      }
+    }
+  }
+
+  void PrintfState(const char *const rec_path, const struct TyNeuronalDymState<TyNeuronModel> &neu_state)
+  {
+    std::ofstream fout(rec_path, std::ios_base::app);
+    fout << "\n";
+    fout << "State in t = " << t << "\n";
+    for (int j = 0; j < pm.n_total(); j++) {
+      fout << "neu[" << std::setw(2) << j << "] = ";
+      fout << setiosflags(std::ios::fixed) << std::setprecision(3);
+      for (int k = 0; k < TyNeuronModel::n_var; k++) {
+        fout << std::setw(7) << neu_state.dym_vals(j, k);
+      }
+      fout << "\n";
+    }
+    fout << std::endl;
   }
 };
 
@@ -286,7 +316,7 @@ public:
     poisson_time_vec.SaveIdxAndClean();
     NextStepNoInteract(neu_state, spike_events, t_end - t);
 
-    // Evolve in the accurate order of spikes.
+    // Evolve along the accurate order of spikes.
     // Each loop deals with one spike.
     while (!spike_events.empty()) {
       // Find out the first spike.
@@ -316,7 +346,7 @@ public:
       spike_events.erase(
         remove_if(spike_events.begin(), spike_events.end(),
           [&](const TySpikeEvent &e) {
-            return bool_affected[e.id] && 
+            return bool_affected[e.id] &&
               !(bk_state_time[e.id]==heading_spike_event.time
                 && e.time==heading_spike_event.time);
           }),

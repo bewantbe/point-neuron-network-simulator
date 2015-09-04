@@ -11,6 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="--t 1e3 --stv 0.5 --net -- --scee 1e-19 --scie 1e-19 --scei 1e-19 --scii 1e-19 --pr 1.6 --ps 0.04 --neuron-model HH-GH --isi-path v_isi.txt --dt 0.5 --nE 100" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -31,15 +32,25 @@
 			<Add option="-Wextra" />
 			<Add option="-Wall" />
 			<Add option="-std=c++11" />
+			<Add option="-Wno-unused-parameter" />
 		</Compiler>
 		<Linker>
 			<Add library="boost_program_options" />
 		</Linker>
 		<Unit filename="common_header.h" />
 		<Unit filename="fmath.hpp" />
+		<Unit filename="legacy_lib.cpp" />
+		<Unit filename="legacy_lib.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="math_helper.cpp" />
 		<Unit filename="math_helper.h" />
+		<Unit filename="neuron_system_utils.cpp" />
+		<Unit filename="neuron_system_utils.h" />
+		<Unit filename="poisson_generator.cpp" />
+		<Unit filename="poisson_generator.h" />
+		<Unit filename="simulator_exact_order.h" />
+		<Unit filename="simulator_v0.h" />
+		<Unit filename="single_neuron_dynamics.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />
