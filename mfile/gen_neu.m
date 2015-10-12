@@ -272,7 +272,7 @@ if mode_read_only
     % Fixme: is there a way to test whether the files are using by
     %        other program in Matlab? lsof is not portable to M$ Windows
     % Note: dir().datenum only precise to seconds
-    %       stat().mtime can precise to nano seconds, bug not in Matlab.
+    %       stat().mtime can precise to nano seconds, but not in Matlab.
     %f_info = stat(output_RAS_name);
     %if ~isempty(f_info) && (time() - f_info.mtime > 1.0)
     f_info = dir(output_RAS_name);

@@ -16,6 +16,11 @@ $(BIN): $(OBJS)
 	mkdir -p `dirname $(BIN)`
 	$(CXX) $(LDFLAGS) -o $(BIN) $(OBJS) $(LDLIBS)
 
+.PHONY : static-link
+static-link: CPPFLAGS += -DNDEBUG
+static-link: LDFLAGS = -static -pthread
+static-link: $(BIN)
+
 .PHONY : debug
 debug: CXXFLAGS = -g
 debug: $(BIN)

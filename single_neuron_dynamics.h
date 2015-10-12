@@ -6,7 +6,7 @@
 
 // Fast function calculation for exp(x)
 #include "fmath.hpp"
-/*#define exp(x) fmath::expd(x)*/
+#define exp(x) fmath::expd(x)
 
 // list of neuron models
 enum eNeuronModel
