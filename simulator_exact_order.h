@@ -7,6 +7,15 @@
 
 #include <iomanip>
 
+class NeuronSimulatorBase
+{
+public:
+  virtual void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) = 0;
+  virtual void SaneTestVolt() = 0;
+  virtual const TyNeuronalDymState & GetNeuState() const = 0;
+  virtual TyNeuronalDymState & GetNeuState() = 0;
+};
+
 /**
   Solver for pulse-coupled neuron model:
     After a test step (without synaptic interaction), evolve the system
@@ -20,18 +29,17 @@
     # of synaptic interaction: (# of edges)*fr*T.
   where the fr is mean firing rate over all neurons, p=nE+nI.
 */
-template<typename TyNeuronModel>
-class NeuronSimulatorExactSpikeOrder
+class NeuronSimulatorExactSpikeOrder :public NeuronSimulatorBase
 {
 public:
-  TyNeuronModel neuron_model;
-  struct TyNeuronalParams pm;
-  struct TyNeuronalDymState<TyNeuronModel> neu_state;
+  const Ty_Neuron_Dym_Base * const p_neuron_model;
+  const TyNeuronalParams pm;
+  struct TyNeuronalDymState neu_state;
   TyPoissonTimeVec poisson_time_vec;
   double t, dt;
 
-  NeuronSimulatorExactSpikeOrder(const TyNeuronModel &_neuron_model, const TyNeuronalParams &_pm, double _dt)
-  :neuron_model(_neuron_model), pm(_pm), neu_state(_pm)
+  NeuronSimulatorExactSpikeOrder(const Ty_Neuron_Dym_Base * _p_neuron_model, const TyNeuronalParams &_pm, double _dt)
+  :p_neuron_model(_p_neuron_model), pm(_pm), neu_state(_pm, _p_neuron_model->Get_n_dym_vars())
   {
     dt = _dt;
     t = 0;
@@ -39,31 +47,31 @@ public:
   }
 
 protected:
-  __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState<TyNeuronModel> &e_neu_state, const TySpikeEvent &se) const
+  __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
   {
     if (se.id < pm.n_E) {
       // Excitatory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), neuron_model.id_gEInject) += it.value() * pm.scee;
+          e_neu_state.dym_vals(it.row(), p_neuron_model->Get_id_gEInject()) += it.value() * pm.scee;
         } else {
-          e_neu_state.dym_vals(it.row(), neuron_model.id_gEInject) += it.value() * pm.scie;
+          e_neu_state.dym_vals(it.row(), p_neuron_model->Get_id_gEInject()) += it.value() * pm.scie;
         }
       }
     } else {
       // Inhibitory neuron fired
       for (SparseMat::InnerIterator it(pm.net, se.id); it; ++it) {
         if (it.row() < pm.n_E) {
-          e_neu_state.dym_vals(it.row(), neuron_model.id_gIInject) += it.value() * pm.scei;
+          e_neu_state.dym_vals(it.row(), p_neuron_model->Get_id_gIInject()) += it.value() * pm.scei;
         } else {
-          e_neu_state.dym_vals(it.row(), neuron_model.id_gIInject) += it.value() * pm.scii;
+          e_neu_state.dym_vals(it.row(), p_neuron_model->Get_id_gIInject()) += it.value() * pm.scii;
         }
       }
     }
   }
 
   // Evolve all neurons without synaptic interaction
-  __attribute__ ((noinline)) void NextStepNoInteract(struct TyNeuronalDymState<TyNeuronModel> &tmp_neu_state,
+  __attribute__ ((noinline)) void NextStepNoInteract(struct TyNeuronalDymState &tmp_neu_state,
               TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
@@ -79,17 +87,17 @@ protected:
                    j, poisson_time_seq.id_seq, poisson_time_seq.size(),
                    poisson_time_seq.Front());
         dbg_printf("Time from %f to %f\n", t_local, poisson_time_seq.Front());
-        neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
+        p_neuron_model->NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, poisson_time_seq.Front() - t_local);
         if (!std::isnan(spike_time_local)) {
           spike_events.emplace_back(t_local + spike_time_local, j);
         }
         t_local = poisson_time_seq.Front();
-        dym_val[neuron_model.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
+        dym_val[p_neuron_model->Get_id_gEInject()] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
       }
       dbg_printf("Time from %f to %f\n", t_local, t_step_end);
-      neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
+      p_neuron_model->NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                           spike_time_local, t_step_end - t_local);
       if (!std::isnan(spike_time_local)) {
         spike_events.emplace_back(t_local + spike_time_local, j);
@@ -103,7 +111,7 @@ public:
   __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
-    struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
+    struct TyNeuronalDymState bk_neu_state;
     struct TySpikeEvent heading_spike_event(qNaN, -1);
     TySpikeEventVec spike_events;
 
@@ -145,7 +153,7 @@ public:
         }
         // Force the neuron to spike, if not already.
         if (!b_heading_spike_pushed) {
-          neuron_model.VoltHandReset(
+          p_neuron_model->VoltHandReset(
               neu_state.StatePtr(heading_spike_event.id));
           neu_state.time_in_refractory[heading_spike_event.id] =
             std::numeric_limits<double>::min();
@@ -163,9 +171,9 @@ public:
   void SaneTestVolt()
   {
     for (int j = 0; j < pm.n_total(); j++) {
-      if (neu_state.dym_vals(j, neuron_model.id_V)
-          > neuron_model.V_threshold) {
-        neuron_model.VoltHandReset(neu_state.StatePtr(j));
+      if (neu_state.dym_vals(j, p_neuron_model->Get_id_V())
+          > p_neuron_model->Get_V_threshold()) {
+        p_neuron_model->VoltHandReset(neu_state.StatePtr(j));
         neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();
       }
     }
@@ -175,15 +183,15 @@ public:
   void SaneTestState()
   {
     for (int j = 0; j < pm.n_total(); j++) {
-      if ( !(fabs(neu_state.dym_vals(j, neuron_model.id_V))<500) ) {  // 500mV
-        cerr << "\nNon-finite state value! V = " << neu_state.dym_vals(j, neuron_model.id_V)
+      if ( !(fabs(neu_state.dym_vals(j, p_neuron_model->Get_id_V()))<500) ) {  // 500mV
+        cerr << "\nNon-finite state value! V = " << neu_state.dym_vals(j, p_neuron_model->Get_id_V())
           << "\n  Possible reason: time step too large.\n\n";
         throw "Non-finite state value!";
       }
     }
   }
 
-  void PrintfState(const char *const rec_path, const struct TyNeuronalDymState<TyNeuronModel> &neu_state)
+  void PrintfState(const char *const rec_path, const struct TyNeuronalDymState &neu_state)
   {
     std::ofstream fout(rec_path, std::ios_base::app);
     fout << "\n";
@@ -191,12 +199,21 @@ public:
     for (int j = 0; j < pm.n_total(); j++) {
       fout << "neu[" << std::setw(2) << j << "] = ";
       fout << setiosflags(std::ios::fixed) << std::setprecision(3);
-      for (int k = 0; k < TyNeuronModel::n_var; k++) {
+      for (int k = 0; k < neu_state.Get_n_dym_vars(); k++) {
         fout << std::setw(7) << neu_state.dym_vals(j, k);
       }
       fout << "\n";
     }
     fout << std::endl;
+  }
+
+  TyNeuronalDymState & GetNeuState()
+  {
+    return neu_state;
+  }
+  const TyNeuronalDymState & GetNeuState() const
+  {
+    return neu_state;
   }
 };
 
@@ -213,6 +230,7 @@ public:
   where `fr' is mean firing rate over all neurons, p=nE+nI,
         `sp' is mean number of out edges for each neuron.
 */
+/*
 template<typename TyNeuronModel>
 class NeuronSimulatorExactSpikeOrderSparse
 : public NeuronSimulatorExactSpikeOrder<TyNeuronModel>
@@ -264,7 +282,7 @@ protected:
           spike_events.emplace_back(t_local + spike_time_local, j);
         }
         t_local = poisson_time_seq.Front();
-        dym_val[neuron_model.id_gEInject] += pm.arr_ps[j];  // Add Poisson input
+        dym_val[neuron_model.Get_id_gEInject()] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
       }
       dbg_printf("  time from %f to %f\n", t_local, t_step_end);
@@ -524,5 +542,5 @@ public:
     t = t_end;
   }
 };
-
+*/
 #endif

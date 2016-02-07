@@ -38,10 +38,37 @@ double g_rand()
 }
 
 // Fixme: The template here is a result of bad design (code bloat)
-template<template<typename> class NeuronSimulator, typename TyNeuronModel>
+//template<template<typename> class NeuronSimulator, typename TyNeuronModel>
 int MainLoop(const po::variables_map &vm)
 {
-  TyNeuronModel neuron_model;
+  Ty_Neuron_Dym_Base *p_neuron_model;
+//  TyNeuronModel neuron_model;
+
+  if (vm.count("neuron-model")) {
+    const std::string &str_nm = vm["neuron-model"].as<std::string>();
+    if (str_nm == "LIF-G") {
+//      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_G>(vm);
+      p_neuron_model = new Ty_LIF_G();
+    } else if (str_nm == "LIF-GH") {
+//      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_GH>(vm);
+      p_neuron_model = new Ty_LIF_GH();
+    } else if (str_nm == "HH-GH") {
+//      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_HH_GH>(vm);
+      p_neuron_model = new Ty_HH_GH();
+//    } else if (str_nm == "LIF-G-Sparse") {
+//      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_G>(vm);
+//    } else if (str_nm == "LIF-GH-Sparse") {
+//      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_GH>(vm);
+//    } else if (str_nm == "HH-GH-Sparse") {
+//      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_HH_GH>(vm);
+    } else {
+      cerr << "Unrecognized neuron model. See --help.\n";
+      return -1;
+    }
+  } else {
+    cerr << "Error: Neuron model not specified. See --help.\n";
+    return -1;
+  }
 
   // Set neural parameters
   TyNeuronalParams pm(vm["nE"].as<unsigned int>(), vm["nI"].as<unsigned int>());
@@ -124,7 +151,7 @@ int MainLoop(const po::variables_map &vm)
   }
 
   // simulator for the neural network
-  NeuronSimulator<TyNeuronModel> neu_simu(neuron_model, pm, e_dt);
+  NeuronSimulatorExactSpikeOrder neu_simu(p_neuron_model, pm, e_dt);
 
   if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(neu_simu.neu_state,
@@ -143,13 +170,13 @@ int MainLoop(const po::variables_map &vm)
   {
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_V), sizeof(double));
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
       }
     }
     if (output_G) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gE), sizeof(double));
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gI), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
       }
     }
   }
@@ -177,13 +204,13 @@ int MainLoop(const po::variables_map &vm)
     count_n_dt_in_stv = n_dt_in_stv;
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_V), sizeof(double));
+        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
       }
     }
     if (output_G) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gE), sizeof(double));
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, neuron_model.id_gI), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
+        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
       }
     }
   }
@@ -285,27 +312,7 @@ int main(int argc, char *argv[])
   }
 
   // Select neuron model.
-  int rt = -1;
-  if (vm.count("neuron-model")) {
-    const std::string &str_nm = vm["neuron-model"].as<std::string>();
-    if (str_nm == "LIF-G") {
-      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_G>(vm);
-    } else if (str_nm == "LIF-GH") {
-      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_GH>(vm);
-    } else if (str_nm == "HH-GH") {
-      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_HH_GH>(vm);
-    } else if (str_nm == "LIF-G-Sparse") {
-      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_G>(vm);
-    } else if (str_nm == "LIF-GH-Sparse") {
-      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_GH>(vm);
-    } else if (str_nm == "HH-GH-Sparse") {
-      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_HH_GH>(vm);
-    } else {
-      cerr << "Unrecognized neuron model. See --help.\n";
-    }
-  } else {
-    cerr << "Error: Neuron model not specified. See --help.\n";
-  }
+  int rt = MainLoop(vm);
 
   return rt;
 }

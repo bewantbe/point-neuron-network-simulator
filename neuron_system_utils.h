@@ -5,7 +5,7 @@
 
 static const double qNaN = std::numeric_limits<double>::quiet_NaN();
 
-/* 
+/*
  * Structures and types (i.e. container) for neuronal system.
  */
 
@@ -43,7 +43,6 @@ struct TyNeuronalParams
 };
 
 // All dynamical variables (V and G etc) for the neuron system
-template<typename TyNeuronModel>
 struct TyNeuronalDymState
 {
   // Current dynamical states of neurons
@@ -58,31 +57,36 @@ struct TyNeuronalDymState
     for (auto &i : time_in_refractory) i = 0;
   }
 
+  inline int Get_n_dym_vars() const
+  {
+    return dym_vals.cols();
+  }
+
   // Pointer to the state of j-th neuron
   inline double *StatePtr(int j)
   {
-    return dym_vals.data() + j * dym_vals.cols();
+    return dym_vals.data() + j * Get_n_dym_vars();
   }
 
   inline const double *StatePtr(int j) const
   {
-    return dym_vals.data() + j * dym_vals.cols();
+    return dym_vals.data() + j * Get_n_dym_vars();
   }
 
-  TyNeuronalDymState(const TyNeuronalParams &pm)
+  TyNeuronalDymState(const TyNeuronalParams &pm, const int n_dym_vars)
   {
-    dym_vals.resize(pm.n_total(), TyNeuronModel::n_var);
+    dym_vals.resize(pm.n_total(), n_dym_vars);
     time_in_refractory.resize(pm.n_total());
     Zeros();
   }
-  
+
   // this[ids] = nd[ids]
-  void ScatterCopy(const struct TyNeuronalDymState<TyNeuronModel> &nd,
+  void ScatterCopy(const struct TyNeuronalDymState &nd,
       const std::vector<int> &ids)
   {
     for (const int &id : ids) {
       memcpy(StatePtr(id), nd.StatePtr(id),
-          sizeof(double)*TyNeuronModel::n_var);
+          sizeof(double)*nd.Get_n_dym_vars());
       time_in_refractory[id] = nd.time_in_refractory[id];
     }
   }
@@ -124,27 +128,7 @@ typedef std::priority_queue<
 
 typedef std::vector< TySpikeEvent > TySpikeEventVec;
 
-template<typename TyNeuronModel>
-void FillNeuStateFromFile(TyNeuronalDymState<TyNeuronModel> &neu_dym_stat, const char *path)
-{
-  std::ifstream fin(path);
-  double v;
-  size_t j = 0;
-  neu_dym_stat.dym_vals.setZero();
-  while (true) {
-    for (int k = 0; fin >> v, k < neu_dym_stat.dym_vals.cols(); k++) {
-      neu_dym_stat.dym_vals(j, k) = v;
-    }
-    if (fin.fail())
-      break;
-    neu_dym_stat.time_in_refractory[j] = 0;
-    j++;
-    if (j >= neu_dym_stat.time_in_refractory.size()) {
-      cerr << "read " << j << " init data" << endl;
-      break;
-    }
-  }
-}
+void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net);
 

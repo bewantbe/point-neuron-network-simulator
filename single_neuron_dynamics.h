@@ -16,6 +16,20 @@ enum eNeuronModel
   HH_GH
 };
 
+struct Ty_Neuron_Dym_Base
+{
+  virtual double Get_V_threshold() const = 0;
+  virtual int Get_id_V() const = 0;
+  virtual int Get_id_gE() const = 0;
+  virtual int Get_id_gI() const = 0;
+  virtual int Get_id_gEInject() const = 0;  // index of gE injection variable
+  virtual int Get_id_gIInject() const = 0;  // index of gI injection variable
+  virtual int Get_n_dym_vars() const = 0;   // number of state variables
+  virtual void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+                           double &spike_time_local, double dt_local) const = 0;
+  virtual void VoltHandReset(double *dym_val) const = 0;
+};
+
 struct Ty_LIF_G_core
 {
   // The neuron model named LIF-G in this code.
@@ -199,7 +213,7 @@ struct Ty_LIF_GH_core
 
 // Adapter for IF type models (only sub-threshold dynamics and need hand reset)
 template<typename TyNeuronModel>
-struct Ty_LIF_stepper: public TyNeuronModel
+struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
 {
   // for template class we need these "using"s. It's a requirement for TyNeuronModel.
   using TyNeuronModel::id_V;
@@ -211,8 +225,20 @@ struct Ty_LIF_stepper: public TyNeuronModel
   using TyNeuronModel::NextDtConductance;
   using TyNeuronModel::DymInplaceRK4;
 
+  using TyNeuronModel::id_gEInject;
+  using TyNeuronModel::id_gIInject;
+  using TyNeuronModel::n_var;
+  using TyNeuronModel::id_gI;
+  double Get_V_threshold() const override {return V_threshold;};
+  int Get_id_gEInject() const override {return id_gEInject;}
+  int Get_id_gIInject() const override {return id_gIInject;}
+  int Get_n_dym_vars() const override {return n_var;}
+  int Get_id_V() const override {return id_V;}
+  int Get_id_gE() const override {return id_gE;}
+  int Get_id_gI() const override {return id_gI;}
+
   // Used when reset the voltage by hand. (e.g. outside this class)
-  inline void VoltHandReset(double *dym_val)
+  inline void VoltHandReset(double *dym_val) const override
   {
     dym_val[id_V] = Vot_Reset;
   }
@@ -262,8 +288,8 @@ struct Ty_LIF_stepper: public TyNeuronModel
 
   // Evolve single neuron as if no external input.
   // Return first spike time in `spike_time_local', if any.
-  __attribute__ ((noinline)) void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
-                           double &spike_time_local, double dt_local)
+  void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+                           double &spike_time_local, double dt_local) const override
   {
     //! at most one spike allowed during this dt_local
     if (t_in_refractory == 0) {
@@ -325,7 +351,7 @@ typedef Ty_LIF_stepper<Ty_LIF_GH_core> Ty_LIF_GH;
 // Model of classical Hodgkin-Huxley (HH) neuron,
 // with two ODE for G (See Ty_LIF_GH_core::NextDtConductance() for details).
 // The parameters for G comes from unknown source.
-struct Ty_HH_GH
+struct Ty_HH_GH :public Ty_Neuron_Dym_Base
 {
   double V_Na = 115;             // mV
   double V_K  = -12;
@@ -353,6 +379,14 @@ struct Ty_HH_GH
   static const int id_gI_s1 = 7;
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
+
+  double Get_V_threshold() const override {return V_threshold;};
+  int Get_id_gEInject() const override {return id_gEInject;}
+  int Get_id_gIInject() const override {return id_gIInject;}
+  int Get_n_dym_vars() const override {return n_var;}
+  int Get_id_V() const override {return id_V;}
+  int Get_id_gE() const override {return id_gE;}
+  int Get_id_gI() const override {return id_gI;}
 
   // dV/dt term
   inline double GetDv(const double *dym_val) const
@@ -429,13 +463,13 @@ struct Ty_HH_GH
     return k1[id_V];
   };
 
-  void VoltHandReset(double *dym_val)
+  void VoltHandReset(double *dym_val) const override
   {
     // no force reset required for HH
   }
 
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
-    double &spike_time_local, double dt_local) const
+    double &spike_time_local, double dt_local) const override
   {
     spike_time_local = std::numeric_limits<double>::quiet_NaN();
     double v0 = dym_val[id_V];

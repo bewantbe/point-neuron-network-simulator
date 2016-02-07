@@ -1,5 +1,26 @@
 #include "neuron_system_utils.h"
 
+void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
+{
+  std::ifstream fin(path);
+  double v;
+  size_t j = 0;
+  neu_dym_stat.dym_vals.setZero();
+  while (true) {
+    for (int k = 0; fin >> v, k < neu_dym_stat.dym_vals.cols(); k++) {
+      neu_dym_stat.dym_vals(j, k) = v;
+    }
+    if (fin.fail())
+      break;
+    neu_dym_stat.time_in_refractory[j] = 0;
+    j++;
+    if (j >= neu_dym_stat.time_in_refractory.size()) {
+      cerr << "read " << j << " init data" << endl;
+      break;
+    }
+  }
+}
+
 // Read network from text file. The number neurons should be known first.
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
 {
