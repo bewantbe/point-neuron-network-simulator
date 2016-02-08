@@ -16,7 +16,7 @@ TODO:
    * isomerisom of neurons in a network?
 */
 
-//#define NDEBUG  // disable assert() and disable checks in Eigen
+#define NDEBUG  // disable assert() and disable checks in Eigen
 
 #include <cassert>
 #include "common_header.h"
@@ -47,18 +47,12 @@ int MainLoop(const po::variables_map &vm)
   }
   Ty_Neuron_Dym_Base *p_neuron_model;
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
-  if (str_nm == "LIF-G") {
+  if (str_nm == "LIF-G" || str_nm == "LIF-G-Sparse") {
     p_neuron_model = new Ty_LIF_G();
-  } else if (str_nm == "LIF-GH") {
+  } else if (str_nm == "LIF-GH" || str_nm == "LIF-GH-Sparse") {
     p_neuron_model = new Ty_LIF_GH();
-  } else if (str_nm == "HH-GH") {
+  } else if (str_nm == "HH-GH" || str_nm == "HH-GH-Sparse") {
     p_neuron_model = new Ty_HH_GH();
-//    } else if (str_nm == "LIF-G-Sparse") {
-//      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_G>(vm);
-//    } else if (str_nm == "LIF-GH-Sparse") {
-//      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_GH>(vm);
-//    } else if (str_nm == "HH-GH-Sparse") {
-//      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_HH_GH>(vm);
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -150,7 +144,10 @@ int MainLoop(const po::variables_map &vm)
     p_neu_simu = new NeuronSimulatorExactSpikeOrder(p_neuron_model, pm, e_dt);
   } else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
              || str_nm == "HH-GH-Sparse") {
-//    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(p_neuron_model, pm, e_dt);
+    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(p_neuron_model, pm, e_dt);
+  } else if (str_nm == "LIF-G-Sparse2" || str_nm == "LIF-GH-Sparse2"
+             || str_nm == "HH-GH-Sparse2") {
+    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(p_neuron_model, pm, e_dt);
   }
 
   if (vm.count("initial-state-path")) {

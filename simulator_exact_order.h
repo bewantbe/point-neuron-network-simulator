@@ -241,34 +241,22 @@ public:
   where `fr' is mean firing rate over all neurons, p=nE+nI,
         `sp' is mean number of out edges for each neuron.
 */
-/*
-template<typename TyNeuronModel>
+
 class NeuronSimulatorExactSpikeOrderSparse
-: public NeuronSimulatorExactSpikeOrder<TyNeuronModel>
+: public NeuronSimulatorExactSpikeOrder
 {
-  // Declare member variable/function for this template class.
-  typedef NeuronSimulatorExactSpikeOrder<TyNeuronModel> NSE;
-  using NSE::NextStepNoInteract;
-  using NSE::SynapticInteraction;
-
 public:
-  using NSE::t;
-  using NSE::dt;
-  using NSE::pm;
-  using NSE::neu_state;
-  using NSE::neuron_model;
-  using NSE::poisson_time_vec;
 
-  NeuronSimulatorExactSpikeOrderSparse(const TyNeuronModel &_neuron_model,
+  NeuronSimulatorExactSpikeOrderSparse(const Ty_Neuron_Dym_Base * _p_neuron_model,
     const TyNeuronalParams &_pm, double _dt)
-    :NeuronSimulatorExactSpikeOrder<TyNeuronModel>(_neuron_model, _pm, _dt)
+    :NeuronSimulatorExactSpikeOrder(_p_neuron_model, _pm, _dt)
   {
   }
 
 protected:
   // Evolve all neurons without synaptic interaction
   __attribute__ ((noinline)) void NextStepNoInteractToTime(
-      struct TyNeuronalDymState<TyNeuronModel> &tmp_neu_state,
+      struct TyNeuronalDymState &tmp_neu_state,
       const TyArrVals &bk_state_time,
       const std::vector<int> &ids_affected,
       TySpikeEventVec &spike_events,
@@ -287,17 +275,17 @@ protected:
                    poisson_time_seq.id_seq, poisson_time_seq.size(),
                    poisson_time_seq.Front());
         dbg_printf("  time from %f to %f\n", t_local, poisson_time_seq.Front());
-        neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
+        p_neuron_model->NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                             spike_time_local, poisson_time_seq.Front() - t_local);
         if (!std::isnan(spike_time_local)) {
           spike_events.emplace_back(t_local + spike_time_local, j);
         }
         t_local = poisson_time_seq.Front();
-        dym_val[neuron_model.Get_id_gEInject()] += pm.arr_ps[j];  // Add Poisson input
+        dym_val[p_neuron_model->Get_id_gEInject()] += pm.arr_ps[j];  // Add Poisson input
         poisson_time_seq.PopAndFill(pm.arr_pr[j]);
       }
       dbg_printf("  time from %f to %f\n", t_local, t_step_end);
-      neuron_model.NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
+      p_neuron_model->NextStepSingleNeuronQuiet(dym_val, tmp_neu_state.time_in_refractory[j],
                           spike_time_local, t_step_end - t_local);
       if (!std::isnan(spike_time_local)) {
         spike_events.emplace_back(t_local + spike_time_local, j);
@@ -318,7 +306,7 @@ public:
 
   // `bk_neu_state' is state at time `bk_state_time'
   TyArrVals bk_state_time;
-  struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
+  struct TyNeuronalDymState bk_neu_state;
 
   __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
@@ -400,7 +388,7 @@ public:
         }
       }
       if (!b_heading_spike_pushed) {
-        neuron_model.VoltHandReset(
+        p_neuron_model->VoltHandReset(
             neu_state.StatePtr(heading_spike_event.id));
         neu_state.time_in_refractory[heading_spike_event.id] =
           std::numeric_limits<double>::min();
@@ -426,27 +414,14 @@ public:
   }
 };
 
-template<typename TyNeuronModel>
 class NeuronSimulatorExactSpikeOrderSparse2
-: public NeuronSimulatorExactSpikeOrderSparse<TyNeuronModel>
+: public NeuronSimulatorExactSpikeOrderSparse
 {
-  // Declare member variable/function for this template class.
-  typedef NeuronSimulatorExactSpikeOrderSparse<TyNeuronModel> NSE;
-  using NSE::NextStepNoInteract;
-  using NSE::SynapticInteraction;
-  using NSE::NextStepNoInteractToTime;
-
 public:
-  using NSE::t;
-  using NSE::dt;
-  using NSE::pm;
-  using NSE::neu_state;
-  using NSE::neuron_model;
-  using NSE::poisson_time_vec;
 
-  NeuronSimulatorExactSpikeOrderSparse2(const TyNeuronModel &_neuron_model,
+  NeuronSimulatorExactSpikeOrderSparse2(const Ty_Neuron_Dym_Base * _p_neuron_model,
     const TyNeuronalParams &_pm, double _dt)
-    :NeuronSimulatorExactSpikeOrderSparse<TyNeuronModel>(_neuron_model, _pm, _dt)
+    :NeuronSimulatorExactSpikeOrderSparse(_p_neuron_model, _pm, _dt)
   {
   }
 
@@ -468,7 +443,7 @@ public:
 
     // `bk_neu_state' is state at time `bk_state_time'
     TyArrVals bk_state_time(pm.n_total());
-    struct TyNeuronalDymState<TyNeuronModel> bk_neu_state;
+    struct TyNeuronalDymState bk_neu_state;
 
     // `spike_events' holds spike events between `bk_state_time' and `t_end'
     TySpikeEventVec spike_events;
@@ -553,5 +528,5 @@ public:
     t = t_end;
   }
 };
-*/
+
 #endif
