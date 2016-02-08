@@ -41,32 +41,26 @@ double g_rand()
 //template<template<typename> class NeuronSimulator, typename TyNeuronModel>
 int MainLoop(const po::variables_map &vm)
 {
+  if (!vm.count("neuron-model")) {
+    cerr << "Error: Neuron model not specified. See --help.\n";
+    return -1;
+  }
   Ty_Neuron_Dym_Base *p_neuron_model;
-//  TyNeuronModel neuron_model;
-
-  if (vm.count("neuron-model")) {
-    const std::string &str_nm = vm["neuron-model"].as<std::string>();
-    if (str_nm == "LIF-G") {
-//      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_G>(vm);
-      p_neuron_model = new Ty_LIF_G();
-    } else if (str_nm == "LIF-GH") {
-//      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_LIF_GH>(vm);
-      p_neuron_model = new Ty_LIF_GH();
-    } else if (str_nm == "HH-GH") {
-//      rt = MainLoop<NeuronSimulatorExactSpikeOrder, Ty_HH_GH>(vm);
-      p_neuron_model = new Ty_HH_GH();
+  const std::string &str_nm = vm["neuron-model"].as<std::string>();
+  if (str_nm == "LIF-G") {
+    p_neuron_model = new Ty_LIF_G();
+  } else if (str_nm == "LIF-GH") {
+    p_neuron_model = new Ty_LIF_GH();
+  } else if (str_nm == "HH-GH") {
+    p_neuron_model = new Ty_HH_GH();
 //    } else if (str_nm == "LIF-G-Sparse") {
 //      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_G>(vm);
 //    } else if (str_nm == "LIF-GH-Sparse") {
 //      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_LIF_GH>(vm);
 //    } else if (str_nm == "HH-GH-Sparse") {
 //      rt = MainLoop<NeuronSimulatorExactSpikeOrderSparse, Ty_HH_GH>(vm);
-    } else {
-      cerr << "Unrecognized neuron model. See --help.\n";
-      return -1;
-    }
   } else {
-    cerr << "Error: Neuron model not specified. See --help.\n";
+    cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
   }
 
@@ -151,17 +145,23 @@ int MainLoop(const po::variables_map &vm)
   }
 
   // simulator for the neural network
-  NeuronSimulatorExactSpikeOrder neu_simu(p_neuron_model, pm, e_dt);
+  NeuronSimulatorBase *p_neu_simu = nullptr;
+  if (str_nm == "LIF-G" || str_nm == "LIF-GH" || str_nm == "HH-GH") {
+    p_neu_simu = new NeuronSimulatorExactSpikeOrder(p_neuron_model, pm, e_dt);
+  } else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
+             || str_nm == "HH-GH-Sparse") {
+//    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(p_neuron_model, pm, e_dt);
+  }
 
   if (vm.count("initial-state-path")) {
-    FillNeuStateFromFile(neu_simu.neu_state,
+    FillNeuStateFromFile(p_neu_simu->GetNeuState(),
                          vm["initial-state-path"].as<std::string>().c_str());
     cout << "initial state loaded!" << endl;
-    neu_simu.SaneTestVolt();
+    p_neu_simu->SaneTestVolt();
   }
 
   if (vm.count("input-event-path")) {
-    FillPoissonEventsFromFile(neu_simu.poisson_time_vec,
+    FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),
                               vm["input-event-path"].as<std::string>().c_str());
     cout << "input event loaded!" << endl;
   }
@@ -170,13 +170,13 @@ int MainLoop(const po::variables_map &vm)
   {
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
+        fout_volt.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
       }
     }
     if (output_G) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
+        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
+        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
       }
     }
   }
@@ -188,8 +188,8 @@ int MainLoop(const po::variables_map &vm)
   size_t n_step = (size_t)(e_t / e_dt);
   // Main loop
   for (size_t i = 0; i < n_step; i++) {
-    neu_simu.NextDt(ras, vec_n_spike);
-    neu_simu.SaneTestState();
+    p_neu_simu->NextDt(ras, vec_n_spike);
+    p_neu_simu->SaneTestState();
     if (output_ras) {
       for (size_t j = 0; j < ras.size(); j++) {
         fout_ras << ras[j].id + 1 << '\t' << ras[j].time << '\n';
@@ -204,13 +204,13 @@ int MainLoop(const po::variables_map &vm)
     count_n_dt_in_stv = n_dt_in_stv;
     if (output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
+        fout_volt.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
       }
     }
     if (output_G) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
-        fout_G.write((char*)&neu_simu.neu_state.dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
+        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
+        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
       }
     }
   }

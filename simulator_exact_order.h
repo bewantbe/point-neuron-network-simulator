@@ -12,8 +12,11 @@ class NeuronSimulatorBase
 public:
   virtual void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) = 0;
   virtual void SaneTestVolt() = 0;
+  virtual void SaneTestState() = 0;
   virtual const TyNeuronalDymState & GetNeuState() const = 0;
   virtual TyNeuronalDymState & GetNeuState() = 0;
+  virtual TyPoissonTimeVec & Get_poisson_time_vec() = 0;
+  virtual const TyPoissonTimeVec & Get_poisson_time_vec() const = 0;
 };
 
 /**
@@ -180,7 +183,7 @@ public:
   }
 
   // Test if the calculation blow up
-  void SaneTestState()
+  void SaneTestState() override
   {
     for (int j = 0; j < pm.n_total(); j++) {
       if ( !(fabs(neu_state.dym_vals(j, p_neuron_model->Get_id_V()))<500) ) {  // 500mV
@@ -214,6 +217,14 @@ public:
   const TyNeuronalDymState & GetNeuState() const
   {
     return neu_state;
+  }
+  TyPoissonTimeVec & Get_poisson_time_vec() override
+  {
+    return poisson_time_vec;
+  }
+  const TyPoissonTimeVec & Get_poisson_time_vec() const override
+  {
+    return poisson_time_vec;
   }
 };
 
