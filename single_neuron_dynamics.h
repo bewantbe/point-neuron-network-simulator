@@ -244,7 +244,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
   }
 
   // Evolve the ODE and note down the spike time, assuming no reset and no external input.
-  // `spike_time_local' should be guaranteed to be with in [0, dt] or NAN.
+  // `spike_time_local' should be guaranteed to be within [0, dt] or NAN.
   __attribute__ ((noinline)) void NextStepSingleNeuronContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
     double v_n = dym_val[id_V];
@@ -402,7 +402,7 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
 
   }
 
-  // Classical HH neuron equations goes here
+  // Classical HH neuron equations go here
   void ODE_RHS(const double *dym_val, double *dym_d_val) const
   {
     dym_d_val[id_V] = GetDv(dym_val);

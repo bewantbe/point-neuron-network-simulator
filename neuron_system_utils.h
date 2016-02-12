@@ -47,7 +47,8 @@ struct TyNeuronalDymState
 {
   // Current dynamical states of neurons
   // Use RowMajor, so state variables of each neuron are continuous on memory
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> dym_vals;
+  typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> TyDymVals;
+  TyDymVals dym_vals;
   // Time resided in refractory period for each neuron
   TyArrVals time_in_refractory;
 
@@ -60,6 +61,11 @@ struct TyNeuronalDymState
   inline int Get_n_dym_vars() const
   {
     return dym_vals.cols();
+  }
+  
+  inline int Get_n_neurons() const
+  {
+    return dym_vals.rows();
   }
 
   // Pointer to the state of j-th neuron
