@@ -37,8 +37,6 @@ double g_rand()
   return udis(rand_eng);
 }
 
-// Fixme: The template here is a result of bad design (code bloat)
-//template<template<typename> class NeuronSimulator, typename TyNeuronModel>
 int MainLoop(const po::variables_map &vm)
 {
   if (!vm.count("neuron-model")) {

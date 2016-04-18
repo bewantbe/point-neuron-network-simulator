@@ -35,10 +35,10 @@ struct Ty_LIF_G_core
   // The neuron model named LIF-G in this code.
   // This is the Leaky Integrate-and-Fire model with jump conductance.
   double V_threshold   = 1.0;  // voltages are in dimensionless unit
-  double Vot_Reset       = 0.0;
-  double Vot_Leakage     = 0.0;
-  double Vot_Excitatory  = 14.0/3.0;
-  double Vot_Inhibitory  = -2.0/3.0;
+  double V_reset       = 0.0;
+  double V_leakage     = 0.0;
+  double V_excitatory  = 14.0/3.0;
+  double V_inhibitory  = -2.0/3.0;
   double Con_Leakage     = 0.05;  // ms^-1
   double Time_ExCon      = 2.0;   // ms
   double Time_InCon      = 5.0;   // ms
@@ -60,9 +60,9 @@ struct Ty_LIF_G_core
   // Get instantaneous dv/dt for current dynamical state
   double GetDv(const double *dym_val) const
   {
-    return - Con_Leakage * (dym_val[id_V] - Vot_Leakage)
-           - dym_val[id_gE] * (dym_val[id_V] - Vot_Excitatory)
-           - dym_val[id_gI] * (dym_val[id_V] - Vot_Inhibitory);
+    return - Con_Leakage * (dym_val[id_V] - V_leakage)
+           - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
+           - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory);
   }
 
   // Evolve the state `dym_val' a `dt' forward,
@@ -110,10 +110,10 @@ struct Ty_LIF_GH_core
   // The neuron model named LIF-GH in this code.
   // This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance.
   double V_threshold   = 1.0;  // voltages are in dimensionless unit
-  double Vot_Reset       = 0.0;
-  double Vot_Leakage     = 0.0;
-  double Vot_Excitatory  = 14.0/3.0;
-  double Vot_Inhibitory  = -2.0/3.0;
+  double V_reset       = 0.0;
+  double V_leakage     = 0.0;
+  double V_excitatory  = 14.0/3.0;
+  double V_inhibitory  = -2.0/3.0;
   double Con_Leakage     = 0.05;  // ms^-1
   double Time_ExCon      = 2.0;   // ms
   double Time_ExConR     = 0.5;   // ms
@@ -159,9 +159,9 @@ struct Ty_LIF_GH_core
   // Get instantaneous dv/dt for current dynamical state
   inline double GetDv(const double *dym_val) const
   {
-    return - Con_Leakage * (dym_val[id_V] - Vot_Leakage)
-           - dym_val[id_gE] * (dym_val[id_V] - Vot_Excitatory)
-           - dym_val[id_gI] * (dym_val[id_V] - Vot_Inhibitory);
+    return - Con_Leakage * (dym_val[id_V] - V_leakage)
+           - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
+           - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory);
   }
 
   // Evolve the state `dym_val' a `dt' forward,
@@ -219,7 +219,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
   using TyNeuronModel::id_V;
   using TyNeuronModel::id_gE;
   using TyNeuronModel::V_threshold;
-  using TyNeuronModel::Vot_Reset;
+  using TyNeuronModel::V_reset;
   using TyNeuronModel::Time_Refractory;
   using TyNeuronModel::GetDv;
   using TyNeuronModel::NextDtConductance;
@@ -240,7 +240,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
   // Used when reset the voltage by hand. (e.g. outside this class)
   inline void VoltHandReset(double *dym_val) const override
   {
-    dym_val[id_V] = Vot_Reset;
+    dym_val[id_V] = V_reset;
   }
 
   // Evolve the ODE and note down the spike time, assuming no reset and no external input.
@@ -303,7 +303,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
         // Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
         t_in_refractory = dt_local - spike_time_local
                           + std::numeric_limits<double>::min();
-        dym_val[id_V] = Vot_Reset;
+        dym_val[id_V] = V_reset;
         dbg_printf("Reach threshold detected. Neuron reseted.\n");
         if (t_in_refractory >= Time_Refractory) {
           // Short refractory period (< dt_local), neuron will active again.
@@ -331,7 +331,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
       if (dt_refractory_remain < dt_local) {
         // neuron will awake after dt_refractory_remain which is in this dt_local
         NextDtConductance(dym_val, dt_refractory_remain);
-        assert( dym_val[id_V] == Vot_Reset );
+        assert( dym_val[id_V] == V_reset );
         t_in_refractory = 0;
         NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
                             spike_time_local, dt_local - dt_refractory_remain);

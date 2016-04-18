@@ -74,9 +74,9 @@ public:
     const Eigen::ArrayXd &gE = nds.dym_vals.col(1);
     const Eigen::ArrayXd &gI = nds.dym_vals.col(2);
 
-    dv_vec = - LIF_param.Con_Leakage * (v - LIF_param.Vot_Leakage)
-             - gE * (v - LIF_param.Vot_Excitatory)
-             - gI * (v - LIF_param.Vot_Inhibitory);
+    dv_vec = - LIF_param.Con_Leakage * (v - LIF_param.V_leakage)
+             - gE * (v - LIF_param.V_excitatory)
+             - gI * (v - LIF_param.V_inhibitory);
   }
 
   // evolve assume not reset, not external input at all (isolated)
