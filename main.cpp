@@ -125,10 +125,16 @@ int MainLoop(const po::variables_map &vm)
     };
 
   std::ofstream fout_volt;
-  bool output_volt = fout_try_open("volt-path", fout_volt);
+  bool b_output_volt = fout_try_open("volt-path", fout_volt);
 
   std::ofstream fout_G;    // G: conductance
-  bool output_G = fout_try_open("conductance-path", fout_G);
+  bool b_output_G = fout_try_open("conductance-path", fout_G);
+
+  std::ofstream fout_HH_gate;    // File for saving gating variables: h, m, n
+  bool b_output_HH_gate = false;
+  if (str_nm.find("HH") != std::string::npos) {
+    b_output_HH_gate = fout_try_open("ion-gate-path", fout_HH_gate);
+  }
 
   std::ofstream fout_ras;
   bool output_ras = fout_try_open("ras-path", fout_ras);
@@ -161,19 +167,32 @@ int MainLoop(const po::variables_map &vm)
     cout << "input event loaded!" << endl;
   }
 
-  if (vm.count("output-first-data-point"))
-  {
-    if (output_volt) {
+  auto func_save_dym_values = [b_output_volt, &fout_volt,
+                               b_output_G, &fout_G,
+                               b_output_HH_gate, &fout_HH_gate]
+                               (NeuronSimulatorBase *p_neu_simu, Ty_Neuron_Dym_Base *p_neuron_model, const TyNeuronalParams &pm) {
+    if (b_output_volt) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
+        fout_volt.write((char*)& p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
       }
     }
-    if (output_G) {
+    if (b_output_G) {
       for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
-        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
+        fout_G.write((char*)& p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
+        fout_G.write((char*)& p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
       }
     }
+    if (b_output_HH_gate) {
+      for (int j = 0; j < pm.n_total(); j++) {
+        fout_HH_gate.write((char*)& p_neu_simu->GetNeuState()
+                           .dym_vals(j, p_neuron_model->Get_id_V() + 1),
+                           sizeof(double)*(((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1));  // a bit ugly here
+      }
+    }
+  };
+
+  if (vm.count("output-first-data-point")) {
+    func_save_dym_values(p_neu_simu, p_neuron_model, pm);
   }
 
   std::vector<size_t> vec_n_spike(pm.n_total());  // count the number of spikes
@@ -197,17 +216,7 @@ int MainLoop(const po::variables_map &vm)
       continue;
     }
     count_n_dt_in_stv = n_dt_in_stv;
-    if (output_volt) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
-      }
-    }
-    if (output_G) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
-        fout_G.write((char*)&p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
-      }
-    }
+    func_save_dym_values(p_neu_simu, p_neuron_model, pm);
   }
 
   if (vm.count("isi-path")) {
@@ -275,6 +284,8 @@ int main(int argc, char *argv[])
        "isi output file path")
       ("conductance-path", po::value<std::string>(),
        "conductance output file path")
+      ("ion-gate-path", po::value<std::string>(),
+       "ion gate output file path")
       ("initial-state-path", po::value<std::string>(),
        "initial state file path")
       ("input-event-path", po::value<std::string>(),

@@ -11,7 +11,8 @@ public:
   virtual void SaneTestVolt() = 0;
   virtual void SaneTestState() = 0;
   virtual const TyNeuronalDymState & GetNeuState() const = 0;
-  virtual TyNeuronalDymState & GetNeuState() = 0;
+  virtual       TyNeuronalDymState & GetNeuState() = 0;
+  virtual double                     GetNeuState(int j, int id_var) const = 0;
   virtual const TyPoissonTimeVec & Get_poisson_time_vec() const = 0;
   virtual TyPoissonTimeVec & Get_poisson_time_vec() = 0;
 };

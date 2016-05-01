@@ -207,6 +207,10 @@ public:
   {
     return neu_state;
   }
+  double GetNeuState(int j, int id_var) const
+  {
+    return neu_state.dym_vals(j, id_var);
+  }
   TyPoissonTimeVec & Get_poisson_time_vec() override
   {
     return poisson_time_vec;

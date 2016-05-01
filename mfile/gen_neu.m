@@ -45,10 +45,12 @@
 % 'read'    none       read        exit
 % 'rm'      none       rm          none
 % 'cmd'     print cmd for gen then exit
-% 'ext_T'   
+% 'ext_T'
+% 'extra_data'
 % background  gen&     none        gen&
 
-function [X, ISI, ras, pm] = gen_neu(pm, gen_cmd, data_dir_prefix)
+function [X, ISI, ras, pm, extra_data] ...
+         = gen_neu(pm, gen_cmd, data_dir_prefix)
 if nargin()==0
     disp(' [X, ISI, ras] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])');
     disp(' Type "help gen_neu" for more help');
@@ -65,6 +67,7 @@ return_X_name  = false;
 mode_rm_only   = false;
 mode_show_cmd  = false;
 mode_read_only = false;
+mode_extra_data = false;
 mode_run_in_background = false;
 ext_T = 0;
 
@@ -88,6 +91,9 @@ while ~isempty(gen_cmd)
         mode_show_cmd = true;   % Show the command to call, then exit
     case 'ext_T'
         ext_T = 1e3;            % extra calculation time
+    case 'extra_data'
+        mode_extra_data = true; % output extra data: G, h, m, n
+        % data will be in struct extra_data
     otherwise
         error('no this option: "%s"', tok);
     end
@@ -187,6 +193,8 @@ file_prefix = [data_dir_prefix, neuron_model_name, '_'];
 output_name     = [file_prefix, 'volt_',file_inf_st,'.dat'];
 output_ISI_name = [file_prefix, 'ISI_', file_inf_st,'.txt'];
 output_RAS_name = [file_prefix, 'RAS_', file_inf_st,'.txt'];
+output_G_name   = [file_prefix, 'G_',file_inf_st,'.dat'];
+output_gating_name = [file_prefix, 'gating_',file_inf_st,'.dat'];
 
 % construct command string
 % ! NOTE: pm.scie is strength from Ex. to In. type
@@ -237,8 +245,14 @@ end
 st_paths =...
     sprintf(' --volt-path %s --isi-path %s --ras-path %s',...
             output_name, output_ISI_name, output_RAS_name);
+if mode_extra_data
+    st_paths = [st_paths ...
+        sprintf(' --conductance-path %s --ion-gate-path %s',...
+                output_G_name, output_gating_name)];
+end
 cmdst = sprintf('%s %s %s %s %s',...
                 program_name, st_neu_param, st_sim_param, st_paths, pm.extra_cmd);
+extra_data.cmdst = cmdst;
 if mode_show_cmd
     disp(cmdst);
     return
@@ -250,7 +264,7 @@ else
     rmcmd = 'rm -f ';
 end
 
-have_data = exist(output_RAS_name, 'file');
+have_data = exist(output_RAS_name, 'file');  % test cached file
 if (~have_data || new_run)...
    && ~mode_read_only...
    && (~mode_rm_only || mode_rm_only && nargout>0)
@@ -333,6 +347,20 @@ if nargout > 0
         if exist('len_cut','var') && len_cut>0 && ~isempty(ras)
             ras(ras(:,2) <= len_cut*pm.stv, :) = [];
             ras(:,2) = ras(:,2) - len_cut*pm.stv;
+        end
+    end
+    if mode_extra_data
+        % read conductance and gating varialbes (if any)
+        fid = fopen(output_G_name, 'r');
+        extra_data.G = fread(fid, [2*p, Inf], 'double');
+        fclose(fid);
+        fid = fopen(output_gating_name, 'r');
+        if fid >=0
+          extra_data.gatings = fread(fid, [3*p, Inf], 'double');
+          fclose(fid);
+          % The order of gating variables is defined in
+          %   single_neuron_dynamics.h
+          % See id_h, id_m, id_n in struct Ty_HH_GH
         end
     end
 end
