@@ -107,6 +107,10 @@ int MainLoop(const po::variables_map &vm)
     cerr << "Must dt <= stv <= t !" << endl;
     return 2;
   }
+  if (e_stv / floor(e_stv/e_dt + 0.5) != e_dt) {  // stv is not a multiple of dt
+    cerr << "stv must be a multiple of dt !" << endl;
+    return 2;
+  }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
     -> bool {
