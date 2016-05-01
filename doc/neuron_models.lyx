@@ -1,0 +1,667 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\float_placement H
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+
+\family typewriter
+point-neuron-network-simulator
+\end_layout
+
+\begin_layout Author
+xyy
+\end_layout
+
+\begin_layout Section
+The HH model Used
+\end_layout
+
+\begin_layout Standard
+It is the classical Hodgkin-Huxley (HH) neuron model.
+ For neuron 
+\begin_inset Formula $i$
+\end_inset
+
+, its membrane potential 
+\begin_inset Formula $V_{i}$
+\end_inset
+
+ obey
+\begin_inset Formula 
+\[
+\left\{ \begin{aligned}C\frac{\mathrm{d}V_{i}}{\mathrm{d}t} & =-(V_{i}-V_{\textrm{Na}})G_{\textrm{Na}}h_{i}m_{i}^{3}-(V_{i}-V_{\textrm{K}})G_{\textrm{K}}n_{i}^{4}-(V_{i}-V_{\textrm{L}})G_{\textrm{L}}+I_{i}^{\textrm{input}}\\
+\frac{\mathrm{d}m_{i}}{\mathrm{d}t} & =(1-m_{i})\alpha_{m}(V_{i})-m_{i}\beta_{m}(V_{i})\\
+\frac{\mathrm{d}h_{i}}{\mathrm{d}t} & =(1-h_{i})\alpha_{h}(V_{i})-h_{i}\beta_{h}(V_{i})\\
+\frac{\mathrm{d}n_{i}}{\mathrm{d}t} & =(1-n_{i})\alpha_{n}(V_{i})-n_{i}\beta_{n}(V_{i})
+\end{aligned}
+\right.
+\]
+
+\end_inset
+
+where
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="3" columns="2">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="left" valignment="top">
+<column alignment="left" valignment="top">
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula ${\displaystyle \alpha_{n}(V_{i})=\frac{0.1-0.01V_{i}}{\exp(1-0.1V_{i})-1}}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula ${\displaystyle \beta_{n}(V_{i})=0.125\exp(-V_{i}/80)}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula ${\displaystyle \alpha_{m}(V_{i})=\frac{2.5-0.1V_{i}}{\exp(2.5-0.1V_{i})-1}}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula ${\displaystyle \beta_{m}(V_{i})=4\exp\left(-V_{i}/18\right)}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula ${\displaystyle \alpha_{h}(V_{i})=0.07\exp(-V_{i}/20)}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula ${\displaystyle \beta_{h}(V_{i})=\frac{1}{\exp(3-0.1V_{i})+1}}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $V_{i}$
+\end_inset
+
+, 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+, 
+\begin_inset Formula $n_{i}$
+\end_inset
+
+, 
+\begin_inset Formula $h_{i}$
+\end_inset
+
+, 
+\begin_inset Formula $I_{i}^{\textrm{input}}$
+\end_inset
+
+ are functions of 
+\begin_inset Formula $t$
+\end_inset
+
+, and others are constants: 
+\begin_inset Formula $V_{\textrm{Na}}=\unit[115]{mV}$
+\end_inset
+
+, 
+\begin_inset Formula $V_{\textrm{K}}=\unit[-12]{mV}$
+\end_inset
+
+, 
+\begin_inset Formula $V_{\textrm{L}}=\unit[10.6]{mV}$
+\end_inset
+
+ (resting potential set to 
+\begin_inset Formula $\unit[0]{mV}$
+\end_inset
+
+), 
+\begin_inset Formula $G_{\textrm{Na}}=\unit[120]{mS\cdot cm^{-2}}$
+\end_inset
+
+, 
+\begin_inset Formula $G_{\textrm{K}}=\unit[36]{mS\cdot cm^{-2}}$
+\end_inset
+
+, 
+\begin_inset Formula $G_{\textrm{L}}=\unit[0.3]{mS\cdot cm^{-2}}$
+\end_inset
+
+ and membrane capacity 
+\begin_inset Formula $C=\unit[1]{\mu F\cdot cm^{-2}}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The interaction between neurons and external inputs come from 
+\begin_inset Formula $I_{i}^{\textrm{input}}$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+I_{i}^{\textrm{input}}=I_{i}^{\textrm{E}}+I_{i}^{\textrm{I}},\quad I_{i}^{\textrm{E}}=-(V_{i}-V_{G}^{\textrm{E}})G_{i}^{\textrm{E}},\quad I_{i}^{\textrm{I}}=-(V_{i}-V_{G}^{\textrm{I}})G_{i}^{\textrm{I}}
+\]
+
+\end_inset
+
+
+\begin_inset Formula $I_{i}^{\textrm{E}}$
+\end_inset
+
+, 
+\begin_inset Formula $I_{i}^{\textrm{I}}$
+\end_inset
+
+ are excitatory and inhibitory input respectively, and 
+\begin_inset Formula $V_{G}^{\textrm{E}}$
+\end_inset
+
+, 
+\begin_inset Formula $V_{G}^{\textrm{I}}$
+\end_inset
+
+ is their reversal potential.
+ The conductances 
+\begin_inset Formula $G_{i}^{Q}$
+\end_inset
+
+ (
+\begin_inset Formula $Q\in\{\textrm{E},\textrm{I}\}$
+\end_inset
+
+) evolves according to
+\begin_inset Formula 
+\[
+\frac{\mathrm{d}G_{i}^{Q}}{\mathrm{d}t}=-\frac{G_{i}^{Q}}{\sigma_{r}^{Q}}+H_{i}^{Q},\quad\frac{\mathrm{d}H_{i}^{Q}}{\mathrm{d}t}=-\frac{H_{i}^{Q}}{\sigma_{d}^{Q}}+\sum_{k}F_{i}^{Q}\delta(t-T_{i,k}^{F})+\sum_{j\neq i}S_{ij}\delta(t-T_{j}^{S})
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $F_{i}^{Q}$
+\end_inset
+
+ is the strength of external input to neuron 
+\begin_inset Formula $i$
+\end_inset
+
+, 
+\begin_inset Formula $T_{i,k}^{F}$
+\end_inset
+
+ is its time of 
+\begin_inset Formula $k$
+\end_inset
+
+-th input event, which is a Poisson process with rate 
+\begin_inset Formula $\mu_{i}$
+\end_inset
+
+.
+ We call this term the Poisson input.
+ 
+\begin_inset Formula $S_{ij}$
+\end_inset
+
+ is the coupling strength from 
+\begin_inset Formula $j$
+\end_inset
+
+-th neuron to 
+\begin_inset Formula $i$
+\end_inset
+
+-th neuron.
+ 
+\begin_inset Formula $\sigma_{r}^{Q}$
+\end_inset
+
+, 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\sigma_{d}^{Q}$
+\end_inset
+
+ are the fast rising and slow decaying timescales in the 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ function.
+ 
+\begin_inset Formula $V_{G}^{\textrm{E}}=\unit[65]{mV}$
+\end_inset
+
+, 
+\begin_inset Formula $V_{G}^{\textrm{I}}=\unit[-15]{mV}$
+\end_inset
+
+, 
+\begin_inset Formula $\sigma_{r}^{E}=0.5$
+\end_inset
+
+, 
+\begin_inset Formula $\sigma_{d}^{E}=3.0$
+\end_inset
+
+, 
+\begin_inset Formula $\sigma_{r}^{I}=0.5$
+\end_inset
+
+, 
+\begin_inset Formula $\sigma_{d}^{I}=7.0$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+We use adjacency matrix 
+\begin_inset Formula $A=(A_{ij})$
+\end_inset
+
+ to denote the neural network structure, i.e.
+ 
+\begin_inset Formula $S_{ij}=A_{ij}S^{Q_{i}Q{}_{j}}$
+\end_inset
+
+, and 
+\begin_inset Formula $S^{Q_{i}Q{}_{j}}$
+\end_inset
+
+ is one of 
+\begin_inset Formula $S^{\textrm{EE}}$
+\end_inset
+
+, 
+\begin_inset Formula $S^{\textrm{EI}}$
+\end_inset
+
+, 
+\begin_inset Formula $S^{\textrm{IE}}$
+\end_inset
+
+, 
+\begin_inset Formula $S^{\textrm{II}}$
+\end_inset
+
+, depends on the type of corresponding neuron pair (
+\begin_inset Formula $\textrm{E}$
+\end_inset
+
+ for excitatory, 
+\begin_inset Formula $\textrm{I}$
+\end_inset
+
+ for inhibitory).
+ 
+\begin_inset Formula $A_{ij}\neq0$
+\end_inset
+
+ means there is a direct affection to 
+\begin_inset Formula $i$
+\end_inset
+
+-th neuron from 
+\begin_inset Formula $j$
+\end_inset
+
+-th neuron.
+ When we talk about 
+\begin_inset Quotes eld
+\end_inset
+
+homogeneous coupling
+\begin_inset Quotes erd
+\end_inset
+
+, we mean 
+\begin_inset Formula $A_{ij}$
+\end_inset
+
+ equals either 
+\begin_inset Formula $1$
+\end_inset
+
+ or 
+\begin_inset Formula $0$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $F$
+\end_inset
+
+, 
+\begin_inset Formula $\mu$
+\end_inset
+
+, 
+\begin_inset Formula $A$
+\end_inset
+
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+, 
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+
+\begin_inset Formula $S^{Q_{i}Q{}_{j}}$
+\end_inset
+
+, 
+\begin_inset Formula $\sigma_{r}^{Q}$
+\end_inset
+
+, 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\sigma_{d}^{Q}$
+\end_inset
+
+ are
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ parameters relate to
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ 
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+synaptic and input to neurons.
+ For all neurons 
+\begin_inset Formula $F_{i}^{\textrm{E}}=F$
+\end_inset
+
+, 
+\begin_inset Formula $F_{i}^{\textrm{I}}=0$
+\end_inset
+
+, 
+\begin_inset Formula $\mu_{i}=\mu$
+\end_inset
+
+.
+ During one simulation, these parameters are 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+all constant.
+\end_layout
+
+\begin_layout Standard
+The time delay due to long dendrite or axion are ignored.
+ The threshold is 
+\begin_inset Formula $\unit[50]{mV}$
+\end_inset
+
+ above resting potential.
+\end_layout
+
+\begin_layout Standard
+(default parameters)
+\end_layout
+
+\begin_layout Standard
+In numerical simulation, we use explicit fourth-order Runge-Kutta method
+ with time step 
+\begin_inset Formula $\unit[1/32]{ms}$
+\end_inset
+
+.
+ The data samples (i.e.
+ 
+\begin_inset Formula $x_{t}$
+\end_inset
+
+, 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+) we used are voltages obtained in sampling rate 
+\begin_inset Formula $\unit[2]{kHz}$
+\end_inset
+
+.
+ When we talk about spike train data, we mean 
+\begin_inset Formula $x_{t}=1$
+\end_inset
+
+ if 
+\begin_inset Formula $V_{i}(t)$
+\end_inset
+
+ just pass through the threshold (
+\begin_inset Formula $\unit[10]{mV}$
+\end_inset
+
+ in our case) from low to high, otherwise 
+\begin_inset Formula $x_{t}=0$
+\end_inset
+
+.
+\end_layout
+
+\end_body
+\end_document
