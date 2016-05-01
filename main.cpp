@@ -111,6 +111,10 @@ int MainLoop(const po::variables_map &vm)
     cerr << "stv must be a multiple of dt !" << endl;
     return 2;
   }
+  if (e_stv / e_dt > INT_MAX) {
+	  cerr << "stv / dt > INT_MAX ! (dt too small or stv too large)" << endl;
+	  return 2;
+  }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
     -> bool {
@@ -201,7 +205,7 @@ int MainLoop(const po::variables_map &vm)
 
   std::vector<size_t> vec_n_spike(pm.n_total());  // count the number of spikes
   TySpikeEventVec ras;                            // record spike raster
-  int n_dt_in_stv = round(e_stv / e_dt);
+  int n_dt_in_stv = int(e_stv / e_dt + 0.1);
   int count_n_dt_in_stv = n_dt_in_stv;
   size_t n_step = (size_t)(e_t / e_dt);
   // Main loop

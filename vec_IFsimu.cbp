@@ -48,6 +48,7 @@
 		<Unit filename="neuron_system_utils.h" />
 		<Unit filename="poisson_generator.cpp" />
 		<Unit filename="poisson_generator.h" />
+		<Unit filename="simulator_base.h" />
 		<Unit filename="simulator_exact_order.h" />
 		<Unit filename="simulator_v0.h" />
 		<Unit filename="single_neuron_dynamics.h" />

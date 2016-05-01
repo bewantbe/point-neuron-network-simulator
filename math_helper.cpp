@@ -1,4 +1,5 @@
 #include <cstdio>
+#define _USE_MATH_DEFINES  // For MSVC, so M_PI is defined
 #include <cmath>
 
 /* poly/solve_cubic.c

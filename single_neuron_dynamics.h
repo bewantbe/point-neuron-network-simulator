@@ -69,7 +69,7 @@ struct Ty_LIF_G_core
   // using classical Runge–Kutta 4-th order scheme for voltage.
   // Conductance will evolve using the exact formula.
   // Return derivative k1 at t_n, for later interpolation.
-  __attribute__ ((noinline)) double DymInplaceRK4(double *dym_val, double dt) const
+  MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
   {
 
     double v_n = dym_val[id_V];
@@ -168,7 +168,7 @@ struct Ty_LIF_GH_core
   // using classical Runge–Kutta 4-th order scheme for voltage.
   // Conductance will evolve using the exact formula.
   // Return derivative k1 at t_n, for later interpolation.
-  __attribute__ ((noinline)) double DymInplaceRK4(double *dym_val, double dt) const
+  MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
   {
     double v_n = dym_val[id_V];
     double k1, k2, k3, k4;
@@ -245,7 +245,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
 
   // Evolve the ODE and note down the spike time, assuming no reset and no external input.
   // `spike_time_local' should be guaranteed to be within [0, dt] or NAN.
-  __attribute__ ((noinline)) void NextStepSingleNeuronContinuous(double *dym_val, double &spike_time_local, double dt) const
+  MACRO_NO_INLINE void NextStepSingleNeuronContinuous(double *dym_val, double &spike_time_local, double dt) const
   {
     double v_n = dym_val[id_V];
     double k1  = DymInplaceRK4(dym_val, dt);

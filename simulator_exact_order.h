@@ -39,7 +39,7 @@ public:
   }
 
 protected:
-  __attribute__ ((noinline)) void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
+  MACRO_NO_INLINE void SynapticInteraction(struct TyNeuronalDymState &e_neu_state, const TySpikeEvent &se) const
   {
     if (se.id < pm.n_E) {
       // Excitatory neuron fired
@@ -63,7 +63,7 @@ protected:
   }
 
   // Evolve all neurons without synaptic interaction
-  __attribute__ ((noinline)) void NextStepNoInteract(struct TyNeuronalDymState &tmp_neu_state,
+  MACRO_NO_INLINE void NextStepNoInteract(struct TyNeuronalDymState &tmp_neu_state,
               TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
@@ -100,7 +100,7 @@ protected:
 
 public:
   // Evolve the whole system one dt, with interaction
-  __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  MACRO_NO_INLINE void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
     struct TyNeuronalDymState bk_neu_state;
@@ -248,7 +248,7 @@ public:
 
 protected:
   // Evolve all neurons without synaptic interaction
-  __attribute__ ((noinline)) void NextStepNoInteractToTime(
+  MACRO_NO_INLINE void NextStepNoInteractToTime(
       struct TyNeuronalDymState &tmp_neu_state,
       const TyArrVals &bk_state_time,
       const std::vector<int> &ids_affected,
@@ -301,7 +301,7 @@ public:
   TyArrVals bk_state_time;
   struct TyNeuronalDymState bk_neu_state;
 
-  __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  MACRO_NO_INLINE void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
 
@@ -421,7 +421,7 @@ public:
   // Evolve the whole system one dt, with interaction.
   // Save spike events in this `dt' in `ras',
   // and add spike count to `vec_n_spike'.
-  __attribute__ ((noinline)) void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  MACRO_NO_INLINE void NextDt(TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
 

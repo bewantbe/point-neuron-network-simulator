@@ -1,4 +1,7 @@
 // Functions in this file is copy from raster_tuning project.
+
+#define _CRT_SECURE_NO_WARNINGS 1  // Suppress MSVC warnings about strcat
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,7 +65,7 @@ int ReadOneLongCmdPara(int argc, char *argv[], int pp, double *vec, int size)
   // calculate the length of argv[]
   int argvs_sz = 10;  // 10 is just for safe
   for (int k=pp; k<argc; k++) {
-    argvs_sz += strlen(argv[k]);
+    argvs_sz += (int)strlen(argv[k]);
   }
   char *tmp_str = (char*)calloc(argvs_sz, sizeof(char));
   int q = pp;
@@ -93,7 +96,7 @@ int ReadOneLongCmdPara(int argc, char *argv[], int pp, double *vec, int size)
 int CheckDirAndCreate(const std::string &filepath)
 {
   std::string path = filepath;
-  int l = path.size();
+  int l = (int)path.size();
   if (l>=2 && path[0]=='.' && path[1]=='/') {         // extract the path name
     l -= 2;
     for (int i=0; i<l; i++) { path[i] = path[i+2]; }
