@@ -54,4 +54,5 @@ old_ras = ras;
 maxabs = @(X) max(abs(X(:)));
 
 maxabs(X - old_X)
+maxabs(ras - old_ras)
 

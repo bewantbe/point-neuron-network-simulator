@@ -391,29 +391,51 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
   // dV/dt term
   inline double GetDv(const double *dym_val) const
   {
+    const double &V = dym_val[id_V];
+    const double &h = dym_val[id_h];
+    const double &m = dym_val[id_m];
+    const double &n = dym_val[id_n];
     return
-      -(dym_val[id_V]-V_Na) * G_Na
-        * dym_val[id_h] * dym_val[id_m] * dym_val[id_m] * dym_val[id_m]
-      -(dym_val[id_V]-V_K ) * G_K
-        * dym_val[id_n] * dym_val[id_n] * dym_val[id_n] * dym_val[id_n]
-      -(dym_val[id_V]-V_L ) * G_L
-      -(dym_val[id_V]-V_gE) * dym_val[id_gE]
-      -(dym_val[id_V]-V_gI) * dym_val[id_gI];
-
+      -(V-V_Na) * G_Na * h * m * m * m
+      -(V-V_K ) * G_K * n * n * n * n
+      -(V-V_L ) * G_L
+      -(V-V_gE) * dym_val[id_gE]
+      -(V-V_gI) * dym_val[id_gI];
   }
 
-  // Classical HH neuron equations go here
+//  // Classical HH neuron equations go here
+//  void ODE_RHS(const double *dym_val, double *dym_d_val) const
+//  {
+//    const double &V = dym_val[id_V];
+//    const double &h = dym_val[id_h];
+//    const double &m = dym_val[id_m];
+//    const double &n = dym_val[id_n];
+//    dym_d_val[id_V] = GetDv(dym_val);
+//    dym_d_val[id_h] = (1-h) * (0.07*exp(-V/20))
+//                        - h / (exp(3-0.1*V)+1);
+//    dym_d_val[id_m] = (1-m) * ((2.5-0.1*V)/(exp(2.5-0.1*V)-1))
+//                        - m * (4*exp(-V/18));
+//    dym_d_val[id_n] = (1-n) * ((0.1-0.01*V)/(exp(1-0.1*V)-1))
+//                        - n * (0.125*exp(-V/80));
+//    // No RHS for G here, that is solved explicitly.
+//  }
+
+  // Classical HH neuron equations go here. Faster version.
   void ODE_RHS(const double *dym_val, double *dym_d_val) const
   {
+    const double &V = dym_val[id_V];
+    const double &h = dym_val[id_h];
+    const double &m = dym_val[id_m];
+    const double &n = dym_val[id_n];
     dym_d_val[id_V] = GetDv(dym_val);
-    dym_d_val[id_h] = (1-dym_val[id_h]) * (0.07*exp(-dym_val[id_V]/20))
-      - dym_val[id_h] / (exp(3-0.1*dym_val[id_V])+1);
-    dym_d_val[id_m] = (1-dym_val[id_m])
-        * ((2.5-0.1*dym_val[id_V])/(exp(2.5-0.1*dym_val[id_V])-1))
-      - dym_val[id_m] * (4*exp(-dym_val[id_V]/18));
-    dym_d_val[id_n] = (1-dym_val[id_n])
-        * ((0.1-0.01*dym_val[id_V])/(exp(1-0.1*dym_val[id_V])-1))
-      - dym_val[id_n] * (0.125*exp(-dym_val[id_V]/80));
+    double e1 = exp(-0.1*dym_val[id_V]);
+    double e2 = sqrt(e1);
+    dym_d_val[id_h] = (1-h) * (0.07*e2)
+                        - h / (e1*exp(3.0)+1);
+    dym_d_val[id_m] = (1-m) * ((2.5-0.1*V)/(e1*exp(2.5)-1))
+                        - m * (4*exp(-V/18));
+    dym_d_val[id_n] = (1-n) * ((0.1-0.01*V)/(e1*exp(1.0)-1))
+                        - n * (0.125*sqrt(sqrt(e2)));
     // No RHS for G here, that is solved explicitly.
   }
 
