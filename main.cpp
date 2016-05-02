@@ -23,7 +23,8 @@ TODO:
 #include "legacy_lib.h"
 
 #include "single_neuron_dynamics.h"
-#include "neuron_system_utils.h"
+//#include "neuron_system_utils.h"
+#include "neuron_population.h"
 #include "simulator_exact_order.h"
 
 #include <boost/program_options.hpp>
@@ -93,6 +94,8 @@ int MainLoop(const po::variables_map &vm)
     exit(-1);
   }
 
+  NeuronPopulationDeltaInteract neu_pop(p_neuron_model, pm);
+
   double e_t   = vm["t"].as<double>();
   double e_dt  = vm["dt"].as<double>();
   double e_stv = e_dt;
@@ -153,17 +156,17 @@ int MainLoop(const po::variables_map &vm)
   // simulator for the neural network
   NeuronSimulatorBase *p_neu_simu = nullptr;
   if (str_nm == "LIF-G" || str_nm == "LIF-GH" || str_nm == "HH-GH") {
-    p_neu_simu = new NeuronSimulatorExactSpikeOrder(p_neuron_model, pm, e_dt);
-  } else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
+    p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+  }/* else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
              || str_nm == "HH-GH-Sparse") {
-    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(p_neuron_model, pm, e_dt);
+    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
   } else if (str_nm == "LIF-G-Sparse2" || str_nm == "LIF-GH-Sparse2"
              || str_nm == "HH-GH-Sparse2") {
-    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(p_neuron_model, pm, e_dt);
-  }
+    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
+  }*/
 
   if (vm.count("initial-state-path")) {
-    FillNeuStateFromFile(p_neu_simu->GetNeuState(),
+    FillNeuStateFromFile(neu_pop.GetDymState(),
                          vm["initial-state-path"].as<std::string>().c_str());
     cout << "initial state loaded!" << endl;
     p_neu_simu->SaneTestVolt();
@@ -178,39 +181,46 @@ int MainLoop(const po::variables_map &vm)
   auto func_save_dym_values = [b_output_volt, &fout_volt,
                                b_output_G, &fout_G,
                                b_output_HH_gate, &fout_HH_gate]
-                               (NeuronSimulatorBase *p_neu_simu, Ty_Neuron_Dym_Base *p_neuron_model, const TyNeuronalParams &pm) {
+                               (const NeuronPopulationBase &neu_pop, Ty_Neuron_Dym_Base *p_neuron_model) {
     if (b_output_volt) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_volt.write((char*)& p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_V()), sizeof(double));
+      int id_V = p_neuron_model->Get_id_V();
+      for (int j = 0; j < neu_pop.n_neurons(); j++) {
+        double d = neu_pop.GetDymState().dym_vals(j, id_V);
+        fout_volt.write((char*)&d, sizeof(double));
       }
     }
     if (b_output_G) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_G.write((char*)& p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gE()), sizeof(double));
-        fout_G.write((char*)& p_neu_simu->GetNeuState().dym_vals(j, p_neuron_model->Get_id_gI()), sizeof(double));
+      int id_gE = p_neuron_model->Get_id_gE();
+      int id_gI = p_neuron_model->Get_id_gI();
+      for (int j = 0; j < neu_pop.n_neurons(); j++) {
+        double d1 = neu_pop.GetDymState().dym_vals(j, id_gE);
+        double d2 = neu_pop.GetDymState().dym_vals(j, id_gI);
+        fout_G.write((char*)&d1, sizeof(double));
+        fout_G.write((char*)&d2, sizeof(double));
       }
     }
     if (b_output_HH_gate) {
-      for (int j = 0; j < pm.n_total(); j++) {
-        fout_HH_gate.write((char*)& p_neu_simu->GetNeuState()
-                           .dym_vals(j, p_neuron_model->Get_id_V() + 1),
-                           sizeof(double)*(((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1));  // a bit ugly here
+      int id_gating = p_neuron_model->Get_id_V() + 1;
+      int n_gating = ((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1;
+      for (int j = 0; j < neu_pop.n_neurons(); j++) {
+        const double *p = & neu_pop.GetDymState().dym_vals(j, id_gating);
+        fout_HH_gate.write((char*)p, sizeof(double)*n_gating);
       }
     }
   };
 
   if (vm.count("output-first-data-point")) {
-    func_save_dym_values(p_neu_simu, p_neuron_model, pm);
+    func_save_dym_values(neu_pop, p_neuron_model);
   }
 
-  std::vector<size_t> vec_n_spike(pm.n_total());  // count the number of spikes
+  std::vector<size_t> vec_n_spike(neu_pop.n_neurons());  // count the number of spikes
   TySpikeEventVec ras;                            // record spike raster
   int n_dt_in_stv = int(e_stv / e_dt + 0.1);
   int count_n_dt_in_stv = n_dt_in_stv;
   size_t n_step = (size_t)(e_t / e_dt);
   // Main loop
   for (size_t i = 0; i < n_step; i++) {
-    p_neu_simu->NextDt(ras, vec_n_spike);
+    p_neu_simu->NextDt(&neu_pop, ras, vec_n_spike);
     p_neu_simu->SaneTestState();
     if (output_ras) {
       for (size_t j = 0; j < ras.size(); j++) {
@@ -224,13 +234,13 @@ int MainLoop(const po::variables_map &vm)
       continue;
     }
     count_n_dt_in_stv = n_dt_in_stv;
-    func_save_dym_values(p_neu_simu, p_neuron_model, pm);
+    func_save_dym_values(neu_pop, p_neuron_model);
   }
 
   if (vm.count("isi-path")) {
     std::ofstream fout_isi( vm["isi-path"].as<std::string>() );
     fout_isi.precision(17);
-    for (int j = 0; j < pm.n_total(); j++) {
+    for (int j = 0; j < neu_pop.n_neurons(); j++) {
       fout_isi << e_t / vec_n_spike[j] << '\t';
     }
   }

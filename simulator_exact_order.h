@@ -29,7 +29,7 @@ public:
   TyPoissonTimeVec poisson_time_vec;
   double t, dt;
 
-  NeuronSimulatorExactSpikeOrder(double _dt)
+  NeuronSimulatorExactSpikeOrder(const TyNeuronalParams &pm, double _dt)
   {
     dt = _dt;
     t = 0;
@@ -43,7 +43,7 @@ protected:
   {
     double t_step_end = t + dt;
     dbg_printf("----- Trying t = %f .. %f -------\n", t, t_step_end);
-    for (int j = 0; j < pm.n_total(); j++) {
+    for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
       //! tmp_neu_state.dym_vals must be Row major !
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
       double t_local = t;
@@ -55,11 +55,11 @@ protected:
         p_neu_pop->NoInteractDt(j, poisson_time_seq.Front() - t_local, t_local, spike_events);
         t_local = poisson_time_seq.Front();
         p_neu_pop->InjectPoissonE(j);
-        poisson_time_seq.PopAndFill(pm.arr_pr[j]);
+        poisson_time_seq.PopAndFill(p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j]);
       }
       dbg_printf("Time from %f to %f\n", t_local, t_step_end);
       p_neu_pop->NoInteractDt(j, t_step_end - t_local, t_local, spike_events);
-      dbg_printf("Neuron %d @t=%f end state %f, %f, %f\n", j, t_step_end, dym_val[0], dym_val[1], dym_val[2]);
+      /*dbg_printf("Neuron %d @t=%f end state %f, %f, %f\n", j, t_step_end, dym_val[0], dym_val[1], dym_val[2]);*/
     }
   }
 
@@ -125,25 +125,25 @@ public:
   // Test and correct the neuron voltage (e.g. for imported data).
   void SaneTestVolt()
   {
-    for (int j = 0; j < pm.n_total(); j++) {
-      if (neu_state.dym_vals(j, p_neuron_model->Get_id_V())
-          > p_neuron_model->Get_V_threshold()) {
-        p_neuron_model->VoltHandReset(neu_state.StatePtr(j));
-        neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();
-      }
-    }
+    /*for (int j = 0; j < pm.n_total(); j++) {*/
+    /*if (neu_state.dym_vals(j, p_neuron_model->Get_id_V())*/
+    /*> p_neuron_model->Get_V_threshold()) {*/
+    /*p_neuron_model->VoltHandReset(neu_state.StatePtr(j));*/
+    /*neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();*/
+    /*}*/
+    /*}*/
   }
 
   // Test if the calculation blow up
   void SaneTestState() override
   {
-    for (int j = 0; j < pm.n_total(); j++) {
-      if ( !(fabs(neu_state.dym_vals(j, p_neuron_model->Get_id_V()))<500) ) {  // 500mV
-        cerr << "\nNon-finite state value! V = " << neu_state.dym_vals(j, p_neuron_model->Get_id_V())
-          << "\n  Possible reason: time step too large.\n\n";
-        throw "Non-finite state value!";
-      }
-    }
+    /*for (int j = 0; j < pm.n_total(); j++) {*/
+    /*if ( !(fabs(neu_state.dym_vals(j, p_neuron_model->Get_id_V()))<500) ) {  // 500mV*/
+    /*cerr << "\nNon-finite state value! V = " << neu_state.dym_vals(j, p_neuron_model->Get_id_V())*/
+    /*<< "\n  Possible reason: time step too large.\n\n";*/
+    /*throw "Non-finite state value!";*/
+    /*}*/
+    /*}*/
   }
 
   void PrintfState(const char *const rec_path, const struct TyNeuronalDymState &neu_state)
@@ -151,7 +151,7 @@ public:
     std::ofstream fout(rec_path, std::ios_base::app);
     fout << "\n";
     fout << "State in t = " << t << "\n";
-    for (int j = 0; j < pm.n_total(); j++) {
+    for (int j = 0; j < neu_state.Get_n_neurons(); j++) {
       fout << "neu[" << std::setw(2) << j << "] = ";
       fout << setiosflags(std::ios::fixed) << std::setprecision(3);
       for (int k = 0; k < neu_state.Get_n_dym_vars(); k++) {
@@ -162,18 +162,6 @@ public:
     fout << std::endl;
   }
 
-  TyNeuronalDymState & GetNeuState()
-  {
-    return neu_state;
-  }
-  const TyNeuronalDymState & GetNeuState() const
-  {
-    return neu_state;
-  }
-  double GetNeuState(int j, int id_var) const
-  {
-    return neu_state.dym_vals(j, id_var);
-  }
   TyPoissonTimeVec & Get_poisson_time_vec() override
   {
     return poisson_time_vec;
@@ -197,7 +185,7 @@ public:
   where `fr' is mean firing rate over all neurons, p=nE+nI,
         `sp' is mean number of out edges for each neuron.
 */
-
+/*
 class NeuronSimulatorExactSpikeOrderSparse
 : public NeuronSimulatorExactSpikeOrder
 {
@@ -484,5 +472,5 @@ public:
     t = t_end;
   }
 };
-
+*/
 #endif
