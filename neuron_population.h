@@ -128,6 +128,8 @@ class NeuronPopulationDeltaInteractTemplate:
   public TyNeuronalDymState
 {
 public:
+  TyNeu neuron_model;
+
   NeuronPopulationDeltaInteractTemplate(const TyNeuronalParams &_pm)
     :TyNeuronalParams(_pm), TyNeuronalDymState(_pm, TyNeu::n_var)
   {
@@ -143,7 +145,7 @@ public:
   {
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
-    TyNeu::NextStepSingleNeuronQuiet(
+    neuron_model.NextStepSingleNeuronQuiet(
         dym_val, time_in_refractory[neuron_id], spike_time_local, dt);
     if (!std::isnan(spike_time_local)) {
       spike_events.emplace_back(t_local + spike_time_local, neuron_id);
@@ -175,14 +177,14 @@ public:
 
   void ForceReset(int neuron_id)
   {
-    TyNeu::VoltHandReset(StatePtr(neuron_id));
+    neuron_model.VoltHandReset(StatePtr(neuron_id));
     time_in_refractory[neuron_id] = std::numeric_limits<double>::min();
   }
 
   void InjectPoissonE(int neuron_id)
   {
     // Add Poisson input
-    dym_vals(neuron_id, TyNeu::id_gEInject()) += arr_ps[neuron_id];
+    dym_vals(neuron_id, TyNeu::id_gEInject) += arr_ps[neuron_id];
   }
 
   void operator=(const TyNeuronalDymState &neu_dym)
