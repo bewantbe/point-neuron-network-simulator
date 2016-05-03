@@ -4,17 +4,9 @@
 #include "common_header.h"
 #include "math_helper.h"
 
-// Fast function calculation for exp(x)
+// Fast code for exp(x)
 #include "fmath.hpp"
 #define exp(x) fmath::expd(x)
-
-// list of neuron models
-enum eNeuronModel
-{
-  LIF_G,
-  LIF_GH,
-  HH_GH
-};
 
 struct Ty_Neuron_Dym_Base
 {
@@ -25,8 +17,11 @@ struct Ty_Neuron_Dym_Base
   virtual int Get_id_gEInject() const = 0;  // index of gE injection variable
   virtual int Get_id_gIInject() const = 0;  // index of gI injection variable
   virtual int Get_n_dym_vars() const = 0;   // number of state variables
-  virtual void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
-                           double &spike_time_local, double dt_local) const = 0;
+  virtual void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local) const = 0;
   virtual void VoltHandReset(double *dym_val) const = 0;
 };
 
@@ -355,7 +350,7 @@ template<typename ExtraCurrent>
 struct Ty_HH_GH_CUR
   :public Ty_Neuron_Dym_Base
 {
-  typedef typename ExtraCurrent::TyData TyCurrent;
+  typedef typename ExtraCurrent::TyData TyCurrentData;
 
   double V_Na = 115;             // mV
   double V_K  = -12;
@@ -394,7 +389,7 @@ struct Ty_HH_GH_CUR
 
   // dV/dt term
   inline double GetDv(const double *dym_val, double t,
-               const TyCurrent &extra_data) const
+               const TyCurrentData &extra_data) const
   {
     const double &V = dym_val[id_V];
     const double &h = dym_val[id_h];
@@ -405,7 +400,8 @@ struct Ty_HH_GH_CUR
       -(V-V_K ) * G_K * n * n * n * n
       -(V-V_L ) * G_L
       -(V-V_gE) * dym_val[id_gE]
-      -(V-V_gI) * dym_val[id_gI];
+      -(V-V_gI) * dym_val[id_gI]
+      + ExtraCurrent()(t, extra_data);
   }
 
 //  // Classical HH neuron equations go here
@@ -427,7 +423,7 @@ struct Ty_HH_GH_CUR
 
   // Classical HH neuron equations go here. Faster version.
   void ODE_RHS(const double *dym_val, double *dym_d_val, double t,
-               const TyCurrent &extra_data) const
+               const TyCurrentData &extra_data) const
   {
     const double &V = dym_val[id_V];
     const double &h = dym_val[id_h];
@@ -446,7 +442,7 @@ struct Ty_HH_GH_CUR
   }
 
   double DymInplaceRK4(double *dym_val, double dt, double t,
-                       const TyCurrent &extra_data) const
+                       const TyCurrentData &extra_data) const
   {
     // for G. See Ty_LIF_GH_core::NextDtConductance().
     double expEC  = exp(-0.5 * dt / tau_gE);
@@ -503,7 +499,7 @@ struct Ty_HH_GH_CUR
     double &spike_time_local,
     double dt_local,
     double t,
-    const TyCurrent &extra_data) const
+    const TyCurrentData &extra_data) const
   {
     spike_time_local = std::numeric_limits<double>::quiet_NaN();
     double v0 = dym_val[id_V];
@@ -530,10 +526,11 @@ struct Ty_HH_GH_CUR
 struct TyZeroCurrent
 {
   typedef int TyData;
-  double operator()(const TyData &a) const
+  double operator()(double t, const TyData &a) const
   { return 0.0; }
 };
 
+// HH model with Poisson input
 struct Ty_HH_GH :public Ty_HH_GH_CUR<TyZeroCurrent>
 {
   /*using Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet;*/
@@ -543,5 +540,15 @@ struct Ty_HH_GH :public Ty_HH_GH_CUR<TyZeroCurrent>
     Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, 0);
   }
 };
+
+struct TySineCurrent
+{
+  typedef double TyData[3];  // Amplitude, angular frequency, phase
+  double operator()(double t, const TyData &a) const
+  { return a[0]*sin(a[1]*t + a[2]); }
+};
+
+// HH model with Poisson input and sine current input
+typedef Ty_HH_GH_CUR<TySineCurrent> Ty_HH_GH_sine;
 
 #endif
