@@ -39,7 +39,7 @@ public:
 
   int n_neurons() const
   {
-    return n_total();
+    return Get_n_neurons();
   }
 
   void NoInteractDt(int neuron_id, double dt, double t_local,

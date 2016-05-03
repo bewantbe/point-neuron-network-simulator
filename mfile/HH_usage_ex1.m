@@ -2,6 +2,7 @@
 
 clear('pm');
 pm.prog_path = '../bin/gen_neu';
+%pm.prog_path = '/home/xyy/code/point-neuron-network-simulator-testing/bin/gen_neu';
 pm.neuron_model = 'HH-GH';
 pm.net  = 'net_1_0';
 pm.nI   = 0;
@@ -11,7 +12,7 @@ pm.scei = 0.00;
 pm.scii = 0.00;
 pm.pr   = 0.05;
 pm.ps   = 0.1;
-pm.t    = 1e3;
+pm.t    = 1e6;
 pm.dt   = 1.0/32;
 pm.stv  = 0.5;
 pm.seed = 235478;
@@ -20,7 +21,7 @@ pm.extra_cmd = '';
 tic;
 [X, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
 toc;
-
+return
 ISI
 figure(3);
 title('ISI distribution');

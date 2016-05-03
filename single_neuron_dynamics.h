@@ -351,8 +351,12 @@ typedef Ty_LIF_stepper<Ty_LIF_GH_core> Ty_LIF_GH;
 // Model of classical Hodgkin-Huxley (HH) neuron,
 // with two ODE for G (See Ty_LIF_GH_core::NextDtConductance() for details).
 // The parameters for G comes from unknown source.
-struct Ty_HH_GH :public Ty_Neuron_Dym_Base
+template<typename ExtraCurrent>
+struct Ty_HH_GH_CUR
+  :public Ty_Neuron_Dym_Base
 {
+  typedef typename ExtraCurrent::TyData TyCurrent;
+
   double V_Na = 115;             // mV
   double V_K  = -12;
   double V_L  =  10.6;
@@ -389,7 +393,8 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
   int Get_id_gI() const override {return id_gI;}
 
   // dV/dt term
-  inline double GetDv(const double *dym_val) const
+  inline double GetDv(const double *dym_val, double t,
+               const TyCurrent &extra_data) const
   {
     const double &V = dym_val[id_V];
     const double &h = dym_val[id_h];
@@ -421,13 +426,14 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
 //  }
 
   // Classical HH neuron equations go here. Faster version.
-  void ODE_RHS(const double *dym_val, double *dym_d_val) const
+  void ODE_RHS(const double *dym_val, double *dym_d_val, double t,
+               const TyCurrent &extra_data) const
   {
     const double &V = dym_val[id_V];
     const double &h = dym_val[id_h];
     const double &m = dym_val[id_m];
     const double &n = dym_val[id_n];
-    dym_d_val[id_V] = GetDv(dym_val);
+    dym_d_val[id_V] = GetDv(dym_val, t, extra_data);
     double e1 = exp(-0.1*dym_val[id_V]);
     double e2 = sqrt(e1);
     dym_d_val[id_h] = (1-h) * (0.07*e2)
@@ -439,7 +445,8 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
     // No RHS for G here, that is solved explicitly.
   }
 
-  double DymInplaceRK4(double *dym_val, double dt) const
+  double DymInplaceRK4(double *dym_val, double dt, double t,
+                       const TyCurrent &extra_data) const
   {
     // for G. See Ty_LIF_GH_core::NextDtConductance().
     double expEC  = exp(-0.5 * dt / tau_gE);
@@ -461,24 +468,24 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
     TyMapVec k4_v(k4, n_var_soma);
 
     dym_val0_v = dym_val_v;
-    ODE_RHS(dym_val, k1);
+    ODE_RHS(dym_val, k1, t, extra_data);
 
     dym_val_v = dym_val0_v + 0.5*dt*k1_v;
     dym_val[id_gE] = expEC*dym_val[id_gE] + gE_s_coef*dym_val[id_gE_s1];
     dym_val[id_gI] = expIC*dym_val[id_gI] + gI_s_coef*dym_val[id_gI_s1];
     dym_val[id_gE_s1] *= expECR;
     dym_val[id_gI_s1] *= expICR;
-    ODE_RHS(dym_val, k2);
+    ODE_RHS(dym_val, k2, t + 0.5*dt, extra_data);
 
     dym_val_v = dym_val0_v + 0.5*dt*k2_v;
-    ODE_RHS(dym_val, k3);
+    ODE_RHS(dym_val, k3, t + 0.5*dt, extra_data);
 
     dym_val_v = dym_val0_v + dt*k3_v;
     dym_val[id_gE] = expEC*dym_val[id_gE] + gE_s_coef*dym_val[id_gE_s1];
     dym_val[id_gI] = expIC*dym_val[id_gI] + gI_s_coef*dym_val[id_gI_s1];
     dym_val[id_gE_s1] *= expECR;
     dym_val[id_gI_s1] *= expICR;
-    ODE_RHS(dym_val, k4);
+    ODE_RHS(dym_val, k4, t + dt, extra_data);
 
     dym_val_v = dym_val0_v + dt/6.0 * (k1_v + 2*k2_v + 2*k3_v + k4_v);
 
@@ -490,27 +497,50 @@ struct Ty_HH_GH :public Ty_Neuron_Dym_Base
     // no force reset required for HH
   }
 
-  void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
-    double &spike_time_local, double dt_local) const override
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local,
+    double t,
+    const TyCurrent &extra_data) const
   {
     spike_time_local = std::numeric_limits<double>::quiet_NaN();
     double v0 = dym_val[id_V];
-    double k1 = DymInplaceRK4(dym_val, dt_local);
+    double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
     double &v1 = dym_val[id_V];
     // See if neuron is firing. t_in_refractory == 0 means the neuron
     // is not in hand set refractory period, avoids kind of infinite loop.
     if (v0 <= V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
       spike_time_local = cubic_hermit_real_root(dt_local,
-        v0, v1, k1, GetDv(dym_val), V_threshold);
+        v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
       // Some redundant calculation of GetDv(). Let's leave it.
     }
     if (dt_local>0) {
-      t_in_refractory = 0;  // not 100% mathematically safe. Use the hard refractory for that.
+      // not 100% mathematically safe. Use the hard refractory for that.
+      t_in_refractory = 0;
     }
     //t_in_refractory += dt_local;
     //if (t_in_refractory > Time_Refractory) {
     //t_in_refractory = 0;
     //}
+  }
+};
+
+struct TyZeroCurrent
+{
+  typedef int TyData;
+  double operator()(const TyData &a) const
+  { return 0.0; }
+};
+
+struct Ty_HH_GH :public Ty_HH_GH_CUR<TyZeroCurrent>
+{
+  /*using Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet;*/
+  void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+    double &spike_time_local, double dt_local) const override
+  {
+    Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, 0);
   }
 };
 
