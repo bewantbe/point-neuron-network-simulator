@@ -1,4 +1,15 @@
-在 Window 下用 MSVC 编译
+Build under linux
+=======================
+
+Simply `make', then you will get a executable `bin/gen_neu'.
+You will need to install Eigen and Boost.ProgramOptions
+
+There is matlab scripts in `mfile/', notably the interface `gen_neu.m'.
+To use the matlab interface, you need to compile `mfile/BKDRHash.c' and `mfile/randMT19937.cpp'
+
+
+在 Windows 下用 MSVC 编译
+=======================
 
 示例环境：
   Win 10
@@ -30,7 +41,7 @@ http://eigen.tuxfamily.org/
   解压复制到
     C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include
   重命名文件夹为 eigen3
-  (也就是应该有文件 m Files (x86)\Microsoft Visual Studio 14.0\VC\include\eigen3\Eigen\Dense)
+  (也就是应该有文件 C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include\eigen3\Eigen\Dense)
 
   也可以放到任意放一个地方（路径最好不要含中文）, 然后添加 Include Directories
 
