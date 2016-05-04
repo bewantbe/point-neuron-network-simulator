@@ -395,6 +395,7 @@ struct Ty_HH_GH_CUR
     const double &h = dym_val[id_h];
     const double &m = dym_val[id_m];
     const double &n = dym_val[id_n];
+    printf("new. extra_data: %e\n", ExtraCurrent()(t, extra_data));
     return
       -(V-V_Na) * G_Na * h * m * m * m
       -(V-V_K ) * G_K * n * n * n * n
@@ -501,6 +502,7 @@ struct Ty_HH_GH_CUR
     double t,
     const TyCurrentData &extra_data) const
   {
+    /*printf("new. extra_data: %e\n", ExtraCurrent()(t, extra_data));*/
     spike_time_local = std::numeric_limits<double>::quiet_NaN();
     double v0 = dym_val[id_V];
     double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
@@ -543,12 +545,24 @@ struct Ty_HH_GH :public Ty_HH_GH_CUR<TyZeroCurrent>
 
 struct TySineCurrent
 {
-  typedef double TyData[3];  // Amplitude, angular frequency, phase
+  typedef double * TyData;  // Amplitude, angular frequency, phase
   double operator()(double t, const TyData &a) const
-  { return a[0]*sin(a[1]*t + a[2]); }
+  { //printf("Current: %e, %e, %e\n", a[0], a[1], a[2]);  fflush(stdout);
+    return a[0]*sin(a[1]*t + a[2]); }
 };
 
 // HH model with Poisson input and sine current input
-typedef Ty_HH_GH_CUR<TySineCurrent> Ty_HH_GH_sine;
+struct Ty_HH_GH_sine :public Ty_HH_GH_CUR<TySineCurrent>
+{
+  using Ty_HH_GH_CUR<TySineCurrent>::NextStepSingleNeuronQuiet;
+
+  void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+    double &spike_time_local, double dt_local) const override
+  {
+    printf("Old.\n");
+    double d[3] = {0, 0, 0};
+    Ty_HH_GH_CUR<TySineCurrent>::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, d);
+  }
+};
 
 #endif

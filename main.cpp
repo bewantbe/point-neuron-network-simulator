@@ -46,7 +46,7 @@ int MainLoop(const po::variables_map &vm)
   }
   Ty_Neuron_Dym_Base *p_neuron_model;
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
-  enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH };
+  enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH, HH_GH_sine };
   EnumNeuronModel enum_neuron_model;
   if (str_nm == "LIF-G" || str_nm == "LIF-G-Sparse") {
     p_neuron_model = new Ty_LIF_G();
@@ -57,6 +57,9 @@ int MainLoop(const po::variables_map &vm)
   } else if (str_nm == "HH-GH" || str_nm == "HH-GH-Sparse") {
     p_neuron_model = new Ty_HH_GH();
     enum_neuron_model = HH_GH;
+  }  else if (str_nm == "HH-GH-sine" || str_nm == "HH-GH-sine-Sparse") {
+    p_neuron_model = new Ty_HH_GH_sine();
+    enum_neuron_model = HH_GH_sine;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -109,6 +112,9 @@ int MainLoop(const po::variables_map &vm)
       break;
     case HH_GH:
       p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_GH>(pm);
+      break;
+    case HH_GH_sine:
+      p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine>(pm);
       break;
   }
   //NeuronPopulationDeltaInteract neu_pop(p_neuron_model, pm);
@@ -172,9 +178,11 @@ int MainLoop(const po::variables_map &vm)
 
   // simulator for the neural network
   NeuronSimulatorBase *p_neu_simu = nullptr;
+  p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+  /*
   if (str_nm == "LIF-G" || str_nm == "LIF-GH" || str_nm == "HH-GH") {
     p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
-  }/* else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
+  } else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
              || str_nm == "HH-GH-Sparse") {
     p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
   } else if (str_nm == "LIF-G-Sparse2" || str_nm == "LIF-GH-Sparse2"
@@ -237,6 +245,7 @@ int MainLoop(const po::variables_map &vm)
   int n_dt_in_stv = int(e_stv / e_dt + 0.1);
   int count_n_dt_in_stv = n_dt_in_stv;
   size_t n_step = (size_t)(e_t / e_dt);
+
   // Main loop
   for (size_t i = 0; i < n_step; i++) {
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);

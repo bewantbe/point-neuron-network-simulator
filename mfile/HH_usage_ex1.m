@@ -3,7 +3,7 @@
 clear('pm');
 pm.prog_path = '../bin/gen_neu';
 %pm.prog_path = '/home/xyy/code/point-neuron-network-simulator-testing/bin/gen_neu';
-pm.neuron_model = 'HH-GH';
+pm.neuron_model = 'HH-GH-sine';
 pm.net  = 'net_1_0';
 pm.nI   = 0;
 pm.scee = 0.05;
