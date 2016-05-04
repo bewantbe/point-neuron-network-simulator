@@ -18,6 +18,7 @@ TODO:
 
 #define NDEBUG  // disable assert() and disable checks in Eigen
 
+#include <libgen.h>  // for basename
 #include <cassert>
 #include "common_header.h"
 #include "legacy_lib.h"
@@ -297,65 +298,67 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "one of LIF-G, LIF-GH, HH-GH")
+       "One of LIF-G, LIF-GH, HH-GH and HH-GH-sine.")
       ("help,h",
-       "produce help message")
+       "Produce help message.")
       ("verbose,v",
-       "show progress.")
-      ("t",    po::value<double>()->default_value(1e4),
-       "simulation time")
-      ("dt",   po::value<double>()->default_value(1.0/2),
-       "simulation delta t")
+       "Show progress.")
+      ("t",    po::value<double>()->default_value(1e3),
+       "Simulation time, in ms.")
+      ("dt",   po::value<double>()->default_value(1.0/32),
+       "Simulation delta t (dt, time step), in ms.")
       ("stv",  po::value<double>(),
-       "delta t for output")
+       "Delta t for output (sampling). Must be multiples of dt.")
       ("nE",   po::value<unsigned int>()->default_value(1),
-       "number of excitatory neuron")
+       "Number of excitatory neurons.")
       ("nI",   po::value<unsigned int>()->default_value(0),
-       "number of inhibitory neuron")
+       "Number of inhibitory neurons.")
       ("net",  po::value<std::string>(),
-       "network name")
+       "Network file path.")
       ("scee", po::value<double>()->default_value(0.0),
-       "cortical strength E->E")
+       "Cortical strength E->E.")
       ("scie", po::value<double>()->default_value(0.0),
-       "cortical strength E->I")
+       "Cortical strength E->I.")
       ("scei", po::value<double>()->default_value(0.0),
-       "cortical strength I->E")
+       "Cortical strength I->E.")
       ("scii", po::value<double>()->default_value(0.0),
-       "cortical strength I->I")
+       "Cortical strength I->I.")
       ("ps",   po::value<double>(),
-       "Poisson input strength")
+       "Poisson input strength.")
       ("pr",   po::value<double>()->default_value(1.0),
-       "Poisson input rate")
+       "Poisson input rate, unit: 1/ms.")
       ("psi",  po::value<double>(),
-       "Poisson input strength, inhibitory type")
+       "Poisson input strength, inhibitory type.")
       ("pri",  po::value<double>(),
-       "Poisson input rate, inhibitory type")
+       "Poisson input rate, inhibitory type.")
       ("pr-mul", po::value<double>()->multitoken(),
-       "Poisson input rate multiper")
+       "Poisson input rate multiper.")
       ("seed",   po::value<unsigned int>()->default_value(1),
        "Random seed for Poisson events. An unsigned integer (0~2^32-1).")
       ("seed-auto",
        "Auto set random seed. This option overrides --seed.")
       ("sine-current-amplitude",         po::value<double>(),
-       "Set current sine amplitude.")
+       "Set the sine amplitude for current input.")
       ("sine-current-angular-frequency", po::value<double>(),
-       "Set current sine angular frequency.")
+       "Set the sine angular frequency for current input.")
       ("volt-path,o",      po::value<std::string>(),
-       "volt output file path")
+       "Volt output file path.")
       ("ras-path",         po::value<std::string>(),
-       "ras output file path")
+       "RAS output file path.")
       ("isi-path",         po::value<std::string>(),
-       "isi output file path")
+       "ISI output file path.")
       ("conductance-path", po::value<std::string>(),
-       "conductance output file path")
+       "Conductance output file path.")
       ("ion-gate-path", po::value<std::string>(),
-       "ion gate output file path")
+       "Gating variables output file path.")
       ("initial-state-path", po::value<std::string>(),
-       "initial state file path")
+       "Initial state file path.")
       ("input-event-path", po::value<std::string>(),
-       "Input event file path")
+       "Input event file path.")
       ("output-first-data-point",
-       "Also output initial condition in volt-path or conductance-path.")
+       "Also output initial condition in volt-path and conductance-path.")
+      ("parameter-path", po::value<std::string>(),
+       "Path for parameters, in INI style.")
   ;
   // ps-mul
   // verbose : for progress percentage
@@ -364,12 +367,19 @@ int main(int argc, char *argv[])
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
 
   if (vm.count("help")) {
+    cout << "Usage: " << basename(argv[0]) << " [OPTION]..." << "\n";
+    cout << "Neuron model simulator, with accurate firing timing and computation.\n";
     cout << desc << "\n";
     return 1;
   }
+
+  if (vm.count("parameter-path")) {
+    std::ifstream fin_opt(vm["parameter-path"].as<std::string>().c_str());
+    po::store(po::parse_config_file(fin_opt, desc), vm);
+  }
+  po::notify(vm);
 
   // Set random seed for Poisson event generator.
   if (vm.count("seed")) {
