@@ -142,9 +142,23 @@ public:
   {
     sin_par.resize(n_neurons(), 4);  // 3 or 4 both ok
     for (int j=0; j<n_neurons(); j++) {
-      sin_par(j, 0) = 5;
-      sin_par(j, 1) = 0.2;
+      sin_par(j, 0) = 0;
+      sin_par(j, 1) = 0;
       sin_par(j, 2) = 2*M_PI / n_neurons() * j;
+    }
+  }
+
+  void SetSineAmplitude(double a)
+  {
+    for (int j=0; j<n_neurons(); j++) {
+      sin_par(j, 0) = a;
+    }
+  }
+
+  void SetSineAngularFrequency(double w)
+  {
+    for (int j=0; j<n_neurons(); j++) {
+      sin_par(j, 1) = w;
     }
   }
 

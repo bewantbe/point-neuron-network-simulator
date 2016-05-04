@@ -141,6 +141,20 @@ int MainLoop(const po::variables_map &vm)
 	  cerr << "stv / dt > INT_MAX ! (dt too small or stv too large)" << endl;
 	  return 2;
   }
+  
+  // Parameters about current input
+  if (enum_neuron_model == HH_GH_sine) {
+    auto p_neu_pop_sine = static_cast<
+      NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine> *>(p_neu_pop);
+    if (vm.count("sine-current-amplitude")) {
+      p_neu_pop_sine->SetSineAmplitude(
+          vm["sine-current-amplitude"].as<double>());
+    }
+    if (vm.count("sine-current-angular-frequency")) {
+      p_neu_pop_sine->SetSineAngularFrequency(
+          vm["sine-current-angular-frequency"].as<double>());
+    }
+  }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
     -> bool {
@@ -322,6 +336,10 @@ int main(int argc, char *argv[])
        "Random seed for Poisson events. An unsigned integer (0~2^32-1).")
       ("seed-auto",
        "Auto set random seed. This option overrides --seed.")
+      ("sine-current-amplitude",         po::value<double>(),
+       "Set current sine amplitude.")
+      ("sine-current-angular-frequency", po::value<double>(),
+       "Set current sine angular frequency.")
       ("volt-path,o",      po::value<std::string>(),
        "volt output file path")
       ("ras-path",         po::value<std::string>(),

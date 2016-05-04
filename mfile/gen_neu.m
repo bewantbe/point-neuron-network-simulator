@@ -208,6 +208,14 @@ st_neu_param =...
 st_neu_param = [st_neu_param, get_mul_st(pm, 'pr_mul')];
 st_neu_param = [st_neu_param, get_mul_st(pm, 'ps_mul')];
 st_neu_param = [st_neu_param, get_mul_st(pm, 'psi_mul')];
+if isfield(pm, 'sine_amp')
+  st_neu_param = [st_neu_param,...
+    sprintf(' --sine-current-amplitude %.16e', pm.sine_amp)];
+end
+if isfield(pm, 'sine_w')
+  st_neu_param = [st_neu_param,...
+    sprintf(' --sine-current-angular-frequency %.16e', pm.sine_w)];
+end
 pm.pr = pm0.pr;
 if isfield(pm, 'pr_mul')
     if ~isfield(pm0, 'pr_mul')

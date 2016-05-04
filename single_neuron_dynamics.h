@@ -395,7 +395,7 @@ struct Ty_HH_GH_CUR
     const double &h = dym_val[id_h];
     const double &m = dym_val[id_m];
     const double &n = dym_val[id_n];
-    printf("new. extra_data: %e\n", ExtraCurrent()(t, extra_data));
+    /*printf("new. extra_data: %e\n", ExtraCurrent()(t, extra_data));*/
     return
       -(V-V_Na) * G_Na * h * m * m * m
       -(V-V_K ) * G_K * n * n * n * n
