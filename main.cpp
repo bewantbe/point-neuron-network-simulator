@@ -18,13 +18,11 @@ TODO:
 
 #define NDEBUG  // disable assert() and disable checks in Eigen
 
-#include <libgen.h>  // for basename
 #include <cassert>
 #include "common_header.h"
 #include "legacy_lib.h"
 
 #include "single_neuron_dynamics.h"
-//#include "neuron_system_utils.h"
 #include "neuron_population.h"
 #include "simulator_exact_order.h"
 
@@ -49,16 +47,16 @@ int MainLoop(const po::variables_map &vm)
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
   enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH, HH_GH_sine };
   EnumNeuronModel enum_neuron_model;
-  if (str_nm == "LIF-G" || str_nm == "LIF-G-Sparse") {
+  if (str_nm == "LIF-G") {
     p_neuron_model = new Ty_LIF_G();
     enum_neuron_model = LIF_G;
-  } else if (str_nm == "LIF-GH" || str_nm == "LIF-GH-Sparse") {
+  } else if (str_nm == "LIF-GH") {
     p_neuron_model = new Ty_LIF_GH();
     enum_neuron_model = LIF_GH;
-  } else if (str_nm == "HH-GH" || str_nm == "HH-GH-Sparse") {
+  } else if (str_nm == "HH-GH") {
     p_neuron_model = new Ty_HH_GH();
     enum_neuron_model = HH_GH;
-  }  else if (str_nm == "HH-GH-sine" || str_nm == "HH-GH-sine-Sparse") {
+  }  else if (str_nm == "HH-GH-sine") {
     p_neuron_model = new Ty_HH_GH_sine();
     enum_neuron_model = HH_GH_sine;
   } else {
@@ -191,19 +189,22 @@ int MainLoop(const po::variables_map &vm)
     fout_ras.precision(17);
   }
 
-  // simulator for the neural network
+  // Set simulator for the neural network
   NeuronSimulatorBase *p_neu_simu = nullptr;
-  p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
-  /*
-  if (str_nm == "LIF-G" || str_nm == "LIF-GH" || str_nm == "HH-GH") {
+  if (vm.count("simulation-method")) {
+    const std::string &str_simu_mathod = vm["simulation-method"].as<std::string>();
+    if (str_simu_mathod == "SSC") {  // Spike-Spike-Correction
+      p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+    } else if (str_simu_mathod == "SSC-Sparse") {
+      p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
+    } else if (str_simu_mathod == "SSC-Sparse2") {
+      p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
+    } else {
+      cerr << "No this simulation method.\n";
+    }
+  } else {
     p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
-  } else if (str_nm == "LIF-G-Sparse" || str_nm == "LIF-GH-Sparse"
-             || str_nm == "HH-GH-Sparse") {
-    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
-  } else if (str_nm == "LIF-G-Sparse2" || str_nm == "LIF-GH-Sparse2"
-             || str_nm == "HH-GH-Sparse2") {
-    p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
-  }*/
+  }
 
   if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(p_neu_pop->GetDymState(),
@@ -218,6 +219,7 @@ int MainLoop(const po::variables_map &vm)
     cout << "input event loaded!" << endl;
   }
 
+  // Function for save data to file
   auto func_save_dym_values = [
     b_output_volt, &fout_volt,
     b_output_G, &fout_G,
@@ -299,6 +301,8 @@ int main(int argc, char *argv[])
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
        "One of LIF-G, LIF-GH, HH-GH and HH-GH-sine.")
+      ("simulation-method",  po::value<std::string>(),
+       "One of SSC, SSC-Sparse and SSC-Sparse2. SSC is the default.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",
@@ -369,6 +373,13 @@ int main(int argc, char *argv[])
   po::store(po::parse_command_line(argc, argv, desc), vm);
 
   if (vm.count("help")) {
+    auto basename = [](std::string filename) -> std::string {
+      const size_t last_slash_idx = filename.find_last_of("\\/");
+      if (std::string::npos != last_slash_idx) {
+        filename.erase(0, last_slash_idx + 1);
+      }
+      return filename;
+    };
     cout << "Usage: " << basename(argv[0]) << " [OPTION]..." << "\n";
     cout << "Neuron model simulator, with accurate firing timing and computation.\n";
     cout << desc << "\n";

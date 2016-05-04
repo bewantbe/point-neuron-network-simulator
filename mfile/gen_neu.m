@@ -158,15 +158,20 @@ end
 if ~isfield(pm, 'neuron_model') || isempty(pm.neuron_model)
     error('neuron_model not specified! Should be one of "LIF-G", "LIF-GH", or "HH-GH"');
 end
+if ~isfield(pm, 'simu_model') || isempty(pm.simu_model)
+    pm.simu_method = 'SSC';
+end
 neuron_model_name = pm.neuron_model;
 if ~isfield(pm, 'prog_path')
     %   consider use 'which raster_tuning_HH3_gcc.' to find path?
     pathdir = fileparts(mfilename('fullpath'));
-    program_name = sprintf('%s%sgen_neu --neuron-model %s',...
-                           pathdir, filesep, pm.neuron_model);
+    program_name = sprintf(...
+        '%s%sgen_neu --neuron-model %s --simulation-method %s',...
+        pathdir, filesep, pm.neuron_model, pm.simu_method);
 else
-    program_name = sprintf('%s --neuron-model %s',...
-                           pm.prog_path, pm.neuron_model);
+    program_name = sprintf(...
+        '%s --neuron-model %s --simulation-method %s',...
+        pm.prog_path, pm.neuron_model, pm.simu_method);
 end
 
 if ~isfield(pm, 'st_extra_inf_post')

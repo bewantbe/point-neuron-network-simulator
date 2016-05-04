@@ -23,6 +23,8 @@ public:
   virtual const TyNeuronalDymState & GetDymState() const = 0;
   virtual double GetDymState(int neuron_id, int id_dym) const = 0;
   virtual const TyNeuronalParams * GetNeuronalParamsPtr() const = 0;
+  virtual void ScatterCopy(const struct TyNeuronalDymState &nd,
+                           const std::vector<int> &ids) = 0;
 };
 
 template<class TyNeu>  // neuron model
@@ -94,6 +96,12 @@ public:
   void operator=(const TyNeuronalDymState &neu_dym)
   {
     GetDymState() = neu_dym;
+  }
+
+  void ScatterCopy(const struct TyNeuronalDymState &nd,
+                   const std::vector<int> &ids)
+  {
+    GetDymState().ScatterCopy(nd, ids);
   }
 
   TyNeuronalDymState & GetDymState()
