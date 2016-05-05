@@ -189,11 +189,13 @@ int MainLoop(const po::variables_map &vm)
     fout_ras.precision(17);
   }
 
-  // Set simulator for the neural network
+  // Set simulator for the neural network.
   NeuronSimulatorBase *p_neu_simu = nullptr;
   if (vm.count("simulation-method")) {
     const std::string &str_simu_mathod = vm["simulation-method"].as<std::string>();
-    if (str_simu_mathod == "SSC") {  // Spike-Spike-Correction
+    if (str_simu_mathod == "simple") {
+      p_neu_simu = new NeuronSimulatorSimple(pm, e_dt);
+    } else if (str_simu_mathod == "SSC") {  // Spike-Spike-Correction
       p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
     } else if (str_simu_mathod == "SSC-Sparse") {
       p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
@@ -210,7 +212,7 @@ int MainLoop(const po::variables_map &vm)
     FillNeuStateFromFile(p_neu_pop->GetDymState(),
                          vm["initial-state-path"].as<std::string>().c_str());
     cout << "initial state loaded!" << endl;
-    p_neu_simu->SaneTestVolt();
+    //p_neu_simu->SaneTestVolt();
   }
 
   if (vm.count("input-event-path")) {
@@ -266,7 +268,7 @@ int MainLoop(const po::variables_map &vm)
   // Main loop
   for (size_t i = 0; i < n_step; i++) {
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);
-    p_neu_simu->SaneTestState();
+    //p_neu_simu->SaneTestState();
     if (output_ras) {
       for (size_t j = 0; j < ras.size(); j++) {
         fout_ras << ras[j].id + 1 << '\t' << ras[j].time << '\n';
@@ -302,7 +304,7 @@ int main(int argc, char *argv[])
       ("neuron-model",  po::value<std::string>(),
        "One of LIF-G, LIF-GH, HH-GH and HH-GH-sine.")
       ("simulation-method",  po::value<std::string>(),
-       "One of SSC, SSC-Sparse and SSC-Sparse2. SSC is the default.")
+       "One of simple, SSC, SSC-Sparse and SSC-Sparse2. SSC is the default.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",

@@ -4,32 +4,17 @@
 #include "common_header.h"
 #include "poisson_generator.h"
 #include "neuron_system_utils.h"
+#include "neuron_population.h"
 #include "simulator_base.h"
 
-#include "neuron_population.h"
-
-#include <iomanip>
-
-/**
-  Solver for pulse-coupled neuron model:
-    After a test step (without synaptic interaction), evolve the system
-    to the time of the first spike in this delta-t step, perform the synaptic
-    interaction. Then start another test step for the remaining interval,
-    recursively until there is no spike in the remaining interval.
-  The template parameter TyNeuronModel fully describes the single neuron dynamics.
-
-  Time cost:
-    # of calls to NextStepSingleNeuronQuiet(): (1/dt + pr + 2*p*fr)*p*T
-    # of synaptic interaction: (# of edges)*fr*T.
-  where the fr is mean firing rate over all neurons, p=nE+nI.
-*/
-class NeuronSimulatorExactSpikeOrder :public NeuronSimulatorBase
+// A simple simulator for networks without in-dt spike order correction.
+class NeuronSimulatorSimple :public NeuronSimulatorBase
 {
 public:
   TyPoissonTimeVec poisson_time_vec;
   double t, dt;
 
-  NeuronSimulatorExactSpikeOrder(const TyNeuronalParams &pm, double _dt)
+  NeuronSimulatorSimple(const TyNeuronalParams &pm, double _dt)
   {
     dt = _dt;
     t = 0;
@@ -39,34 +24,78 @@ public:
 protected:
   // Evolve all neurons without synaptic interaction
   MACRO_NO_INLINE void NextStepNoInteract(NeuronPopulationBase * p_neu_pop,
-              TySpikeEventVec &spike_events, double dt)
+      TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
-    dbg_printf("----- Trying t = %f .. %f -------\n", t, t_step_end);
+    // Loop over neurons
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
-      //! tmp_neu_state.dym_vals must be Row major !
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
+      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
       double t_local = t;
+      // Loop over Poisson events in this dt
       while (poisson_time_seq.Front() < t_step_end) {
-        dbg_printf("Neuron %d receive %lu-th (%lu) Poisson input at %f\n",
-                   j, poisson_time_seq.id_seq, poisson_time_seq.size(),
-                   poisson_time_seq.Front());
-        dbg_printf("Time from %f to %f\n", t_local, poisson_time_seq.Front());
         p_neu_pop->NoInteractDt(j, poisson_time_seq.Front() - t_local, t_local, spike_events);
         t_local = poisson_time_seq.Front();
         p_neu_pop->InjectPoissonE(j);
-        poisson_time_seq.PopAndFill(p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j]);
+        poisson_time_seq.PopAndFill(pr);  // Next event
       }
-      dbg_printf("Time from %f to %f\n", t_local, t_step_end);
       p_neu_pop->NoInteractDt(j, t_step_end - t_local, t_local, spike_events);
-      /*dbg_printf("Neuron %d @t=%f end state %f, %f, %f\n", j, t_step_end, dym_val[0], dym_val[1], dym_val[2]);*/
     }
   }
 
 public:
+  void NextDt(NeuronPopulationBase * p_neu_pop,
+      TySpikeEventVec &ras, std::vector<size_t> &vec_n_spike) override
+  {
+    TySpikeEventVec spike_events;        // Spike events in this dt
+    poisson_time_vec.SaveIdxAndClean();  // Clean Poisson queue
+
+    NextStepNoInteract(p_neu_pop, spike_events, dt);
+
+    std::sort(spike_events.begin(), spike_events.end());
+    for (auto it = spike_events.begin(); it != spike_events.end(); it++) {
+      p_neu_pop->SynapticInteraction(*it);
+      vec_n_spike[it->id]++;
+    }
+    ras.insert(ras.end(), spike_events.begin(), spike_events.end());
+    t += dt;
+  }
+
+  TyPoissonTimeVec & Get_poisson_time_vec() override
+  {
+    return poisson_time_vec;
+  }
+  const TyPoissonTimeVec & Get_poisson_time_vec() const override
+  {
+    return poisson_time_vec;
+  }
+};
+
+
+/**
+  Solver for pulse-coupled neuron model:
+    After a test step (without synaptic interaction), evolve the system
+    to the time of the first spike in this delta-t step, perform the synaptic
+    interaction. Then start another test step for the remaining interval,
+    recursively until there is no spike in the remaining interval.
+  Based on the interface NeuronPopulationBase which describes the population dynamic.
+
+  Time cost:
+    # of calls to NextStepSingleNeuronQuiet(): (1/dt + pr + 2*p*fr)*p*T
+    # of synaptic interaction: (# of edges)*fr*T.
+  where the fr is mean firing rate over all neurons, p=nE+nI.
+*/
+class NeuronSimulatorExactSpikeOrder :public NeuronSimulatorSimple
+{
+public:
+  NeuronSimulatorExactSpikeOrder(const TyNeuronalParams &pm, double _dt)
+    :NeuronSimulatorSimple(pm, _dt)
+  {}
+
+public:
   // Evolve the whole system one dt, with interaction
-  MACRO_NO_INLINE void NextDt(NeuronPopulationBase * p_neu_pop,
-      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  void NextDt(NeuronPopulationBase * p_neu_pop,
+      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
   {
     double t_end = t + dt;
     struct TyNeuronalDymState bk_neu_state;
@@ -95,7 +124,7 @@ public:
         // Record all spike events during the time step above.
         // Ideally, there should be only one event: heading_spike_event.
         bool b_heading_spike_pushed = false;
-        for (size_t i = 0; i < spike_events.size(); i ++) {
+        for (size_t i = 0; i < spike_events.size(); i++) {
           if (spike_events[i].id == heading_spike_event.id) {
             b_heading_spike_pushed = true;
           } else {
@@ -122,54 +151,6 @@ public:
     }
   }
 
-  // Test and correct the neuron voltage (e.g. for imported data).
-  void SaneTestVolt()
-  {
-    /*for (int j = 0; j < pm.n_total(); j++) {*/
-    /*if (neu_state.dym_vals(j, p_neuron_model->Get_id_V())*/
-    /*> p_neuron_model->Get_V_threshold()) {*/
-    /*p_neuron_model->VoltHandReset(neu_state.StatePtr(j));*/
-    /*neu_state.time_in_refractory[j] = std::numeric_limits<double>::min();*/
-    /*}*/
-    /*}*/
-  }
-
-  // Test if the calculation blow up
-  void SaneTestState() override
-  {
-    /*for (int j = 0; j < pm.n_total(); j++) {*/
-    /*if ( !(fabs(neu_state.dym_vals(j, p_neuron_model->Get_id_V()))<500) ) {  // 500mV*/
-    /*cerr << "\nNon-finite state value! V = " << neu_state.dym_vals(j, p_neuron_model->Get_id_V())*/
-    /*<< "\n  Possible reason: time step too large.\n\n";*/
-    /*throw "Non-finite state value!";*/
-    /*}*/
-    /*}*/
-  }
-
-  void PrintfState(const char *const rec_path, const struct TyNeuronalDymState &neu_state)
-  {
-    std::ofstream fout(rec_path, std::ios_base::app);
-    fout << "\n";
-    fout << "State in t = " << t << "\n";
-    for (int j = 0; j < neu_state.Get_n_neurons(); j++) {
-      fout << "neu[" << std::setw(2) << j << "] = ";
-      fout << setiosflags(std::ios::fixed) << std::setprecision(3);
-      for (int k = 0; k < neu_state.Get_n_dym_vars(); k++) {
-        fout << std::setw(7) << neu_state.dym_vals(j, k);
-      }
-      fout << "\n";
-    }
-    fout << std::endl;
-  }
-
-  TyPoissonTimeVec & Get_poisson_time_vec() override
-  {
-    return poisson_time_vec;
-  }
-  const TyPoissonTimeVec & Get_poisson_time_vec() const override
-  {
-    return poisson_time_vec;
-  }
 };
 
 /*
@@ -186,12 +167,12 @@ public:
         `sp' is mean number of out edges for each neuron.
 */
 class NeuronSimulatorExactSpikeOrderSparse
-: public NeuronSimulatorExactSpikeOrder
+: public NeuronSimulatorSimple
 {
 public:
 
   NeuronSimulatorExactSpikeOrderSparse(const TyNeuronalParams &_pm, double _dt)
-    :NeuronSimulatorExactSpikeOrder(_pm, _dt)
+    :NeuronSimulatorSimple(_pm, _dt)
   {
   }
 
@@ -242,7 +223,7 @@ public:
   TyArrVals bk_state_time;
   struct TyNeuronalDymState bk_neu_state;
 
-  MACRO_NO_INLINE void NextDt(NeuronPopulationBase * p_neu_pop,
+  void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
@@ -287,7 +268,7 @@ public:
       for (SparseMat::InnerIterator it(net, heading_spike_event.id); it; ++it) {
         ids_affected.push_back(it.row());
         bool_affected[it.row()] = true;
-        dbg_printf("  %d", it.row());
+        dbg_printf("  %ld", it.row());
       }
       ids_affected.push_back(heading_spike_event.id);
       bool_affected[heading_spike_event.id] = true;
@@ -360,7 +341,7 @@ public:
   // Evolve the whole system one dt, with interaction.
   // Save spike events in this `dt' in `ras',
   // and add spike count to `vec_n_spike'.
-  MACRO_NO_INLINE void NextDt(NeuronPopulationBase * p_neu_pop,
+  void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
     double t_end = t + dt;
@@ -410,7 +391,7 @@ public:
       for (SparseMat::InnerIterator it(net, heading_spike_event.id); it; ++it) {
         ids_affected.push_back(it.row());
         bool_affected[it.row()] = true;
-        dbg_printf("  %d", it.row());
+        dbg_printf("  %ld", it.row());
       }
       dbg_printf(".\n");
 
@@ -460,6 +441,46 @@ public:
       }
     }
     t = t_end;
+  }
+};
+
+// A simple simulator for networks with delayed synaptics.
+class NeuronSimulatorBigDelay :public NeuronSimulatorExactSpikeOrder
+{
+  TyPoissonTimeVec se_vec;
+
+  // Evolve all neurons without synaptic interaction
+  MACRO_NO_INLINE void NextStepNoInteract(NeuronPopulationBase * p_neu_pop,
+      TySpikeEventVec &spike_events, double dt)
+  {
+    double t_step_end = t + dt;
+    for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
+      TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
+      TyPoissonTimeSeq &se_seq = se_vec[j];
+      double t_local = t;
+      while (poisson_time_seq.Front() < t_step_end) {
+        p_neu_pop->NoInteractDt(j, poisson_time_seq.Front() - t_local, t_local, spike_events);
+        t_local = poisson_time_seq.Front();
+        p_neu_pop->InjectPoissonE(j);
+        poisson_time_seq.PopAndFill(p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j]);
+      }
+      p_neu_pop->NoInteractDt(j, t_step_end - t_local, t_local, spike_events);
+    }
+  }
+
+public:
+  void NextDt(NeuronPopulationBase * p_neu_pop,
+      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  {
+    TySpikeEventVec spike_events;
+    poisson_time_vec.SaveIdxAndClean();
+    NextStepNoInteract(p_neu_pop, spike_events, dt);
+    // Note down the spikes
+    double synaptic_delay = p_neu_pop->SynapticDelay();
+    for (auto it = spike_events.begin(); it != spike_events.end(); it++) {
+      se_vec[it->id].push_back(it->time + synaptic_delay);
+    }
+    t += dt;
   }
 };
 

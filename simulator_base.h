@@ -11,10 +11,8 @@ class NeuronSimulatorBase
 public:
   virtual void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) = 0;
-  virtual void SaneTestVolt() = 0;
-  virtual void SaneTestState() = 0;
   virtual const TyPoissonTimeVec & Get_poisson_time_vec() const = 0;
-  virtual TyPoissonTimeVec & Get_poisson_time_vec() = 0;
+  virtual       TyPoissonTimeVec & Get_poisson_time_vec() = 0;
 };
 
 #endif
