@@ -451,7 +451,7 @@ class NeuronSimulatorBigDelay :public NeuronSimulatorSimple
   typedef std::deque<TySpikeEvent> TySpikeEventQue;
   std::vector< TySpikeEventQue > se_que_vec;  // synaptic events
 
-  // Evolve all neurons without synaptic interaction
+  // Go one step without spike timing correction.
   MACRO_NO_INLINE void NextStepNoInteract(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &spike_events, double dt)
   {
@@ -502,6 +502,7 @@ public:
     TySpikeEventVec spike_events;
     poisson_time_vec.SaveIdxAndClean();
 
+    // Go one step without spike timing correction.
     NextStepNoInteract(p_neu_pop, spike_events, dt);
 
     for (auto it_se = spike_events.begin(); it_se != spike_events.end();
@@ -511,18 +512,22 @@ public:
     std::sort(spike_events.begin(), spike_events.end());
     ras.insert(ras.end(), spike_events.begin(), spike_events.end());
 
+    // Insert new synaptic events
     const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
     for (auto it_se = spike_events.begin(); it_se != spike_events.end();
         it_se++) {
-      // Insert new events
+      // Loop over affected neurons.
       for (SparseMat::InnerIterator it(net, it_se->id); it; ++it) {
         se_que_vec[it.row()].emplace_back(
             it_se->time + synaptic_delay, it_se->id);
       }
     }
+    // Sort events. Not necessary in this constant delay case.
+    /*
     for (int i = 0; i < p_neu_pop->n_neurons(); i++) {
-      std::sort(se_que_vec[i].begin(), se_que_vec[i].end());  // Sort events
+      std::sort(se_que_vec[i].begin(), se_que_vec[i].end());
     }
+    */
     t += dt;
   }
 };
