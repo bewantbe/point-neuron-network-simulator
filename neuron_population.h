@@ -265,7 +265,14 @@ class NeuronPopulationDeltaInteractConstantDelay
 {
 public:
   double synaptic_delay;
-  double SynapticDelay() const { return synaptic_delay; }
+  double   SynapticDelay() const override { return synaptic_delay; }
+  double & SynapticDelay()                { return synaptic_delay; }
+
+  NeuronPopulationDeltaInteractConstantDelay(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractSine<TyNeu>(_pm)
+  {
+  }
+
   // Let's say, it is the simulator's responsibility to relay the delayed interaction
 };
 

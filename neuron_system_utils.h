@@ -134,6 +134,13 @@ typedef std::priority_queue<
 
 typedef std::vector< TySpikeEvent > TySpikeEventVec;
 
+struct TySpikeTimeStrength
+{
+  double time;
+  double strength;
+  int id_type;      // id_gEInject or id_gIInject
+};
+
 void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net);

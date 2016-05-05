@@ -101,22 +101,39 @@ int MainLoop(const po::variables_map &vm)
     exit(-1);
   }
 
+  // Set neuron population type
   NeuronPopulationBase * p_neu_pop = nullptr;
-  switch (enum_neuron_model) {
-    case LIF_G:
-      p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_LIF_G>(pm);
-      break;
-    case LIF_GH:
-      p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_LIF_GH>(pm);
-      break;
-    case HH_GH:
-      p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_GH>(pm);
-      break;
-    case HH_GH_sine:
-      p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine>(pm);
-      break;
+  if (vm.count("synaptic-delay")) {
+    switch (enum_neuron_model) {
+      case HH_GH:
+      case HH_GH_sine:
+      {
+        auto tmp_p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_GH_sine>(pm);
+        tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
+        p_neu_pop = tmp_p_neu_pop;
+        break;
+      }
+      default:
+        cerr << "Delay for non-HH is not supported yet.\n";
+        exit(-1);
+    }
+  } else {
+    switch (enum_neuron_model) {
+      case LIF_G:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_LIF_G>(pm);
+        break;
+      case LIF_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_LIF_GH>(pm);
+        break;
+      case HH_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_GH>(pm);
+        break;
+      case HH_GH_sine:
+        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine>(pm);
+        break;
+    }
   }
-  //NeuronPopulationDeltaInteract neu_pop(p_neuron_model, pm);
 
   double e_t   = vm["t"].as<double>();
   double e_dt  = vm["dt"].as<double>();
@@ -191,8 +208,8 @@ int MainLoop(const po::variables_map &vm)
 
   // Set simulator for the neural network.
   NeuronSimulatorBase *p_neu_simu = nullptr;
+  const std::string &str_simu_mathod = vm["simulation-method"].as<std::string>();
   if (vm.count("simulation-method")) {
-    const std::string &str_simu_mathod = vm["simulation-method"].as<std::string>();
     if (str_simu_mathod == "simple") {
       p_neu_simu = new NeuronSimulatorSimple(pm, e_dt);
     } else if (str_simu_mathod == "SSC") {  // Spike-Spike-Correction
@@ -201,11 +218,18 @@ int MainLoop(const po::variables_map &vm)
       p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
     } else if (str_simu_mathod == "SSC-Sparse2") {
       p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
+    } else if (str_simu_mathod == "big-delay") {
+      p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
     } else {
       cerr << "No this simulation method.\n";
     }
   } else {
     p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+  }
+
+  if (vm.count("synaptic-delay") && str_simu_mathod != "big-delay") {
+    cerr << "You select a delayed synaptic network, but use a non-compatible simulator. Try --simulation-method big-delay\n";
+    exit(-1);
   }
 
   if (vm.count("initial-state-path")) {
@@ -304,7 +328,7 @@ int main(int argc, char *argv[])
       ("neuron-model",  po::value<std::string>(),
        "One of LIF-G, LIF-GH, HH-GH and HH-GH-sine.")
       ("simulation-method",  po::value<std::string>(),
-       "One of simple, SSC, SSC-Sparse and SSC-Sparse2. SSC is the default.")
+       "One of simple, SSC, SSC-Sparse, SSC-Sparse2 and big-delay. SSC is the default.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",
@@ -347,6 +371,8 @@ int main(int argc, char *argv[])
        "Set the sine amplitude for current input.")
       ("sine-current-angular-frequency", po::value<double>(),
        "Set the sine angular frequency for current input.")
+      ("synaptic-delay", po::value<double>(),
+       "Set a synaptic delay for the network.")
       ("volt-path,o",      po::value<std::string>(),
        "Volt output file path.")
       ("ras-path",         po::value<std::string>(),
@@ -404,7 +430,6 @@ int main(int argc, char *argv[])
     rand_eng.seed( sseq );
   }
 
-  // Select neuron model.
   int rt = MainLoop(vm);
 
   return rt;

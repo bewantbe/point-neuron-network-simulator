@@ -445,40 +445,83 @@ public:
 };
 
 // A simple simulator for networks with delayed synaptics.
-class NeuronSimulatorBigDelay :public NeuronSimulatorExactSpikeOrder
+class NeuronSimulatorBigDelay :public NeuronSimulatorSimple
 {
-  TyPoissonTimeVec se_vec;
+  // or try circular_buffer_space_optimized in boost/circular_buffer.hpp
+  typedef std::deque<TySpikeEvent> TySpikeEventQue;
+  std::vector< TySpikeEventQue > se_que_vec;  // synaptic events
 
   // Evolve all neurons without synaptic interaction
   MACRO_NO_INLINE void NextStepNoInteract(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
+
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
-      TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
-      TyPoissonTimeSeq &se_seq = se_vec[j];
+      TyPoissonTimeSeq &pe_seq = poisson_time_vec[j];
+      TySpikeEventQue  &se_que = se_que_vec[j];
+      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
       double t_local = t;
-      while (poisson_time_seq.Front() < t_step_end) {
-        p_neu_pop->NoInteractDt(j, poisson_time_seq.Front() - t_local, t_local, spike_events);
-        t_local = poisson_time_seq.Front();
-        p_neu_pop->InjectPoissonE(j);
-        poisson_time_seq.PopAndFill(p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j]);
+
+      while (true) {
+        if (se_que.size() != 0
+            && se_que.front().time < pe_seq.Front()) {
+          // Spike event comes first.
+          if (se_que.front().time >= t_step_end) break;
+          p_neu_pop->NoInteractDt(j, se_que.front().time - t_local, t_local, spike_events);
+          t_local = se_que.front().time;
+          p_neu_pop->SynapticInteraction(j, se_que.front());
+          se_que.pop_front();
+        } else {
+          // Poisson event comes first.
+          if (pe_seq.Front() >= t_step_end) break;
+          p_neu_pop->NoInteractDt(j, pe_seq.Front() - t_local, t_local, spike_events);
+          t_local = pe_seq.Front();
+          p_neu_pop->InjectPoissonE(j);
+          pe_seq.PopAndFill(pr);
+        }
       }
       p_neu_pop->NoInteractDt(j, t_step_end - t_local, t_local, spike_events);
     }
   }
 
 public:
+  NeuronSimulatorBigDelay(const TyNeuronalParams &_pm, double _dt)
+    :NeuronSimulatorSimple(_pm, _dt)
+  {
+    se_que_vec.resize(_pm.n_total());
+  }
+
   void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
+    double synaptic_delay = p_neu_pop->SynapticDelay();
+    if (synaptic_delay <= dt) {
+      throw "Delay too small for this simulator";
+    }
     TySpikeEventVec spike_events;
     poisson_time_vec.SaveIdxAndClean();
+
     NextStepNoInteract(p_neu_pop, spike_events, dt);
-    // Note down the spikes
-    double synaptic_delay = p_neu_pop->SynapticDelay();
-    for (auto it = spike_events.begin(); it != spike_events.end(); it++) {
-      se_vec[it->id].push_back(it->time + synaptic_delay);
+
+    for (auto it_se = spike_events.begin(); it_se != spike_events.end();
+        it_se++) {
+      vec_n_spike[it_se->id]++;  // Count spikes.
+    }
+    std::sort(spike_events.begin(), spike_events.end());
+    ras.insert(ras.end(), spike_events.begin(), spike_events.end());
+
+    const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
+    for (auto it_se = spike_events.begin(); it_se != spike_events.end();
+        it_se++) {
+      // Insert new events
+      for (SparseMat::InnerIterator it(net, it_se->id); it; ++it) {
+        se_que_vec[it.row()].emplace_back(
+            it_se->time + synaptic_delay, it_se->id);
+      }
+    }
+    for (int i = 0; i < p_neu_pop->n_neurons(); i++) {
+      std::sort(se_que_vec[i].begin(), se_que_vec[i].end());  // Sort events
     }
     t += dt;
   }

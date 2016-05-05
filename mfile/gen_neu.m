@@ -158,7 +158,7 @@ end
 if ~isfield(pm, 'neuron_model') || isempty(pm.neuron_model)
     error('neuron_model not specified! Should be one of "LIF-G", "LIF-GH", or "HH-GH"');
 end
-if ~isfield(pm, 'simu_model') || isempty(pm.simu_model)
+if ~isfield(pm, 'simu_method') || isempty(pm.simu_method)
     pm.simu_method = 'SSC';
 end
 neuron_model_name = pm.neuron_model;
@@ -220,6 +220,10 @@ end
 if isfield(pm, 'sine_w')
   st_neu_param = [st_neu_param,...
     sprintf(' --sine-current-angular-frequency %.16e', pm.sine_w)];
+end
+if isfield(pm, 'synaptic_delay')
+  st_neu_param = [st_neu_param,...
+    sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
 end
 pm.pr = pm0.pr;
 if isfield(pm, 'pr_mul')
