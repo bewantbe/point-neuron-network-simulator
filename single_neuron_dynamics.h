@@ -525,6 +525,40 @@ struct Ty_HH_GH_CUR
   }
 };
 
+// Model that note down spike event when the spike is falling.
+template<typename ExtraCurrent>
+struct Ty_HH_FT_GH_CUR  // Falling threshold
+  :public Ty_HH_GH_CUR<ExtraCurrent>
+{
+  typedef typename Ty_HH_GH_CUR<ExtraCurrent>::TyCurrentData TyCurrentData;
+  using Ty_HH_GH_CUR<ExtraCurrent>::id_V;
+  using Ty_HH_GH_CUR<ExtraCurrent>::V_threshold;
+  using Ty_HH_GH_CUR<ExtraCurrent>::DymInplaceRK4;
+  using Ty_HH_GH_CUR<ExtraCurrent>::GetDv;
+
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local,
+    double t,
+    const TyCurrentData &extra_data) const
+  {
+    spike_time_local = std::numeric_limits<double>::quiet_NaN();
+    double v0 = dym_val[id_V];
+    double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
+    double &v1 = dym_val[id_V];
+    if (v0 >= V_threshold && v1 <= V_threshold && t_in_refractory == 0) {
+      spike_time_local = cubic_hermit_real_root(dt_local,
+        v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
+    }
+    if (dt_local>0) {
+      t_in_refractory = 0;
+    }
+  }
+};
+
+// Template for zero current input
 struct TyZeroCurrent
 {
   typedef int TyData;
@@ -532,17 +566,22 @@ struct TyZeroCurrent
   { return 0.0; }
 };
 
-// HH model with Poisson input
-struct Ty_HH_GH :public Ty_HH_GH_CUR<TyZeroCurrent>
+template<class Ty_Neuron_With_Current>
+struct Neuron_Zero_Current_Adaper :public Ty_Neuron_With_Current
 {
   /*using Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet;*/
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const override
   {
-    Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, 0);
+    Ty_Neuron_With_Current::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, 0);
   }
 };
 
+// Declare the model with zero current input
+typedef Neuron_Zero_Current_Adaper< Ty_HH_GH_CUR<TyZeroCurrent> >  Ty_HH_GH;
+typedef Neuron_Zero_Current_Adaper< Ty_HH_FT_GH_CUR<TyZeroCurrent> >  Ty_HH_FT_GH;
+
+// Template for sine current input
 struct TySineCurrent
 {
   typedef double * TyData;  // Amplitude, angular frequency, phase
@@ -551,18 +590,22 @@ struct TySineCurrent
     return a[0]*sin(a[1]*t + a[2]); }
 };
 
-// HH model with Poisson input and sine current input
-struct Ty_HH_GH_sine :public Ty_HH_GH_CUR<TySineCurrent>
+template<class Ty_Neuron_With_Current>
+struct Neuron_Sine_Current_Adaper :public Ty_Neuron_With_Current
 {
-  using Ty_HH_GH_CUR<TySineCurrent>::NextStepSingleNeuronQuiet;
+  using Ty_Neuron_With_Current::NextStepSingleNeuronQuiet;
 
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const override
   {
     printf("Old.\n");
     double d[3] = {0, 0, 0};
-    Ty_HH_GH_CUR<TySineCurrent>::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, d);
+    Ty_Neuron_With_Current::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, d);
   }
 };
+
+// Declare the model with sine current input
+typedef Neuron_Sine_Current_Adaper< Ty_HH_GH_CUR<TySineCurrent> > Ty_HH_GH_sine;
+typedef Neuron_Sine_Current_Adaper< Ty_HH_FT_GH_CUR<TySineCurrent> > Ty_HH_FT_GH_sine;
 
 #endif

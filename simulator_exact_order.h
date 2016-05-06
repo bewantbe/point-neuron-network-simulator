@@ -128,9 +128,9 @@ public:
           if (spike_events[i].id == heading_spike_event.id) {
             b_heading_spike_pushed = true;
           } else {
-            cerr << "Unexpected spike (spike before \"first\" spike):  ["
-              << i << "] id = " << spike_events[i].id
-              << " time = " << spike_events[i].time << "\n";
+            fprintf(stderr, "Unexpected spike before \"first\" spike: [%lu] id = %d, t = %g - %g\n",
+                i, spike_events[i].id, heading_spike_event.time,
+                heading_spike_event.time - spike_events[i].time);
           }
           // Here does not do `ras.emplace_back(spike_events[i])' because
           // effectively the spike interaction are done at the same time.

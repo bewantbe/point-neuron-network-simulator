@@ -45,7 +45,9 @@ int MainLoop(const po::variables_map &vm)
   }
   Ty_Neuron_Dym_Base *p_neuron_model;
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
-  enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH, HH_GH_sine };
+
+  // Set neuron model.
+  enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH, HH_GH_sine, HH_FT_GH, HH_FT_GH_sine };
   EnumNeuronModel enum_neuron_model;
   if (str_nm == "LIF-G") {
     p_neuron_model = new Ty_LIF_G();
@@ -59,6 +61,12 @@ int MainLoop(const po::variables_map &vm)
   }  else if (str_nm == "HH-GH-sine") {
     p_neuron_model = new Ty_HH_GH_sine();
     enum_neuron_model = HH_GH_sine;
+  } else if (str_nm == "HH-FT-GH") {
+    p_neuron_model = new Ty_HH_FT_GH();
+    enum_neuron_model = HH_FT_GH;
+  }  else if (str_nm == "HH-FT-GH-sine") {
+    p_neuron_model = new Ty_HH_FT_GH_sine();
+    enum_neuron_model = HH_FT_GH_sine;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -114,6 +122,15 @@ int MainLoop(const po::variables_map &vm)
         p_neu_pop = tmp_p_neu_pop;
         break;
       }
+      case HH_FT_GH:
+      case HH_FT_GH_sine:
+      {
+        auto tmp_p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH_sine>(pm);
+        tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
+        p_neu_pop = tmp_p_neu_pop;
+        break;
+      }
       default:
         cerr << "Delay for non-HH is not supported yet.\n";
         exit(-1);
@@ -131,6 +148,12 @@ int MainLoop(const po::variables_map &vm)
         break;
       case HH_GH_sine:
         p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine>(pm);
+        break;
+      case HH_FT_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_FT_GH>(pm);
+        break;
+      case HH_FT_GH_sine:
+        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_FT_GH_sine>(pm);
         break;
     }
   }
@@ -326,7 +349,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-GH and HH-GH-sine.")
+       "One of LIF-G, LIF-GH, HH-GH, HH-GH-sine, HH-FT-GH, HH_FT-GH-sine.")
       ("simulation-method",  po::value<std::string>(),
        "One of simple, SSC, SSC-Sparse, SSC-Sparse2 and big-delay. SSC is the default.")
       ("help,h",
