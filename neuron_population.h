@@ -18,7 +18,7 @@ public:
   // Evolution without any input. For single neuron.
   virtual void NoInteractDt(int neuron_id, double dt, double t_local, TySpikeEventVec &spike_events) = 0;
   // Evolution without any input. For population.
-  /*virtual void NoInteractDt(double dt, TySpikeEventVec &ras) = 0;*/
+  virtual void NoInteractDt(double dt, double t_local, TySpikeEventVec &spike_events) {}
 
   // Perform an interaction
   virtual void SynapticInteraction(const TySpikeEvent &se) = 0;

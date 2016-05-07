@@ -6,7 +6,18 @@
 
 // Fast code for exp(x)
 #include "fmath.hpp"
-#define exp(x) fmath::expd(x)
+//#define exp(x) fmath::expd(x)
+
+template<typename Ty>
+inline Ty my_expd(const Ty &x)
+{ return exp(x); }
+
+template<>
+inline double my_expd(const double &x)
+{ return fmath::expd(x); }
+
+#define exp(x) my_expd(x)
+
 
 struct Ty_Neuron_Dym_Base
 {
@@ -607,5 +618,41 @@ struct Neuron_Sine_Current_Adaper :public Ty_Neuron_With_Current
 // Declare the model with sine current input
 typedef Neuron_Sine_Current_Adaper< Ty_HH_GH_CUR<TySineCurrent> > Ty_HH_GH_sine;
 typedef Neuron_Sine_Current_Adaper< Ty_HH_FT_GH_CUR<TySineCurrent> > Ty_HH_FT_GH_sine;
+
+
+struct Ty_HH_GH_cont_syn
+  :public Ty_Neuron_Dym_Base
+{
+  double V_threshold = 7;
+
+  static const int n_var = 8;
+  static const int n_var_soma = 4;  // number of variables for non- G part
+  static const int id_V     = 0;    // id_V should just before gating variables(see main.cpp)
+  static const int id_h     = 6;
+  static const int id_m     = 5;
+  static const int id_n     = 7;
+  static const int id_gE    = 1;
+  static const int id_gI    = 3;
+  static const int id_gE_s1 = 2;
+  static const int id_gI_s1 = 4;
+  static const int id_gEInject = id_gE_s1;
+  static const int id_gIInject = id_gI_s1;
+
+  double Get_V_threshold() const override {return V_threshold;};
+  int Get_id_gEInject() const override {return id_gEInject;}
+  int Get_id_gIInject() const override {return id_gIInject;}
+  int Get_n_dym_vars() const override {return n_var;}
+  int Get_id_V() const override {return id_V;}
+  int Get_id_gE() const override {return id_gE;}
+  int Get_id_gI() const override {return id_gI;}
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local) const override
+  {}
+  void VoltHandReset(double *dym_val) const override
+  {}
+};
 
 #endif

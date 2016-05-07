@@ -26,6 +26,9 @@ TODO:
 #include "neuron_population.h"
 #include "simulator_exact_order.h"
 
+#include "neuron_population_cont_synaptic.h"
+#include "simulator_cont_synaptic.h"
+
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
@@ -47,7 +50,7 @@ int MainLoop(const po::variables_map &vm)
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
 
   // Set neuron model.
-  enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH, HH_GH_sine, HH_FT_GH, HH_FT_GH_sine };
+  enum EnumNeuronModel {LIF_G, LIF_GH, HH_GH, HH_GH_sine, HH_FT_GH, HH_FT_GH_sine, HH_GH_cont_syn };
   EnumNeuronModel enum_neuron_model;
   if (str_nm == "LIF-G") {
     p_neuron_model = new Ty_LIF_G();
@@ -58,15 +61,18 @@ int MainLoop(const po::variables_map &vm)
   } else if (str_nm == "HH-GH") {
     p_neuron_model = new Ty_HH_GH();
     enum_neuron_model = HH_GH;
-  }  else if (str_nm == "HH-GH-sine") {
+  } else if (str_nm == "HH-GH-sine") {
     p_neuron_model = new Ty_HH_GH_sine();
     enum_neuron_model = HH_GH_sine;
   } else if (str_nm == "HH-FT-GH") {
     p_neuron_model = new Ty_HH_FT_GH();
     enum_neuron_model = HH_FT_GH;
-  }  else if (str_nm == "HH-FT-GH-sine") {
+  } else if (str_nm == "HH-FT-GH-sine") {
     p_neuron_model = new Ty_HH_FT_GH_sine();
     enum_neuron_model = HH_FT_GH_sine;
+  }  else if (str_nm == "HH-GH-cont-syn") {
+    p_neuron_model = new Ty_HH_GH_cont_syn();
+    enum_neuron_model = HH_GH_cont_syn;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -154,6 +160,8 @@ int MainLoop(const po::variables_map &vm)
         break;
       case HH_FT_GH_sine:
         p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_FT_GH_sine>(pm);
+      case HH_GH_cont_syn:
+        p_neu_pop = new NeuronPopulationContSyn(pm);
         break;
     }
   }
@@ -247,14 +255,21 @@ int MainLoop(const po::variables_map &vm)
       cerr << "No this simulation method.\n";
     }
   } else {
-    p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+    // Default simulator
+    if (HH_GH_cont_syn == enum_neuron_model) {
+      p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
+    } else if (vm.count("synaptic-delay")) {
+      p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
+    } else {
+      p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+    }
   }
 
   if (vm.count("synaptic-delay") && str_simu_mathod != "big-delay") {
     cerr << "You select a delayed synaptic network, but use a non-compatible simulator. Try --simulation-method big-delay\n";
     exit(-1);
   }
-
+  
   if (vm.count("initial-state-path")) {
     FillNeuStateFromFile(p_neu_pop->GetDymState(),
                          vm["initial-state-path"].as<std::string>().c_str());
@@ -338,6 +353,8 @@ int MainLoop(const po::variables_map &vm)
       fout_isi << e_t / vec_n_spike[j] << '\t';
     }
   }
+  
+//  delete p_neu_simu;
 
   return 0;
 }
