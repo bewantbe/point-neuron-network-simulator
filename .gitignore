@@ -15,3 +15,5 @@ bin/
 obj/
 eigen3/
 test/IFsimu
+mfile/BKDRHash.mexa64
+mfile/data/

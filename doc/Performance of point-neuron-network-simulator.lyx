@@ -2809,6 +2809,43 @@ real    4773m28.916s user    4752m18.687s sys     0m12.322s
 \end_layout
 
 \begin_layout Standard
+\begin_inset Formula 
+\[
+p\frac{T}{\Delta t}+p\mu T+2p^{2}r_{f}T
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\left(\frac{1}{\Delta t}+\mu+2pr_{f}\right)pT
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\left(\frac{1}{\Delta t}+\mu+2pr_{f}\right)pT+\left(\frac{1}{\Delta t}+\mu+r_{f}\right)pT\log p
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 .
 \end_layout
 

@@ -1,0 +1,46 @@
+199ab45a3e
+
+real	0m10.337s
+user	0m9.904s
+sys	0m0.352s
+real	0m10.300s
+user	0m9.860s
+sys	0m0.364s
+
+
+
+real	0m8.231s
+user	0m7.756s
+sys	0m0.400s
+
+
+
+Time from 999.958290 to 1000.000000
+NextStepSingleNeuronQuiet(): dt_local = 0.041710:
+NextStepSingleNeuronQuiet(): begin state=0.633845,0.042095,0.006092
+NextStepSingleNeuronQuiet(): end   state=0.639190,0.041226,0.006041
+Neuron 2 @t=1000.000000 end state 0.639190, 0.041226, 0.006041
+Time from 999.500000 to 1000.000000
+NextStepSingleNeuronQuiet(): dt_local = 0.500000:
+NextStepSingleNeuronQuiet(): begin state=0.441296,0.047739,0.000368
+NextStepSingleNeuronQuiet(): end   state=0.517479,0.037179,0.000333
+Neuron 3 @t=1000.000000 end state 0.517479, 0.037179, 0.000333
+
+
+pms='--neuron-model LIF-G --t 1e6 --dt 0.5 --stv 0.5 --nE 2 --nI 2 --net - --scee 0.01 --scie 0.012 --scei 0.018 --scii 0.02 --ps 0.011 --initial-state-path /home/xyy/code/vec_IFsimu/neu_state_init.txt --seed 12321'
+
+$ time ../bin/gen_neu_nodbg ${pms} -o v_volt.dat
+initial state loaded!
+
+real	0m1.316s
+user	0m1.256s
+sys	0m0.056s
+
+
+$ time ../bin/gen_neu_orig_nodbg ${pms} -o v_volt_o.dat
+initial state loaded!
+
+real	0m1.271s
+user	0m1.228s
+sys	0m0.044s
+
