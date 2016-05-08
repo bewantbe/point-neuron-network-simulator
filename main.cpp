@@ -119,26 +119,56 @@ int MainLoop(const po::variables_map &vm)
   NeuronPopulationBase * p_neu_pop = nullptr;
   if (vm.count("synaptic-delay")) {
     switch (enum_neuron_model) {
+      case LIF_G:
+      {
+        auto tmp_p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_LIF_G>(pm);
+        tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
+        p_neu_pop = tmp_p_neu_pop;
+        break;
+      }
+      case LIF_GH:
+      {
+        auto tmp_p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_LIF_GH>(pm);
+        tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
+        p_neu_pop = tmp_p_neu_pop;
+        break;
+      }
       case HH_GH:
+      {
+        auto tmp_p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_GH>(pm);
+        tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
+        p_neu_pop = tmp_p_neu_pop;
+        break;
+      }
       case HH_GH_sine:
       {
         auto tmp_p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_GH_sine>(pm);
+          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_GH_sine>(pm);
         tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
         p_neu_pop = tmp_p_neu_pop;
         break;
       }
       case HH_FT_GH:
+      {
+        auto tmp_p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH>(pm);
+        tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
+        p_neu_pop = tmp_p_neu_pop;
+        break;
+      }
       case HH_FT_GH_sine:
       {
         auto tmp_p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH_sine>(pm);
+          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_FT_GH_sine>(pm);
         tmp_p_neu_pop->SynapticDelay() = vm["synaptic-delay"].as<double>();
         p_neu_pop = tmp_p_neu_pop;
         break;
       }
       default:
-        cerr << "Delay for non-HH is not supported yet.\n";
+        cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
         exit(-1);
     }
   } else {

@@ -456,31 +456,42 @@ class NeuronSimulatorBigDelay :public NeuronSimulatorSimple
       TySpikeEventVec &spike_events, double dt)
   {
     double t_step_end = t + dt;
+    
+    TySpikeEventVec se_list;   // id<0 poisson; id>0 spike
 
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
-      TyPoissonTimeSeq &pe_seq = poisson_time_vec[j];
-      TySpikeEventQue  &se_que = se_que_vec[j];
-      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
-      double t_local = t;
+      se_list.clear();
 
-      while (true) {
-        if (se_que.size() != 0
-            && se_que.front().time < pe_seq.Front()) {
-          // Spike event comes first.
-          if (se_que.front().time >= t_step_end) break;
-          p_neu_pop->NoInteractDt(j, se_que.front().time - t_local, t_local, spike_events);
-          t_local = se_que.front().time;
-          p_neu_pop->SynapticInteraction(j, se_que.front());
-          se_que.pop_front();
+      // All Poisson events for neuron j in this dt.
+      TyPoissonTimeSeq &pe_seq = poisson_time_vec[j];
+      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
+      while (pe_seq.Front() < t_step_end) {
+        se_list.emplace_back(pe_seq.Front(), -j);
+        pe_seq.PopAndFill(pr);
+      }
+      
+      // All Spike events for neuron j in this dt.
+      TySpikeEventQue  &se_que = se_que_vec[j];
+      while (se_que.size() != 0
+            && se_que.front().time < t_step_end) {
+        se_list.emplace_back(se_que.front());
+        se_que.pop_front();
+      }
+
+      std::sort(se_list.begin(), se_list.end());
+
+      // Apply the events.
+      double t_local = t;
+      for (size_t i = 0; i < se_list.size(); i++) {
+        p_neu_pop->NoInteractDt(j, se_list[i].time - t_local, t_local, spike_events);
+        t_local = se_list[i].time;
+        if (se_list[i].id > 0) {
+          p_neu_pop->SynapticInteraction(j, se_list[i]);
         } else {
-          // Poisson event comes first.
-          if (pe_seq.Front() >= t_step_end) break;
-          p_neu_pop->NoInteractDt(j, pe_seq.Front() - t_local, t_local, spike_events);
-          t_local = pe_seq.Front();
           p_neu_pop->InjectPoissonE(j);
-          pe_seq.PopAndFill(pr);
         }
       }
+
       p_neu_pop->NoInteractDt(j, t_step_end - t_local, t_local, spike_events);
     }
   }

@@ -260,7 +260,7 @@ public:
 };
 
 template<class TyNeu>
-class NeuronPopulationDeltaInteractConstantDelay
+class NeuronPopulationDeltaInteractConstantDelaySine
   :public NeuronPopulationDeltaInteractSine<TyNeu>
 {
 public:
@@ -268,8 +268,25 @@ public:
   double   SynapticDelay() const override { return synaptic_delay; }
   double & SynapticDelay()                { return synaptic_delay; }
 
-  NeuronPopulationDeltaInteractConstantDelay(const TyNeuronalParams &_pm)
+  NeuronPopulationDeltaInteractConstantDelaySine(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractSine<TyNeu>(_pm)
+  {
+  }
+
+  // Let's say, it is the simulator's responsibility to relay the delayed interaction
+};
+
+template<class TyNeu>
+class NeuronPopulationDeltaInteractConstantDelay
+  :public NeuronPopulationDeltaInteractTemplate<TyNeu>
+{
+public:
+  double synaptic_delay;
+  double   SynapticDelay() const override { return synaptic_delay; }
+  double & SynapticDelay()                { return synaptic_delay; }
+
+  NeuronPopulationDeltaInteractConstantDelay(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
   {
   }
 
