@@ -28,6 +28,7 @@ public:
   {
     double t_local = t;
     double t_step_end = t + dt;
+//    printf("From t = %.16e to %.16e\n", t, t_step_end);
 
     poisson_time_vec.SaveIdxAndClean();  // Clean Poisson queue
 
@@ -47,6 +48,7 @@ public:
 
     // Evoluate one dt, loop over Poisson events in this dt.
     for (size_t i = 0; i < tmp_poisson_events.size(); i++) {
+//      printf("  P: to %d @ t = %.16e\n", tmp_poisson_events[i].id, tmp_poisson_events[i].time);
       p_neu_pop->NoInteractDt(tmp_poisson_events[i].time - t_local, t_local, ras);
       t_local = tmp_poisson_events[i].time;
       p_neu_pop->InjectPoissonE(tmp_poisson_events[i].id);

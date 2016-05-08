@@ -20,6 +20,4 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
   for (auto &i : poisson_time_vec) {
     i.push_back(NAN);
   }
-  cout << "poisson size[0] = " << poisson_time_vec[0].size() << endl;
-  cout << "poisson size[1] = " << poisson_time_vec[1].size() << endl;
 }

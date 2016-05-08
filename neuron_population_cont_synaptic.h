@@ -14,7 +14,7 @@ void hermit(double a, double b, double va, double vb,
   double f4 = dvb*(x-a)*(x-a)*(x-b)/(b-a)/(b-a);
 
   // the polynomial of v(x) - Vot_Threshold
-  double V_threshold = 7;
+  double V_threshold = 7.5;
   fx = f1 + f2 + f3 + f4 - V_threshold;
 }
 
@@ -24,8 +24,12 @@ double root_search(void (*func)(double a, double b, double va, double vb,
                    double fx1, double fx2,
                    double dfx1, double dfx2, double xacc)
 {
+//printf("t1, t2 = %.16e, %.16e; v1, v2 = %.16e, %.16e; dv1, dv2 = %.16e, %.16e\n", x1, x2, fx1, fx2, dfx1, dfx2);
   int j;
   double tempx1,tempx2,dx,f,fmid,xmid,root;
+  double x1_0 = x1;
+  x2 = x2 - x1;
+  x1 = 0;
 
   // for firing time case, fx1<0, fmid>0
   (*func)(x1,x2,fx1,fx2,dfx1,dfx2,x1,f);
@@ -37,8 +41,8 @@ double root_search(void (*func)(double a, double b, double va, double vb,
     }
   ***************************************/
   if (f*fmid > 0) {
-    fprintf(stderr, "voltage difference at the beginning time and ending time: %g;%g\n",f,fmid);
-    return x1;
+    fprintf(stderr, "No spike in this interval: v1=%g, v2=%g\n", f, fmid);
+    return x1 + x1_0;
   }
 
   tempx1 = x1;
@@ -55,10 +59,11 @@ double root_search(void (*func)(double a, double b, double va, double vb,
     // the interval is small enough or already find the root
     if (fabs(fmid)<xacc) {
       root = xmid;
-      return root;
+//  printf("N iter = %d, fmid = %.3e, dx = %.3e, root = %.16e\n", j, fmid, dx, root);
+      return root + x1_0;
     }
   }
-  return xmid;
+  return xmid + x1_0;
 }
 
 
@@ -69,19 +74,19 @@ class NeuronPopulationContSyn
 {
 public:
   // Neuron model
-  double V_Na = 115;             // mV
-  double V_K  = -12;
-  double V_L  =  10.6;
-  double G_Na = 120;             // mS cm^-2
+  double V_Na = 11.5;
+  double V_K  = -1.2;
+  double V_L  =  1.06;
+  double G_Na = 120;
   double G_K  =  36;
   double G_L  =   0.3;
-  double V_gE =  65;             // mV, for synaptic
-  double V_gI = -15;             // mV
-  double tau_gE    = 0.5;        // ms, decay time for gE equation
-  double tau_gE_s1 = 3.0;        // ms, decay time for gE_H equation.
-  double tau_gI    = 0.5;        // ms
-  double tau_gI_s1 = 7.0;        // ms
-  double V_threshold = 7;       // mV, determine the spike time for synaptic interaction.
+  double V_gE =  6.5;
+  double V_gI = -1.5;
+  double tau_gE    = 0.5;
+  double tau_gE_s1 = 3.0;
+  double tau_gI    = 0.5;
+  double tau_gI_s1 = 7.0;
+  double V_threshold = 7.5;
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
   static const int id_V     = 0;    // id_V should just before gating variables(see main.cpp)
@@ -260,6 +265,7 @@ public:
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events)
   {
+    fprintf(stderr, "Evoluate each neuron separately is not supported.\n");
     throw "Evoluate each neuron separately is not supported.";
   }
 

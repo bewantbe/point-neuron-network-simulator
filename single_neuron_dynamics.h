@@ -4,6 +4,7 @@
 #include "common_header.h"
 #include "math_helper.h"
 
+/*
 // Fast code for exp(x)
 #include "fmath.hpp"
 //#define exp(x) fmath::expd(x)
@@ -17,7 +18,7 @@ inline double my_expd(const double &x)
 { return fmath::expd(x); }
 
 #define exp(x) my_expd(x)
-
+*/
 
 struct Ty_Neuron_Dym_Base
 {
@@ -623,8 +624,19 @@ typedef Neuron_Sine_Current_Adaper< Ty_HH_FT_GH_CUR<TySineCurrent> > Ty_HH_FT_GH
 struct Ty_HH_GH_cont_syn
   :public Ty_Neuron_Dym_Base
 {
-  double V_threshold = 7;
-
+  double V_Na = 11.5;
+  double V_K  = -1.2;
+  double V_L  =  1.06;
+  double G_Na = 120;
+  double G_K  =  36;
+  double G_L  =   0.3;
+  double V_gE =  6.5;
+  double V_gI = -1.5;
+  double tau_gE    = 0.5;
+  double tau_gE_s1 = 3.0;
+  double tau_gI    = 0.5;
+  double tau_gI_s1 = 7.0;
+  double V_threshold = 7.5;
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
   static const int id_V     = 0;    // id_V should just before gating variables(see main.cpp)

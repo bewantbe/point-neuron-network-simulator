@@ -7,7 +7,8 @@ void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
   size_t j = 0;
   neu_dym_stat.dym_vals.setZero();
   while (true) {
-    for (int k = 0; fin >> v, k < neu_dym_stat.dym_vals.cols(); k++) {
+    for (int k = 0; k < neu_dym_stat.dym_vals.cols(); k++) {
+      fin >> v;
       neu_dym_stat.dym_vals(j, k) = v;
     }
     if (fin.fail())

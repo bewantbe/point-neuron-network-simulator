@@ -251,6 +251,8 @@ int MainLoop(const po::variables_map &vm)
       p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
     } else if (str_simu_mathod == "big-delay") {
       p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
+    } else if (str_simu_mathod == "cont-syn") {
+      p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
     } else {
       cerr << "No this simulation method.\n";
     }
@@ -274,6 +276,18 @@ int MainLoop(const po::variables_map &vm)
     FillNeuStateFromFile(p_neu_pop->GetDymState(),
                          vm["initial-state-path"].as<std::string>().c_str());
     cout << "initial state loaded!" << endl;
+//    const auto &ds = p_neu_pop->GetDymState().dym_vals;
+//    for (int i = 0; i < ds.rows(); i++) {
+//      printf("%.16e ", ds(i, 0));
+//      printf("%.16e ", ds(i, 1));
+//      printf("%.16e ", ds(i, 2));
+//      printf("%.16e ", ds(i, 3));
+//      printf("%.16e ", ds(i, 4));
+//      printf("%.16e ", ds(i, 5));
+//      printf("%.16e ", ds(i, 6));
+//      printf("%.16e ", ds(i, 7));
+//      printf("\n");
+//    }
     //p_neu_simu->SaneTestVolt();
   }
 
@@ -366,9 +380,9 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-GH, HH-GH-sine, HH-FT-GH, HH_FT-GH-sine.")
+       "One of LIF-G, LIF-GH, HH-GH, HH-GH-sine, HH-FT-GH, HH_FT-GH-sine, HH-GH-cont-syn.")
       ("simulation-method",  po::value<std::string>(),
-       "One of simple, SSC, SSC-Sparse, SSC-Sparse2 and big-delay. SSC is the default.")
+       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, cont-syn.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",

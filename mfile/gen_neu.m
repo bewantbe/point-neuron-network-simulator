@@ -331,9 +331,11 @@ if nargout > 0
         fclose(fid);
         len = size(X,2);
         if len ~= floor((pm.t+ext_T)/pm.stv)
-            warning('inconsistant data length!');
-            fprintf('size(X,2) = %d, floor((pm.t+ext_T)/pm.stv) = %d\n',...
-                    size(X,2), floor((pm.t+ext_T)/pm.stv));
+            fprintf('gen_neu:\n');
+            fprintf('  size(X,2) = %d (read in file),\n', size(X,2));
+            fprintf('  floor((pm.t+ext_T)/pm.stv) = %d (expected)\n',...
+                    floor((pm.t+ext_T)/pm.stv));
+            warning('inconsistant data length! Exceed part will be truncated.');
         end
         len_cut = len - floor(pm.t/pm.stv);
         if (len_cut>0)
