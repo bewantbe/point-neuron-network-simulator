@@ -640,13 +640,13 @@ struct Ty_HH_GH_cont_syn
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
   static const int id_V     = 0;    // id_V should just before gating variables(see main.cpp)
-  static const int id_h     = 6;
-  static const int id_m     = 5;
-  static const int id_n     = 7;
-  static const int id_gE    = 1;
-  static const int id_gI    = 3;
-  static const int id_gE_s1 = 2;
-  static const int id_gI_s1 = 4;
+  static const int id_h     = 1;
+  static const int id_m     = 2;
+  static const int id_n     = 3;
+  static const int id_gE    = 4;
+  static const int id_gI    = 5;
+  static const int id_gE_s1 = 6;
+  static const int id_gI_s1 = 7;
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
 

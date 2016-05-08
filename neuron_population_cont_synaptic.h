@@ -89,18 +89,21 @@ public:
   double V_threshold = 7.5;
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
-  static const int id_V     = 0;    // id_V should just before gating variables(see main.cpp)
-  static const int id_h     = 6;
-  static const int id_m     = 5;
-  static const int id_n     = 7;
-  static const int id_gE    = 1;
-  static const int id_gI    = 3;
-  static const int id_gE_s1 = 2;
-  static const int id_gI_s1 = 4;
+  static const int id_V     = 0;
+  static const int id_h     = 1;
+  static const int id_m     = 2;
+  static const int id_n     = 3;
+  static const int id_gE    = 4;
+  static const int id_gI    = 5;
+  static const int id_gE_s1 = 6;
+  static const int id_gI_s1 = 7;
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
 
-  void get_dx_net(TyNeuronalDymState::TyDymVals &dx, const TyNeuronalDymState::TyDymVals &xm)
+  TyNeuronalDymState::TyDymVals xt, k1, k2, k3, k4;  // working variables
+
+  void get_dx_net(TyNeuronalDymState::TyDymVals &dx, 
+      const TyNeuronalDymState::TyDymVals &xm)
   {
     double synaptic_volt;
     for (int i = 0; i < n_E; i++) {
@@ -128,16 +131,16 @@ public:
   }
 
   void get_dx(TyNeuronalDymState::TyDymVals &dx,
-        const TyNeuronalDymState::TyDymVals &xm, double t)
+      const TyNeuronalDymState::TyDymVals &xm, double t)
   {
     const Eigen::ArrayXd &v  = xm.col(id_V);
-    const Eigen::ArrayXd &gE = xm.col(id_gE);
-    const Eigen::ArrayXd &hE = xm.col(id_gE_s1);
-    const Eigen::ArrayXd &gI = xm.col(id_gI);
-    const Eigen::ArrayXd &hI = xm.col(id_gI_s1);
-    const Eigen::ArrayXd &m  = xm.col(id_m);
     const Eigen::ArrayXd &h  = xm.col(id_h);
+    const Eigen::ArrayXd &m  = xm.col(id_m);
     const Eigen::ArrayXd &n  = xm.col(id_n);
+    const Eigen::ArrayXd &gE = xm.col(id_gE);
+    const Eigen::ArrayXd &gI = xm.col(id_gI);
+    const Eigen::ArrayXd &hE = xm.col(id_gE_s1);
+    const Eigen::ArrayXd &hI = xm.col(id_gI_s1);
 
     // cost 13.3% (1000neuron), 16.4% (100neuron)
     dx.col(id_V) = -G_L * (v - V_L)
@@ -156,74 +159,50 @@ public:
     e1 = exp(e1);     // only write in this way, Eigen will use MKL
     e2 = v*(-1/1.8);
     e2 = exp(e2);
-    dx.col(5) = (v-2.5)/(1-e1)*(1-m) - 4*e2*m;
+    dx.col(id_m) = (v-2.5)/(1-e1)*(1-m) - 4*e2*m;
     e2 = e1*exp(-2.5);
     e2 = sqrt(e2);
-    dx.col(6) = 0.07*e2*(1-h) - h/(1+e1*exp(0.5));
+    dx.col(id_h) = 0.07*e2*(1-h) - h/(1+e1*exp(0.5));
     e2 = sqrt(e2);
     e2 = sqrt(e2);
-    dx.col(7) = 0.1*(v-1.0)/(1-e1*exp(-1.5))*(1-n) - 0.125*e2*n;
+    dx.col(id_n) = 0.1*(v-1.0)/(1-e1*exp(-1.5))*(1-n) - 0.125*e2*n;
 
     //conductance_dt
-    dx.col(1) = -gE * (1.0/tau_gE) + hE;
-    dx.col(2) = -hE * (1.0/tau_gE_s1);
-    dx.col(3) = -gI * (1.0/tau_gI) + hI;
-    dx.col(4) = -hI * (1.0/tau_gI_s1);
+    dx.col(id_gE   ) = -gE * (1.0/tau_gE) + hE;
+    dx.col(id_gI   ) = -gI * (1.0/tau_gI) + hI;
+    dx.col(id_gE_s1) = -hE * (1.0/tau_gE_s1);
+    dx.col(id_gI_s1) = -hI * (1.0/tau_gI_s1);
 
     // cost 12% (1000neuron), 2.4% (100neuron)
     // Compute influence from the network (H^E and H^I)
     get_dx_net(dx, xm);
   }
 
-  void voltage_dt(int index_neuron,double t,double m,double h,double n,double gE,double gI,double v,double &dv)
+  double GetDv(const double *dym_val, double t) const
   {
-    dv = - G_L*(v - V_L) - G_Na*m*m*m*h*(v-V_Na) - G_K*n*n*n*n*(v - V_K)
-            - gE*(v - V_gE) - gI*(v - V_gI);
+    const double &V = dym_val[id_V];
+    const double &h = dym_val[id_h];
+    const double &m = dym_val[id_m];
+    const double &n = dym_val[id_n];
+    return  - G_L*(V - V_L) - G_Na*m*m*m*h*(V-V_Na) - G_K*n*n*n*n*(V - V_K)
+            - dym_val[id_gE]*(V - V_gE) - dym_val[id_gI]*(V - V_gI);
   }
 
-  void spiking_time(double *bef_neu, double *cur_neu, double t_evolution, double Ta,
-                    double Tb, double &firing_time)
+  void spiking_time(double *bef_neu, double *cur_neu, double t_evolution,
+      double Ta, double Tb, double &firing_time)
   {
-    double dva = 0; // initialization
     double va  = bef_neu[id_V];
-    double gEa = bef_neu[id_gE];
-    double gIa = bef_neu[id_gI];
-    double ma  = bef_neu[id_m];
-    double ha  = bef_neu[id_h];
-    double na  = bef_neu[id_n];
-
-    voltage_dt(0,t_evolution,ma,ha,na,gEa,gIa,va,dva);
-
-    double dvb = 0; // initialization
-    double vb  = cur_neu[0];
-    double gEb = cur_neu[1];
-    double gIb = cur_neu[3];
-    double mb  = cur_neu[5];
-    double hb  = cur_neu[6];
-    double nb  = cur_neu[7];
-
-    voltage_dt(0,(t_evolution+Tb-Ta),mb,hb,nb,gEb,gIb,vb,dvb);
-
+    double dva = GetDv(bef_neu, t_evolution);
+    double vb  = cur_neu[id_V];
+    double dvb = GetDv(cur_neu, t_evolution+Tb-Ta);
 // the tolerance error for root searching
 #define root_acc  (1.0e-12)
-
     firing_time = root_search(hermit, Ta, Tb, va, vb, dva, dvb, root_acc);
   }
 
-  TyNeuronalDymState::TyDymVals xt, k1, k2, k3, k4;  // all variables of all neurons each
   void runge_kutta4_vec(TyNeuronalDymState::TyDymVals &neu_dym_vals,
       double dt, double t_local, TySpikeEventVec &spike_events)
   {
-    const int n = neu_dym_vals.rows();
-    const int m = neu_dym_vals.cols();
-    if (xt.rows() != n || xt.cols() != m) {
-      xt.resize(n, m);
-      k1.resize(n, m);
-      k2.resize(n, m);
-      k3.resize(n, m);
-      k4.resize(n, m);
-    }
-
     xt = neu_dym_vals;
 
     get_dx(k1, xt, t_local);
@@ -235,16 +214,18 @@ public:
     get_dx(k4, xt + k3 * dt, t_local + dt);
 
     neu_dym_vals = xt + (k1 + 2*k2 + 2*k3 + k4) * (dt/6);
-    
+
     // Get spike timings
     size_t id_ses_hd = spike_events.size();
+    const int n = neu_dym_vals.rows();
+    const int m = neu_dym_vals.cols();
     for (int j=0; j<n; j++) {
       if (   neu_dym_vals(j, id_V) >= V_threshold
                     && xt(j, id_V) <  V_threshold) {
         double t_sp = NAN;
         spiking_time(xt.data()+j*m, neu_dym_vals.data()+j*m,
-                     t_local, t_local, t_local+dt, t_sp);
-        spike_events.emplace_back(t_sp, j);
+                     t_local, 0, dt, t_sp);
+        spike_events.emplace_back(t_local + t_sp, j);
       }
     }
     std::sort(spike_events.begin() + id_ses_hd, spike_events.end());
@@ -255,6 +236,13 @@ public:
   NeuronPopulationContSyn(const TyNeuronalParams &_pm)
     :TyNeuronalParams(_pm), TyNeuronalDymState(_pm, n_var)
   {
+    const int n = dym_vals.rows();
+    const int m = dym_vals.cols();
+    xt.resize(n, m);
+    k1.resize(n, m);
+    k2.resize(n, m);
+    k3.resize(n, m);
+    k4.resize(n, m);
   }
 
   int n_neurons() const
