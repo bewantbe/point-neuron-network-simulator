@@ -306,6 +306,16 @@ int MainLoop(const po::variables_map &vm)
     FillNeuStateFromFile(p_neu_pop->GetDymState(),
                          vm["initial-state-path"].as<std::string>().c_str());
     cout << "initial state loaded!" << endl;
+    //p_neu_simu->SaneTestVolt();
+  } else {
+    // Fill with default values
+    const double *v = p_neuron_model->Get_dym_default_val();
+    auto &ds = p_neu_pop->GetDymState().dym_vals;
+    int n_var = p_neuron_model->Get_n_dym_vars();
+    for (int i = 0; i < p_neu_pop->n_neurons(); i++) {
+      memcpy(ds.data()+i*n_var, v, n_var*sizeof(double));
+    }
+  }
 //    const auto &ds = p_neu_pop->GetDymState().dym_vals;
 //    for (int i = 0; i < ds.rows(); i++) {
 //      printf("%.16e ", ds(i, 0));
@@ -318,8 +328,6 @@ int MainLoop(const po::variables_map &vm)
 //      printf("%.16e ", ds(i, 7));
 //      printf("\n");
 //    }
-    //p_neu_simu->SaneTestVolt();
-  }
 
   if (vm.count("input-event-path")) {
     FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),

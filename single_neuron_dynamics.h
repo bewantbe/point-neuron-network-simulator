@@ -35,6 +35,7 @@ struct Ty_Neuron_Dym_Base
     double &spike_time_local,
     double dt_local) const = 0;
   virtual void VoltHandReset(double *dym_val) const = 0;
+  virtual const double * Get_dym_default_val() const = 0;
 };
 
 struct Ty_LIF_G_core
@@ -350,6 +351,11 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
     }
   }
 
+  const double * Get_dym_default_val() const
+  {
+     static const double dym[n_var] = {0};
+     return dym;
+  }
 };
 
 typedef Ty_LIF_stepper<Ty_LIF_G_core>  Ty_LIF_G;
@@ -535,6 +541,13 @@ struct Ty_HH_GH_CUR
     //t_in_refractory = 0;
     //}
   }
+  const double * Get_dym_default_val() const
+  {
+    static const double dym_default[n_var] = {
+      2.7756626542950876e-04, 5.9611104634682788e-01,
+      5.2934217620863984e-02, 3.1768116757978115e-01, 0, 0, 0, 0 };
+    return dym_default;
+  }
 };
 
 // Model that note down spike event when the spike is falling.
@@ -649,6 +662,14 @@ struct Ty_HH_GH_cont_syn
   static const int id_gI_s1 = 7;
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
+
+  const double * Get_dym_default_val() const
+  {
+    static const double dym_default[n_var] = {
+      2.7756626542950876e-05, 5.9611104634682788e-01,
+      5.2934217620863984e-02, 3.1768116757978115e-01, 0, 0, 0, 0 };
+    return dym_default;
+  }
 
   double Get_V_threshold() const override {return V_threshold;};
   int Get_id_gEInject() const override {return id_gEInject;}
