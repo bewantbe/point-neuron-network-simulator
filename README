@@ -1,15 +1,56 @@
-Build under linux
-=======================
+Accurate Point Neuronal Network Simulator
+=========================================
+(Note: **NOT** for artifical neural network)
 
-Simply `make', then you will get a executable `bin/gen_neu'.
-You will need to install Eigen and Boost.ProgramOptions
+This program aims to provide an accurate simulator and a portable code framework for point neuron model networks.
 
-There is matlab scripts in `mfile/', notably the interface `gen_neu.m'.
-To use the matlab interface, you need to compile `mfile/BKDRHash.c' and `mfile/randMT19937.cpp'
+A handy GNU Octave/Matlab interface to the core simulator is also provided.
+
+The accuracy is achieved by breaking the simulation time steps (dt) according to the (e.g. spike) event timings. So that the dynamics inside the sub-time-steps are smooth and the classical ODE solves (notably RK4) will work well.
+
+Currently there are (parenthesis: Name used inside the code):
+
+  * Leaky Integrate-and-Fire models with exponential decay conductance (LIF-G).
+  * Leaky Integrate-and-Fire models with "alpha function" conductance (LIF-GH).
+  * Hodgkin Huxley neuron model with exponential decay conductance (HH-G).
+  * Hodgkin Huxley neuron model with "alpha function" conductance (HH-GH).
+
+Optional:
+
+  * Add an alternating current to these models.
+  * Add synaptic delay. (Currently constant delay, and must larger than dt)
+
+You can provide external input events in a file or just let the program generate (Poisson) for you.
+
+Comparison to other simulators
+------------------------------
+
+* NEST
+
+    NEST is full featured point neuron simulator. While this one (APNNS) has much less neuron models and tunable settings. The function of APNNS is extended by directly modifying the source code.
+
+    NEST is a big project. APNNS is rather small, roughly about 3 thousand lines of C++ code.
+    
+    NEST use high order ODE solver for each neurons (by default it is Runge–Kutta–Fehlberg method through GNU Scientific Library). But the interactions between neurons has only order one accuracy. Because the interactions is perform at the time of dt boundary. APNNS will deal with this case correctly.
+
+* NEURON
+
+    NEURON is a more detailed/physiology simulator. APNNS only simulate "point" neuron.
 
 
-在 Windows 下用 MSVC 编译
-=======================
+Build from source
+-----------------
+
+### Build under linux
+
+You will need to install libraries Eigen and Boost.ProgramOptions first.
+Then simply `make`, you will get an executable `bin/gen_neu`.
+
+There is matlab scripts in `mfile/`, notably the interface `gen_neu.m`.
+To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`. See the source code for how to compile them.
+
+
+### 在 Windows 下用 MSVC 编译
 
 示例环境：
   Win 10
