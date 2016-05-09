@@ -14,7 +14,7 @@ void hermit(double a, double b, double va, double vb,
   double f4 = dvb*(x-a)*(x-a)*(x-b)/(b-a)/(b-a);
 
   // the polynomial of v(x) - Vot_Threshold
-  double V_threshold = 7.5;
+  double V_threshold = 6.5;
   fx = f1 + f2 + f3 + f4 - V_threshold;
 }
 
@@ -86,7 +86,7 @@ public:
   double tau_gE_s1 = 3.0;
   double tau_gI    = 0.5;
   double tau_gI_s1 = 7.0;
-  double V_threshold = 7.5;
+  double V_threshold = 6.5;
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
   static const int id_V     = 0;

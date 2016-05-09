@@ -382,7 +382,7 @@ struct Ty_HH_GH_CUR
   double tau_gE_s1 = 3.0;        // ms, decay time for gE_H equation.
   double tau_gI    = 0.5;        // ms
   double tau_gI_s1 = 7.0;        // ms
-  double V_threshold = 50;       // mV, determine the spike time for synaptic interaction.
+  double V_threshold = 65;       // mV, determine the spike time for synaptic interaction.
   //double Time_Refractory = 1.0;  // ms, hard refractory period. Used for correctly locate the firing when change time step
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
@@ -649,7 +649,7 @@ struct Ty_HH_GH_cont_syn
   double tau_gE_s1 = 3.0;
   double tau_gI    = 0.5;
   double tau_gI_s1 = 7.0;
-  double V_threshold = 7.5;
+  double V_threshold = 6.5;
   static const int n_var = 8;
   static const int n_var_soma = 4;  // number of variables for non- G part
   static const int id_V     = 0;    // id_V should just before gating variables(see main.cpp)

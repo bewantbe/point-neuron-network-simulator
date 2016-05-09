@@ -466,7 +466,7 @@ class NeuronSimulatorBigDelay :public NeuronSimulatorSimple
       TyPoissonTimeSeq &pe_seq = poisson_time_vec[j];
       double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
       while (pe_seq.Front() < t_step_end) {
-        se_list.emplace_back(pe_seq.Front(), -j);
+        se_list.emplace_back(pe_seq.Front(), -1);
         pe_seq.PopAndFill(pr);
       }
       
@@ -485,7 +485,7 @@ class NeuronSimulatorBigDelay :public NeuronSimulatorSimple
       for (size_t i = 0; i < se_list.size(); i++) {
         p_neu_pop->NoInteractDt(j, se_list[i].time - t_local, t_local, spike_events);
         t_local = se_list[i].time;
-        if (se_list[i].id > 0) {
+        if (se_list[i].id >= 0) {
           p_neu_pop->SynapticInteraction(j, se_list[i]);
         } else {
           p_neu_pop->InjectPoissonE(j);

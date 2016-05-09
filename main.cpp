@@ -92,11 +92,16 @@ int MainLoop(const po::variables_map &vm)
     pm.arr_ps[i] = vm["ps"].as<double>();
   }
 
-//  if (vm.count("pr-mul")) {
-//    std::string v = vm["pr-mul"].as<std::string>();
-//    cout << v << endl;
-//    // TODO: pause it
-//  }
+  if (vm.count("pr-mul")) {
+    const auto &v = vm["pr-mul"].as< std::vector<double> >();
+    if (v.size() != (size_t)n_neu) {
+      cerr << "parameter --pr-mul should have the same number of data as neuron number.\n";
+      exit(-1);
+    }
+    for (int i = 0; i < n_neu; i++) {
+      pm.arr_pr[i] *= v[i];
+    }
+  }
 
   if (vm.count("psi") || vm.count("pri")) {
     cerr << "option --psi and --pri not support yet!" << endl;
@@ -453,7 +458,7 @@ int main(int argc, char *argv[])
        "Poisson input strength, inhibitory type.")
       ("pri",  po::value<double>(),
        "Poisson input rate, inhibitory type.")
-      ("pr-mul", po::value<double>()->multitoken(),
+      ("pr-mul", po::value< std::vector<double> >()->multitoken(),
        "Poisson input rate multiper.")
       ("seed",   po::value<unsigned int>()->default_value(1),
        "Random seed for Poisson events. An unsigned integer (0~2^32-1).")
