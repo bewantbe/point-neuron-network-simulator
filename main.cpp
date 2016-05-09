@@ -307,12 +307,17 @@ int MainLoop(const po::variables_map &vm)
     exit(-1);
   }
   
+  bool b_init_loaded = false;
   if (vm.count("initial-state-path")) {
-    FillNeuStateFromFile(p_neu_pop->GetDymState(),
-                         vm["initial-state-path"].as<std::string>().c_str());
-    cout << "initial state loaded!" << endl;
+    int rt = FillNeuStateFromFile(p_neu_pop->GetDymState(),
+                 vm["initial-state-path"].as<std::string>().c_str());
+    if (rt == 0) {
+      b_init_loaded = true;
+      cout << "Initial state loaded." << endl;
+    }
     //p_neu_simu->SaneTestVolt();
-  } else {
+  }
+  if (!b_init_loaded) {
     // Fill with default values
     const double *v = p_neuron_model->Get_dym_default_val();
     auto &ds = p_neu_pop->GetDymState().dym_vals;
@@ -320,6 +325,7 @@ int MainLoop(const po::variables_map &vm)
     for (int i = 0; i < p_neu_pop->n_neurons(); i++) {
       memcpy(ds.data()+i*n_var, v, n_var*sizeof(double));
     }
+    b_init_loaded = true;
   }
 //    const auto &ds = p_neu_pop->GetDymState().dym_vals;
 //    for (int i = 0; i < ds.rows(); i++) {

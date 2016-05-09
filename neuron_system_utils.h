@@ -141,7 +141,7 @@ struct TySpikeTimeStrength
   int id_type;      // id_gEInject or id_gIInject
 };
 
-void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
+int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net);
 

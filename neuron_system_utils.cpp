@@ -1,8 +1,13 @@
 #include "neuron_system_utils.h"
 
-void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
+int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
 {
   std::ifstream fin(path);
+  if (fin.fail()) {
+    cerr << "Initial value file not found! \"" << path << "\"" << endl;
+    return -1;
+  }
+
   double v;
   size_t j = 0;
   neu_dym_stat.dym_vals.setZero();
@@ -20,6 +25,11 @@ void FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
       break;
     }
   }
+  if (j < neu_dym_stat.time_in_refractory.size()) {
+    cerr << "No enough data read!" << endl;
+    return -1;
+  }
+  return 0;
 }
 
 // Read network from text file. The number neurons should be known first.

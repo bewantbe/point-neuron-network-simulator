@@ -1,4 +1,4 @@
-function ras_plot(ras, t_bg, t_ed, id_neu)
+function hd = ras_plot(ras, t_bg, t_ed, id_neu)
 if ~exist('t_bg', 'var') || isempty(t_bg)
   t_bg = 0;
 end
@@ -21,7 +21,8 @@ id_b_neu(id_neu) = true;
 local_ras = local_ras(id_b_neu(local_ras(:,1)), :);
 
 t_len = t_ed - t_bg;
-cla
+
+hd = ...
 line([local_ras(:, 2)'; local_ras(:, 2)']-t_bg,...
      [local_ras(:, 1)'; local_ras(:, 1)'-0.7], 'color', [0 0 0], 'linewidth', 5);
 xlabel('time (ms)');
