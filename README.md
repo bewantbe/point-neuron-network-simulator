@@ -127,12 +127,12 @@ Usage example:
 
 After run the program.
 
-The file `a.dat` will contain voltage traces. In raw `double` binary format. The order is:
+The file `a.dat` will contain voltage traces. In raw `double` binary format. The order is:<a name="V-order"></a>
 
-		V\_1(t = 0)     V\_2(t = 0)    ... V\_n(t = 0)
-		V\_1(t = dt)    V\_2(t = dt)   ... V\_n(t = dt)
+		V_1(t = 0)     V_2(t = 0)    ... V_n(t = 0)
+		V_1(t = dt)    V_2(t = dt)   ... V_n(t = dt)
 		...
-		V\_1(t = L*dt)  V\_2(t = L*dt) ... V\_n(t = L*dt)
+		V_1(t = L*dt)  V_2(t = L*dt) ... V_n(t = L*dt)
 
 	where L = floor(T/dt), n is number of neurons, T is simulation time, dt  is output time step (--stv).
 
@@ -145,10 +145,14 @@ The file `ras.txt` contains spike events (of the neurons inside the network). In
 
 (Note: compile the utility function first! See [Build the Matlab interface](#build-matlab))
 
+The interface `gen_neu.m` is a wrapper for `bin/gen_neu`.
+
 ```matlab
 	pm = [];
-	pm.neuron_model = 'HH-GH';  % e.g. LIF-G, LIF-GH, HH-G, HH-GH. See bin/gen_neu --help for complete list
-	pm.net  = 'net_2_2';  % can also be a connectivity (adjacency) matrix or a file path
+	pm.neuron_model = 'HH-GH';  % e.g. LIF-G, LIF-GH, HH-G, HH-GH.
+	                            % See bin/gen_neu --help for complete list.
+	pm.net  = 'net_2_2';  % Can also be a connectivity (adjacency) matrix,
+	                      % or a file path.
 	pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
 			              %             Indexes are later half
 	pm.scee = 0.05;
@@ -161,6 +165,14 @@ The file `ras.txt` contains spike events (of the neurons inside the network). In
 	pm.dt   = 1.0/32;     % Simulation time step. Default: 1/32
 	pm.stv  = 0.5;        % Output time step.
 	pm.seed = 'auto';     % default: 'auto'(or []). Also accept integers.
-	pm.extra_cmd = '';    % put all other command line options here.
-	[X, ISI, ras] = gen_neu(pm);
+	pm.extra_cmd = '';    % Optional: put all other command line options here.
+	[V, ISI, ras] = gen_neu(pm, 'rm');
 ```
+
+Now you got voltage traces `V`, mean Inter-Spike-Intervals `ISI` and spike events `ras`.
+
+See [previous section](#V-order) for the format of `V`, `ISI` and `ras`.
+Note that there is a transpose for the format of `V` here.
+
+The parameter `'rm'` for `gen_neu` means delete the temporary files after the result been read (just befor function return). Otherwise, in next run, `gen_neu` will use the cached results.
+
