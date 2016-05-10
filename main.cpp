@@ -32,6 +32,8 @@ TODO:
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+typedef std::vector<unsigned int> VecUInt;
+
 std::mt19937 rand_eng(1);
 
 double g_rand()
@@ -228,13 +230,13 @@ int MainLoop(const po::variables_map &vm)
   if (enum_neuron_model == HH_GH_sine) {
     auto p_neu_pop_sine = static_cast<
       NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine> *>(p_neu_pop);
-    if (vm.count("sine-current-amplitude")) {
+    if (vm.count("current-sine-amp")) {
       p_neu_pop_sine->SetSineAmplitude(
-          vm["sine-current-amplitude"].as<double>());
+          vm["current-sine-amp"].as<double>());
     }
-    if (vm.count("sine-current-angular-frequency")) {
-      p_neu_pop_sine->SetSineAngularFrequency(
-          vm["sine-current-angular-frequency"].as<double>());
+    if (vm.count("current-sine-freq")) {
+      p_neu_pop_sine->SetSineFrequency(
+          vm["current-sine-freq"].as<double>());
     }
   }
 
@@ -274,8 +276,9 @@ int MainLoop(const po::variables_map &vm)
 
   // Set simulator for the neural network.
   NeuronSimulatorBase *p_neu_simu = nullptr;
-  const std::string &str_simu_mathod = vm["simulation-method"].as<std::string>();
+  std::string str_simu_mathod;
   if (vm.count("simulation-method")) {
+    str_simu_mathod = vm["simulation-method"].as<std::string>();
     if (str_simu_mathod == "simple") {
       p_neu_simu = new NeuronSimulatorSimple(pm, e_dt);
     } else if (str_simu_mathod == "SSC") {  // Spike-Spike-Correction
@@ -294,14 +297,16 @@ int MainLoop(const po::variables_map &vm)
   } else {
     // Default simulator
     if (HH_GH_cont_syn == enum_neuron_model) {
+      str_simu_mathod = "cont-syn";
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
     } else if (vm.count("synaptic-delay")) {
+      str_simu_mathod = "big-delay";
       p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
     } else {
+      str_simu_mathod = "SSC";
       p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
     }
   }
-
   if (vm.count("synaptic-delay") && str_simu_mathod != "big-delay") {
     cerr << "You select a delayed synaptic network, but use a non-compatible simulator. Try --simulation-method big-delay\n";
     exit(-1);
@@ -431,7 +436,7 @@ int main(int argc, char *argv[])
       ("neuron-model",  po::value<std::string>(),
        "One of LIF-G, LIF-GH, HH-GH, HH-GH-sine, HH-FT-GH, HH_FT-GH-sine, HH-GH-cont-syn.")
       ("simulation-method",  po::value<std::string>(),
-       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, cont-syn.")
+       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, cont-syn. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",
@@ -459,41 +464,41 @@ int main(int argc, char *argv[])
       ("ps",   po::value<double>(),
        "Poisson input strength.")
       ("pr",   po::value<double>()->default_value(1.0),
-       "Poisson input rate, unit: 1/ms.")
+       "Poisson input rate, in 1/ms.")
       ("psi",  po::value<double>(),
        "Poisson input strength, inhibitory type.")
       ("pri",  po::value<double>(),
        "Poisson input rate, inhibitory type.")
       ("pr-mul", po::value< std::vector<double> >()->multitoken(),
        "Poisson input rate multiper.")
-      ("seed",   po::value<unsigned int>()->default_value(1),
-       "Random seed for Poisson events. An unsigned integer (0~2^32-1).")
+      ("seed",   po::value< VecUInt >()->multitoken()->default_value(VecUInt{1}, "1"),
+       "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
       ("seed-auto",
        "Auto set random seed. This option overrides --seed.")
-      ("sine-current-amplitude",         po::value<double>(),
-       "Set the sine amplitude for current input.")
-      ("sine-current-angular-frequency", po::value<double>(),
-       "Set the sine angular frequency for current input.")
+      ("current-sine-amp",         po::value<double>(),
+       "Set the current input sine amplitude.")
+      ("current-sine-freq", po::value<double>(),
+       "Set the current input sine frequency, in kHz.")
       ("synaptic-delay", po::value<double>(),
        "Set a synaptic delay for the network.")
       ("volt-path,o",      po::value<std::string>(),
-       "Volt output file path.")
+       "Output volt to path. In raw binary format.")
       ("ras-path",         po::value<std::string>(),
-       "RAS output file path.")
+       "Output spike events to path.")
       ("isi-path",         po::value<std::string>(),
-       "ISI output file path.")
+       "Output mean InterSpike Interval to path.")
       ("conductance-path", po::value<std::string>(),
-       "Conductance output file path.")
+       "Output conductance to path.")
       ("ion-gate-path", po::value<std::string>(),
-       "Gating variables output file path.")
-      ("initial-state-path", po::value<std::string>(),
-       "Initial state file path.")
-      ("input-event-path", po::value<std::string>(),
-       "Input event file path.")
+       "Output gating variables to path. In raw binary format.")
       ("output-first-data-point",
        "Also output initial condition in volt-path and conductance-path.")
+      ("initial-state-path", po::value<std::string>(),
+       "Read initial state from path.")
+      ("input-event-path", po::value<std::string>(),
+       "Read input event from path.")
       ("parameter-path", po::value<std::string>(),
-       "Path for parameters, in INI style.")
+       "Read parameters from path, in INI style.")
   ;
   // ps-mul
   // verbose : for progress percentage
@@ -504,6 +509,7 @@ int main(int argc, char *argv[])
   po::store(po::parse_command_line(argc, argv, desc), vm);
 
   if (vm.count("help")) {
+    // Thanks stackoverflow
     auto basename = [](std::string filename) -> std::string {
       const size_t last_slash_idx = filename.find_last_of("\\/");
       if (std::string::npos != last_slash_idx) {
@@ -523,9 +529,13 @@ int main(int argc, char *argv[])
   }
   po::notify(vm);
 
-  // Set random seed for Poisson event generator.
+  // Set random seed for the global generator, mainly for Poisson event.
   if (vm.count("seed")) {
-    rand_eng.seed( vm["seed"].as<unsigned int>() );
+    const auto &v = vm["seed"].as< VecUInt >();
+//    for (size_t k = 0; k < v.size(); k++)
+//      cout << "v[" << k <<"] = " << v[k] << endl;
+    std::seed_seq sseq(v.begin(), v.end());
+    rand_eng.seed( sseq );
   }
   if (vm.count("seed-auto")) {
     std::random_device rd;

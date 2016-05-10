@@ -52,8 +52,12 @@ Build from source
 You will need to install libraries Eigen and Boost.ProgramOptions first.
 Then simply `make`, you will get an executable `bin/gen_neu`.
 
+
+### Build the Matlab interface<a name="build-matlab"></a>
+
 There are matlab scripts in `mfile/`, notably the interface `mfile/gen_neu.m`.
-To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`. See the source code for how to compile them.
+
+To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`. See the comments in the source code for how to compile them.
 
 
 ### 在 Windows 下用 MSVC 编译
@@ -108,3 +112,55 @@ To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/r
 
 	没报错就是编译正常了。
 
+Usage
+-----
+
+### Using the core simulator `bin/gen_neu`
+
+(Note: compile the program first)
+
+Enter `bin/gen_neu --help` too see command line help.
+
+Usage example:
+
+		bin/gen_neu --neuron-model HH-GH --net - --nE 1 --nI 0 --t 1e3 --dt 0.03125 --pr 1 --ps 0.05 --volt-path a.dat --isi-path isi.txt --ras-path ras.txt
+
+After run the program.
+
+The file `a.dat` will contain voltage traces. In raw `double` binary format. The order is:
+
+		V\_1(t = 0)     V\_2(t = 0)    ... V\_n(t = 0)
+		V\_1(t = dt)    V\_2(t = dt)   ... V\_n(t = dt)
+		...
+		V\_1(t = L*dt)  V\_2(t = L*dt) ... V\_n(t = L*dt)
+
+	where L = floor(T/dt), n is number of neurons, T is simulation time, dt  is output time step (--stv).
+
+The file `isi.txt` contains mean Inter-Spike-Intervals for each neurons. In text format.
+
+The file `ras.txt` contains spike events (of the neurons inside the network). In text format. The first column shows neuron indexes (range from 1 to n), second column shows the timings.
+
+
+### Using GNU Octave/Matlab interface
+
+(Note: compile the utility function first! See [Build the Matlab interface](#build-matlab))
+
+```matlab
+	pm = [];
+	pm.neuron_model = 'HH-GH';  % e.g. LIF-G, LIF-GH, HH-G, HH-GH. See bin/gen_neu --help for complete list
+	pm.net  = 'net_2_2';  % can also be a connectivity (adjacency) matrix or a file path
+	pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
+			              %             Indexes are later half
+	pm.scee = 0.05;
+	pm.scie = 0.00;       % default: 0. Strength from Ex. to In.
+	pm.scei = 0.00;       % default: 0. Strength from In. to Ex.
+	pm.scii = 0.00;       % default: 0.
+	pm.pr   = 1.6;        % Poisson input rate
+	pm.ps   = 0.04;       % Poisson input strength
+	pm.t    = 1e4;        % Simulation time.
+	pm.dt   = 1.0/32;     % Simulation time step. Default: 1/32
+	pm.stv  = 0.5;        % Output time step.
+	pm.seed = 'auto';     % default: 'auto'(or []). Also accept integers.
+	pm.extra_cmd = '';    % put all other command line options here.
+	[X, ISI, ras] = gen_neu(pm);
+```

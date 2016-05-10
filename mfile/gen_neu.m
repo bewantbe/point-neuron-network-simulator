@@ -215,11 +215,11 @@ st_neu_param = [st_neu_param, get_mul_st(pm, 'ps_mul')];
 st_neu_param = [st_neu_param, get_mul_st(pm, 'psi_mul')];
 if isfield(pm, 'sine_amp')
   st_neu_param = [st_neu_param,...
-    sprintf(' --sine-current-amplitude %.16e', pm.sine_amp)];
+    sprintf(' --current-sine-amp %.16e', pm.sine_amp)];
 end
 if isfield(pm, 'sine_w')
   st_neu_param = [st_neu_param,...
-    sprintf(' --sine-current-angular-frequency %.16e', pm.sine_w)];
+    sprintf(' --current-sine-freq %.16e', pm.sine_w)];
 end
 if isfield(pm, 'synaptic_delay')
   st_neu_param = [st_neu_param,...

@@ -237,8 +237,9 @@ public:
     }
   }
 
-  void SetSineAngularFrequency(double w)
+  void SetSineFrequency(double f)
   {
+    double w = 2.0*M_PI*f;
     for (int j=0; j<n_neurons(); j++) {
       sin_par(j, 1) = w;
     }
