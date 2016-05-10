@@ -1,6 +1,6 @@
 Accurate Point Neuronal Network Simulator
 =========================================
-(Note: **NOT** for artifical neural network)
+(Note: **NOT** for artificial neural network)
 
 This program aims to provide an accurate simulator and a portable code framework for point neuron model networks.
 
@@ -22,7 +22,9 @@ Optional:
 
 See `doc/neuron_models.pdf` for model details.
 
-You can provide external input events in a file or just let the program generate (Poisson) for you.
+You can provide external input events in a file or just let the program generate (Poisson input) for you.
+
+Refer to `bin/gen_neu --help` for the command line option help (after compilation).
 
 Comparison to other simulators
 ------------------------------
@@ -47,7 +49,7 @@ Comparison to other simulators
 Build from source
 -----------------
 
-### Build under linux
+### Build under Linux
 
 You will need to install libraries Eigen and Boost.ProgramOptions first.
 Then simply `make`, you will get an executable `bin/gen_neu`.
@@ -57,10 +59,30 @@ Then simply `make`, you will get an executable `bin/gen_neu`.
 
 There are matlab scripts in `mfile/`, notably the interface `mfile/gen_neu.m`.
 
-To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`. See the comments in the source code for how to compile them.
+To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`.
+
+In matlab, use `mfile/` as your working directory.
+
+  * compile `mfile/BKDRHash.c`
+
+		mex BKDRHash.c
+	
+  * compile `mfile/randMT19937.cpp`
+
+	Using GCC, under Linux
+
+		mex CXXFLAGS="\$CXXFLAGS -std=c++11" CXXOPTIMFLAGS="-O3 -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp" randMT19937.cpp
+
+	Using MSVC, under Windows
+
+		mex COMPFLAGS="$COMPFLAGS" OPTIMFLAGS="$OPTIMFLAGS /fopenmp" LINKFLAGS="$LINKFLAGS /fopenmp" randMT19937.cpp
+	
+	Using GCC, Octave, under Linux. (In command line)
+
+		CXXFLAGS="-O3 -fopenmp -std=c++11"  LDFLAGS=" -fopenmp" mkoctfile --mex randMT19937.cpp
 
 
-### 在 Windows 下用 MSVC 编译
+### 在 Windows 下用 MSVC 编译 (Build under Windows using MSVC)
 
 示例环境：
 
@@ -141,7 +163,7 @@ The file `isi.txt` contains mean Inter-Spike-Intervals for each neurons. In text
 The file `ras.txt` contains spike events (of the neurons inside the network). In text format. The first column shows neuron indexes (range from 1 to n), second column shows the timings.
 
 
-### Using GNU Octave/Matlab interface
+### Using the GNU Octave/Matlab interface `gen_neu.m`
 
 (Note: compile the utility function first! See [Build the Matlab interface](#build-matlab))
 
@@ -174,5 +196,5 @@ Now you got voltage traces `V`, mean Inter-Spike-Intervals `ISI` and spike event
 See [previous section](#V-order) for the format of `V`, `ISI` and `ras`.
 Note that there is a transpose for the format of `V` here.
 
-The parameter `'rm'` for `gen_neu` means delete the temporary files after the result been read (just befor function return). Otherwise, in next run, `gen_neu` will use the cached results.
+The parameter `'rm'` for `gen_neu` means delete the temporary files after the result been read (just before function return). Otherwise, in next run, with the same parameters, `gen_neu` will use the cached results.
 
