@@ -48,44 +48,32 @@ int MainLoop(const po::variables_map &vm)
     cerr << "Error: Neuron model not specified. See --help.\n";
     return -1;
   }
-  Ty_Neuron_Dym_Base *p_neuron_model;
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
 
   // Set neuron model.
   enum EnumNeuronModel {LIF_G, LIF_GH, HH_G, HH_GH, HH_G_sine, HH_GH_sine, HH_FT_GH, HH_FT_GH_sine, HH_G_extI, HH_GH_extI, HH_GH_cont_syn };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
-    p_neuron_model = new Ty_LIF_G();
     enum_neuron_model =     LIF_G;
   } else if (str_nm ==     "LIF-GH") {
-    p_neuron_model = new Ty_LIF_GH();
     enum_neuron_model =     LIF_GH;
   } else if (str_nm ==     "HH-G") {
-    p_neuron_model = new Ty_HH_G();
     enum_neuron_model =     HH_G;
   } else if (str_nm ==     "HH-GH") {
-    p_neuron_model = new Ty_HH_GH();
     enum_neuron_model =     HH_GH;
   } else if (str_nm ==     "HH-G-sine") {
-    p_neuron_model = new Ty_HH_G_sine();
     enum_neuron_model =     HH_G_sine;
   } else if (str_nm ==     "HH-GH-sine") {
-    p_neuron_model = new Ty_HH_GH_sine();
     enum_neuron_model =     HH_GH_sine;
   } else if (str_nm ==     "HH-G-extI") {
-    p_neuron_model = new Ty_HH_G_extI();
     enum_neuron_model =     HH_G_extI;
   } else if (str_nm ==     "HH-GH-extI") {
-    p_neuron_model = new Ty_HH_GH_extI();
     enum_neuron_model =     HH_GH_extI;
   } else if (str_nm ==     "HH-FT-GH") {
-    p_neuron_model = new Ty_HH_FT_GH();
     enum_neuron_model =     HH_FT_GH;
   } else if (str_nm ==     "HH-FT-GH-sine") {
-    p_neuron_model = new Ty_HH_FT_GH_sine();
     enum_neuron_model =     HH_FT_GH_sine;
   }  else if (str_nm ==    "HH-GH-cont-syn") {
-    p_neuron_model = new Ty_HH_GH_cont_syn();
     enum_neuron_model =     HH_GH_cont_syn;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
@@ -220,6 +208,8 @@ int MainLoop(const po::variables_map &vm)
         break;
     }
   }
+  // Get basic single neuron info
+  const Ty_Neuron_Dym_Base *p_neuron_model = p_neu_pop->GetNeuronModel();
 
   double e_t   = vm["t"].as<double>();
   double e_dt  = vm["dt"].as<double>();
@@ -244,7 +234,7 @@ int MainLoop(const po::variables_map &vm)
 	  return 2;
   }
   
-  // Parameters about current input
+  // Parameters about sine current input
   if (enum_neuron_model == HH_GH_sine) {
     auto p_neu_pop_sine = static_cast<
       NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine> *>(p_neu_pop);

@@ -37,6 +37,7 @@ public:
   virtual const TyNeuronalDymState & GetDymState() const = 0;
   virtual double GetDymState(int neuron_id, int id_dym) const = 0;
   virtual const TyNeuronalParams * GetNeuronalParamsPtr() const = 0;
+  virtual const Ty_Neuron_Dym_Base * GetNeuronModel() const = 0;
 
   virtual double SynapticDelay() const { return 0; }
   virtual void SetSynapticDelay(double d) { };
@@ -162,6 +163,11 @@ public:
   const TyNeuronalParams * GetNeuronalParamsPtr() const
   {
     return static_cast<const TyNeuronalParams*>(this);
+  }
+
+  const Ty_Neuron_Dym_Base * GetNeuronModel() const
+  {
+    return &neuron_model;
   }
 
   /*

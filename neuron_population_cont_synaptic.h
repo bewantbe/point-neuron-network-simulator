@@ -100,6 +100,8 @@ public:
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
 
+  Ty_HH_GH_cont_syn neuron_model;
+
   TyNeuronalDymState::TyDymVals xt, k1, k2, k3, k4;  // working variables
 
   void get_dx_net(TyNeuronalDymState::TyDymVals &dx, 
@@ -307,6 +309,10 @@ public:
   const TyNeuronalParams * GetNeuronalParamsPtr() const
   {
     return static_cast<const TyNeuronalParams*>(this);
+  }
+  const Ty_Neuron_Dym_Base * GetNeuronModel() const
+  {
+    return &neuron_model;
   }
 
   void SynapticInteraction(const TySpikeEvent &se) override
