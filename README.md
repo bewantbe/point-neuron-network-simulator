@@ -2,7 +2,7 @@ Accurate Point Neuronal Network Simulator
 =========================================
 (Note: **NOT** for artificial neural network)
 
-This program aims to provide an accurate simulator and a portable code framework for point neuron model networks.
+This program aims to provide an accurate simulator and a portable code framework for point spiking neuron model networks.
 
 A handy GNU Octave/Matlab interface to the core simulator is also provided.
 
@@ -141,7 +141,7 @@ Usage
 
 (Note: compile the program first)
 
-Enter `bin/gen_neu --help` too see command line help.
+Enter `bin/gen_neu --help` to see command line help.
 
 Usage example:
 

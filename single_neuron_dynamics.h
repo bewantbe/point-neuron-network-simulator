@@ -361,11 +361,12 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
 typedef Ty_LIF_stepper<Ty_LIF_G_core>  Ty_LIF_G;
 typedef Ty_LIF_stepper<Ty_LIF_GH_core> Ty_LIF_GH;
 
+/////////////////////////////////////////////////////////////////////////////
 // Model of classical Hodgkin-Huxley (HH) neuron,
 // with two ODE for G (See Ty_LIF_GH_core::NextDtConductance() for details).
 // The parameters for G comes from unknown source.
 template<typename ExtraCurrent>
-struct Ty_HH_GH_CUR
+struct Ty_HH_GH_CUR_core
   :public Ty_Neuron_Dym_Base
 {
   typedef typename ExtraCurrent::TyData TyCurrentData;
@@ -396,14 +397,6 @@ struct Ty_HH_GH_CUR
   static const int id_gI_s1 = 7;
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
-
-  double Get_V_threshold() const override {return V_threshold;};
-  int Get_id_gEInject() const override {return id_gEInject;}
-  int Get_id_gIInject() const override {return id_gIInject;}
-  int Get_n_dym_vars() const override {return n_var;}
-  int Get_id_V() const override {return id_V;}
-  int Get_id_gE() const override {return id_gE;}
-  int Get_id_gI() const override {return id_gI;}
 
   // dV/dt term
   inline double GetDv(const double *dym_val, double t,
@@ -507,11 +500,6 @@ struct Ty_HH_GH_CUR
     return k1[id_V];
   };
 
-  void VoltHandReset(double *dym_val) const override
-  {
-    // no force reset required for HH
-  }
-
   void NextStepSingleNeuronQuiet(
     double *dym_val,
     double &t_in_refractory,
@@ -552,14 +540,15 @@ struct Ty_HH_GH_CUR
 
 // Model that note down spike event when the spike is falling.
 template<typename ExtraCurrent>
-struct Ty_HH_FT_GH_CUR  // Falling threshold
-  :public Ty_HH_GH_CUR<ExtraCurrent>
+struct Ty_HH_FT_GH_CUR_core  // Falling threshold
+  :public Ty_HH_GH_CUR_core<ExtraCurrent>
 {
-  typedef typename Ty_HH_GH_CUR<ExtraCurrent>::TyCurrentData TyCurrentData;
-  using Ty_HH_GH_CUR<ExtraCurrent>::id_V;
-  using Ty_HH_GH_CUR<ExtraCurrent>::V_threshold;
-  using Ty_HH_GH_CUR<ExtraCurrent>::DymInplaceRK4;
-  using Ty_HH_GH_CUR<ExtraCurrent>::GetDv;
+  typedef Ty_HH_GH_CUR_core<ExtraCurrent> T0;
+  typedef typename T0::TyCurrentData TyCurrentData;
+  using T0::id_V;
+  using T0::V_threshold;
+  using T0::DymInplaceRK4;
+  using T0::GetDv;
 
   void NextStepSingleNeuronQuiet(
     double *dym_val,
@@ -583,7 +572,128 @@ struct Ty_HH_FT_GH_CUR  // Falling threshold
   }
 };
 
-// Template for zero current input
+// Model of classical Hodgkin-Huxley (HH) neuron,
+// with one ODE for G (See Ty_LIF_G_core::NextDtConductance() for details).
+template<typename ExtraCurrent>
+struct Ty_HH_G_CUR_core
+  :public Ty_HH_GH_CUR_core<ExtraCurrent>
+{
+  typedef typename Ty_HH_GH_CUR_core<ExtraCurrent>::TyCurrentData TyCurrentData;
+  typedef Ty_HH_GH_CUR_core<ExtraCurrent> T0;
+  using T0::id_V;
+  using T0::id_gE;
+  using T0::id_gI;
+  using T0::n_var_soma;
+  using T0::V_threshold;
+  using T0::GetDv;
+  using T0::ODE_RHS;
+
+  double tau_gE = 3.0;
+  double tau_gI = 7.0;
+  static const int n_var = 6;
+  static const int id_gEInject = id_gE;
+  static const int id_gIInject = id_gI;
+
+  double DymInplaceRK4(double *dym_val, double dt, double t,
+                       const TyCurrentData &extra_data) const
+  {
+    double exp_E = exp(-0.5 * dt / tau_gE);
+    double exp_I = exp(-0.5 * dt / tau_gI);
+
+    double k1[n_var_soma], k2[n_var_soma], k3[n_var_soma], k4[n_var_soma];
+    double dym_val0[n_var_soma];
+    // Use template BLAS lib
+    // so some expressions can be written in vector form.
+    typedef Eigen::Map< Eigen::RowVectorXd > TyMapVec;
+    TyMapVec dym_val0_v(dym_val0, n_var_soma);
+    TyMapVec dym_val_v (dym_val , n_var_soma);
+    TyMapVec k1_v(k1, n_var_soma);
+    TyMapVec k2_v(k2, n_var_soma);
+    TyMapVec k3_v(k3, n_var_soma);
+    TyMapVec k4_v(k4, n_var_soma);
+
+    dym_val0_v = dym_val_v;
+    ODE_RHS(dym_val, k1, t, extra_data);
+
+    dym_val_v = dym_val0_v + 0.5*dt*k1_v;
+    dym_val[id_gE] *= exp_E;
+    dym_val[id_gI] *= exp_I;
+    ODE_RHS(dym_val, k2, t + 0.5*dt, extra_data);
+
+    dym_val_v = dym_val0_v + 0.5*dt*k2_v;
+    ODE_RHS(dym_val, k3, t + 0.5*dt, extra_data);
+
+    dym_val_v = dym_val0_v + dt*k3_v;
+    dym_val[id_gE] *= exp_E;
+    dym_val[id_gI] *= exp_I;
+    ODE_RHS(dym_val, k4, t + dt, extra_data);
+
+    dym_val_v = dym_val0_v + dt/6.0 * (k1_v + 2*k2_v + 2*k3_v + k4_v);
+
+    return k1[id_V];
+  };
+
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local,
+    double t,
+    const TyCurrentData &extra_data) const
+  {
+    spike_time_local = std::numeric_limits<double>::quiet_NaN();
+    double v0 = dym_val[id_V];
+    double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
+    double &v1 = dym_val[id_V];
+    // See if neuron is firing. t_in_refractory == 0 means the neuron
+    // is not in hand set refractory period, avoids kind of infinite loop.
+    if (v0 <= V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
+      spike_time_local = cubic_hermit_real_root(dt_local,
+        v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
+    }
+    if (dt_local>0) {
+      t_in_refractory = 0;
+    }
+  }
+};
+
+template<class TyNeuronModel>
+struct Ty_HH_shell: public TyNeuronModel
+{
+  using TyNeuronModel::id_V;
+  using TyNeuronModel::id_gE;
+  using TyNeuronModel::id_gI;
+  using TyNeuronModel::id_gEInject;
+  using TyNeuronModel::id_gIInject;
+  using TyNeuronModel::V_threshold;
+  using TyNeuronModel::n_var;
+
+  double Get_V_threshold() const override {return V_threshold;};
+  int Get_id_gEInject() const override {return id_gEInject;}
+  int Get_id_gIInject() const override {return id_gIInject;}
+  int Get_n_dym_vars() const override {return n_var;}
+  int Get_id_V() const override {return id_V;}
+  int Get_id_gE() const override {return id_gE;}
+  int Get_id_gI() const override {return id_gI;}
+  void VoltHandReset(double *dym_val) const override
+  {
+    // no force reset required for HH
+  }
+};
+
+template<typename ExtraCurrent>
+using Ty_HH_GH_CUR = Ty_HH_shell< Ty_HH_GH_CUR_core<ExtraCurrent> >;
+
+template<typename ExtraCurrent>
+using Ty_HH_FT_GH_CUR = Ty_HH_shell< Ty_HH_FT_GH_CUR_core<ExtraCurrent> >;
+
+template<typename ExtraCurrent>
+using Ty_HH_G_CUR = Ty_HH_shell< Ty_HH_G_CUR_core<ExtraCurrent> >;
+
+/////////////////////////////////////////////////////////////////////////////
+// Current term
+
+/// Template for zero current input
 struct TyZeroCurrent
 {
   typedef int TyData;
@@ -591,20 +701,24 @@ struct TyZeroCurrent
   { return 0.0; }
 };
 
-template<class Ty_Neuron_With_Current>
-struct Neuron_Zero_Current_Adaper :public Ty_Neuron_With_Current
+// Template that apply the current input
+template<template<class> class Ty_Neuron_With_Current>
+struct Neuron_Zero_Current_Adaper
+    :public Ty_Neuron_With_Current<TyZeroCurrent>
 {
   /*using Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet;*/
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const override
   {
-    Ty_Neuron_With_Current::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, 0);
+    Ty_Neuron_With_Current<TyZeroCurrent>::NextStepSingleNeuronQuiet(
+        dym_val, t_in_refractory, spike_time_local, dt_local, 0, 0);
   }
 };
 
-// Declare the model with zero current input
-typedef Neuron_Zero_Current_Adaper< Ty_HH_GH_CUR<TyZeroCurrent> >  Ty_HH_GH;
-typedef Neuron_Zero_Current_Adaper< Ty_HH_FT_GH_CUR<TyZeroCurrent> >  Ty_HH_FT_GH;
+/// Declare the model with zero current input
+typedef Neuron_Zero_Current_Adaper< Ty_HH_GH_CUR >  Ty_HH_GH;
+typedef Neuron_Zero_Current_Adaper< Ty_HH_FT_GH_CUR >  Ty_HH_FT_GH;
+typedef Neuron_Zero_Current_Adaper< Ty_HH_G_CUR >  Ty_HH_G;
 
 // Template for sine current input
 struct TySineCurrent
@@ -615,25 +729,61 @@ struct TySineCurrent
     return a[0]*sin(a[1]*t + a[2]); }
 };
 
-template<class Ty_Neuron_With_Current>
-struct Neuron_Sine_Current_Adaper :public Ty_Neuron_With_Current
+// Template that apply the current input
+template<template<class> class Ty_Neuron_With_Current>
+struct Neuron_Sine_Current_Adaper
+   :public Ty_Neuron_With_Current<TySineCurrent>
 {
-  using Ty_Neuron_With_Current::NextStepSingleNeuronQuiet;
+  using Ty_Neuron_With_Current<TySineCurrent>::NextStepSingleNeuronQuiet;
 
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const override
   {
-    printf("Old.\n");
+    fprintf(stderr, "Seems you are using a simulator that does not support extra current.\n");
     double d[3] = {0, 0, 0};
-    Ty_Neuron_With_Current::NextStepSingleNeuronQuiet(dym_val, t_in_refractory, spike_time_local, dt_local, 0, d);
+    Ty_Neuron_With_Current<TySineCurrent>::NextStepSingleNeuronQuiet(
+        dym_val, t_in_refractory, spike_time_local, dt_local, 0, d);
   }
 };
 
-// Declare the model with sine current input
-typedef Neuron_Sine_Current_Adaper< Ty_HH_GH_CUR<TySineCurrent> > Ty_HH_GH_sine;
-typedef Neuron_Sine_Current_Adaper< Ty_HH_FT_GH_CUR<TySineCurrent> > Ty_HH_FT_GH_sine;
+// Declare the models with sine current input
+typedef Neuron_Sine_Current_Adaper< Ty_HH_GH_CUR > Ty_HH_GH_sine;
+typedef Neuron_Sine_Current_Adaper< Ty_HH_FT_GH_CUR > Ty_HH_FT_GH_sine;
+typedef Neuron_Sine_Current_Adaper< Ty_HH_G_CUR > Ty_HH_G_sine;
 
+// Template for external current input
+struct TyExtCurrent
+{
+  typedef double TyData;  // Amplitude, angular frequency, phase
+  double operator()(double t, const TyData &a) const
+  { //printf("Current: %e, %e, %e\n", a[0], a[1], a[2]);  fflush(stdout);
+    return a;
+  }
+};
 
+// Template that apply the current input
+template<template<class> class Ty_Neuron_With_Current>
+struct Neuron_Ext_Current_Adaper
+   :public Ty_Neuron_With_Current<TyExtCurrent>
+{
+  using Ty_Neuron_With_Current<TyExtCurrent>::NextStepSingleNeuronQuiet;
+
+  void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+    double &spike_time_local, double dt_local) const override
+  {
+    fprintf(stderr, "Seems you are using a simulator that does not support extra current.\n");
+    double d = 0;
+    Ty_Neuron_With_Current<TyExtCurrent>::NextStepSingleNeuronQuiet(
+        dym_val, t_in_refractory, spike_time_local, dt_local, 0, d);
+  }
+};
+
+// Declare the models with external current input
+typedef Neuron_Ext_Current_Adaper< Ty_HH_GH_CUR > Ty_HH_GH_extI;
+typedef Neuron_Ext_Current_Adaper< Ty_HH_FT_GH_CUR > Ty_HH_FT_GH_extI;
+typedef Neuron_Ext_Current_Adaper< Ty_HH_G_CUR > Ty_HH_G_extI;
+
+// HH model with continuous synaptic interaction
 struct Ty_HH_GH_cont_syn
   :public Ty_Neuron_Dym_Base
 {
@@ -663,7 +813,7 @@ struct Ty_HH_GH_cont_syn
   static const int id_gEInject = id_gE_s1;
   static const int id_gIInject = id_gI_s1;
 
-  const double * Get_dym_default_val() const
+  const double * Get_dym_default_val() const override
   {
     static const double dym_default[n_var] = {
       2.7756626542950876e-05, 5.9611104634682788e-01,
@@ -683,7 +833,7 @@ struct Ty_HH_GH_cont_syn
     double &t_in_refractory,
     double &spike_time_local,
     double dt_local) const override
-  {}
+  {  }
   void VoltHandReset(double *dym_val) const override
   {}
 };

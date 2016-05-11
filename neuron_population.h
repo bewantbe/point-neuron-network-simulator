@@ -5,10 +5,11 @@
 #include "single_neuron_dynamics.h"
 #include "neuron_system_utils.h"
 
-/* Class NeuronPopulation* are abstractions for whole neuronal networks.
+/*
+ * Class NeuronPopulation* are abstractions for whole neuronal networks.
  * They are used to contain neuronal data and provide a simple interface
  *  to evolute and interact the network or a specific neuron.
- * It is intended to provide a uniform interface for simulators, bridging
+ * It is to provide a uniform interface for simulators, bridging
  *  the single neuron models.
  */
 
@@ -38,8 +39,10 @@ public:
   virtual const TyNeuronalParams * GetNeuronalParamsPtr() const = 0;
 
   virtual double SynapticDelay() const { return 0; }
+  virtual void SetSynapticDelay(double d) { };
 };
 
+// Population: delta interact, no delay, no current input
 template<class TyNeu>  // neuron model
 class NeuronPopulationDeltaInteractTemplate:
   public NeuronPopulationBase,
@@ -205,7 +208,7 @@ public:
 
 };
 
-// Neuron population with sine current input and Poisson input.
+// Population: delta interact, no delay, sine current input
 template<class TyNeu>  // neuron model
 class NeuronPopulationDeltaInteractSine
   :public NeuronPopulationDeltaInteractTemplate<TyNeu>
@@ -260,38 +263,80 @@ public:
   }
 };
 
-template<class TyNeu>
-class NeuronPopulationDeltaInteractConstantDelaySine
-  :public NeuronPopulationDeltaInteractSine<TyNeu>
+// Population: delta interact, no delay, custom current input
+template<class TyNeu>  // neuron model
+class NeuronPopulationDeltaInteractExtI
+  :public NeuronPopulationDeltaInteractTemplate<TyNeu>
 {
 public:
-  double synaptic_delay;
-  double   SynapticDelay() const override { return synaptic_delay; }
-  double & SynapticDelay()                { return synaptic_delay; }
+  using NeuronPopulationDeltaInteractTemplate<TyNeu>::StatePtr;
+  using NeuronPopulationDeltaInteractTemplate<TyNeu>::neuron_model;
+  using NeuronPopulationDeltaInteractTemplate<TyNeu>::time_in_refractory;
 
-  NeuronPopulationDeltaInteractConstantDelaySine(const TyNeuronalParams &_pm)
-    :NeuronPopulationDeltaInteractSine<TyNeu>(_pm)
+  NeuronPopulationDeltaInteractExtI(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
   {
   }
 
-  // Let's say, it is the simulator's responsibility to relay the delayed interaction
+  void NoInteractDt(int neuron_id, double dt, double t_local,
+                    TySpikeEventVec &spike_events) override
+  {
+    double spike_time_local = qNaN;
+    double *dym_val = StatePtr(neuron_id);
+    double d = 1; // some value
+    neuron_model.NextStepSingleNeuronQuiet(
+        dym_val, time_in_refractory[neuron_id], spike_time_local, dt,
+        t_local, d);
+    if (!std::isnan(spike_time_local)) {
+      spike_events.emplace_back(t_local + spike_time_local, neuron_id);
+    }
+  }
 };
 
+// Population: delta interact, constant delay, zero current input
 template<class TyNeu>
 class NeuronPopulationDeltaInteractConstantDelay
   :public NeuronPopulationDeltaInteractTemplate<TyNeu>
 {
 public:
   double synaptic_delay;
-  double   SynapticDelay() const override { return synaptic_delay; }
-  double & SynapticDelay()                { return synaptic_delay; }
+  double SynapticDelay() const override { return synaptic_delay; }
+  void SetSynapticDelay(double d) { synaptic_delay = d; }
 
   NeuronPopulationDeltaInteractConstantDelay(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
-  {
-  }
-
+  { }
   // Let's say, it is the simulator's responsibility to relay the delayed interaction
+};
+
+// Population: delta interact, constant delay, sine current input
+template<class TyNeu>
+class NeuronPopulationDeltaInteractConstantDelaySine
+  :public NeuronPopulationDeltaInteractSine<TyNeu> 
+{
+public:
+  double synaptic_delay;
+  double SynapticDelay() const override { return synaptic_delay; }
+  void SetSynapticDelay(double d) { synaptic_delay = d; }
+
+  NeuronPopulationDeltaInteractConstantDelaySine(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractSine<TyNeu>(_pm)
+  { }
+};
+
+// Population: delta interact, constant delay, sine current input
+template<class TyNeu>
+class NeuronPopulationDeltaInteractConstantDelayExtI
+  :public NeuronPopulationDeltaInteractExtI<TyNeu> 
+{
+public:
+  double synaptic_delay;
+  double SynapticDelay() const override { return synaptic_delay; }
+  void SetSynapticDelay(double d) { synaptic_delay = d; }
+
+  NeuronPopulationDeltaInteractConstantDelayExtI(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractExtI<TyNeu>(_pm)
+  { }
 };
 
 #endif
