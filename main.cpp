@@ -247,6 +247,36 @@ int MainLoop(const po::variables_map &vm)
           vm["current-sine-freq"].as<double>());
     }
   }
+  if (enum_neuron_model == HH_G_sine) {
+    auto p_neu_pop_sine = static_cast<
+      NeuronPopulationDeltaInteractSine<Ty_HH_G_sine> *>(p_neu_pop);
+    if (vm.count("current-sine-amp")) {
+      p_neu_pop_sine->SetSineAmplitude(
+          vm["current-sine-amp"].as<double>());
+    }
+    if (vm.count("current-sine-freq")) {
+      p_neu_pop_sine->SetSineFrequency(
+          vm["current-sine-freq"].as<double>());
+    }
+  }
+
+  // Parameters about -extI current input
+  if (enum_neuron_model == HH_G_extI) {
+    auto p_neu_pop_extI = static_cast<
+      NeuronPopulationDeltaInteractExtI<Ty_HH_G_extI> *>(p_neu_pop);
+    if (vm.count("extI")) {
+      p_neu_pop_extI->SetExtI(
+          vm["extI"].as<double>());
+    }
+  }
+  if (enum_neuron_model == HH_GH_extI) {
+    auto p_neu_pop_extI = static_cast<
+      NeuronPopulationDeltaInteractExtI<Ty_HH_GH_extI> *>(p_neu_pop);
+    if (vm.count("extI")) {
+      p_neu_pop_extI->SetExtI(
+          vm["extI"].as<double>());
+    }
+  }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
     -> bool {
@@ -487,6 +517,8 @@ int main(int argc, char *argv[])
        "Set the current input sine amplitude.")
       ("current-sine-freq", po::value<double>(),
        "Set the current input sine frequency, in kHz.")
+      ("extI", po::value<double>(),
+       "Set the custom current input extI.")
       ("synaptic-delay", po::value<double>(),
        "Set a synaptic delay for the network.")
       ("volt-path,o",      po::value<std::string>(),

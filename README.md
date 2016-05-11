@@ -18,6 +18,7 @@ Currently there are (parenthesis: Name used inside the code):
 Optional:
 
   * Add an alternating current to these models.
+  * Add an constant current to these models.
   * Add synaptic delay. (Currently constant delay, and must larger than dt)
 
 See `doc/neuron_models.pdf` for model details.

@@ -217,13 +217,17 @@ if isfield(pm, 'sine_amp')
   st_neu_param = [st_neu_param,...
     sprintf(' --current-sine-amp %.16e', pm.sine_amp)];
 end
-if isfield(pm, 'sine_w')
+if isfield(pm, 'sine_freq')
   st_neu_param = [st_neu_param,...
-    sprintf(' --current-sine-freq %.16e', pm.sine_w)];
+    sprintf(' --current-sine-freq %.16e', pm.sine_freq)];
 end
 if isfield(pm, 'synaptic_delay')
   st_neu_param = [st_neu_param,...
     sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
+end
+if isfield(pm, 'extI')
+  st_neu_param = [st_neu_param,...
+    sprintf(' --extI %.16e', pm.extI)];
 end
 pm.pr = pm0.pr;
 if isfield(pm, 'pr_mul')

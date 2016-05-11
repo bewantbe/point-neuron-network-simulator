@@ -275,6 +275,7 @@ class NeuronPopulationDeltaInteractExtI
   :public NeuronPopulationDeltaInteractTemplate<TyNeu>
 {
 public:
+  using NeuronPopulationDeltaInteractTemplate<TyNeu>::n_neurons;
   using NeuronPopulationDeltaInteractTemplate<TyNeu>::StatePtr;
   using NeuronPopulationDeltaInteractTemplate<TyNeu>::neuron_model;
   using NeuronPopulationDeltaInteractTemplate<TyNeu>::time_in_refractory;
@@ -284,12 +285,22 @@ public:
   {
   }
 
+  typedef std::vector<double> TyDVec;
+  TyDVec cur_param;
+  void SetExtI(double d)
+  {
+    cur_param.resize(n_neurons());
+    for (int i = 0; i < n_neurons(); i++) {
+      cur_param[i] = d;
+    }
+  }
+
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events) override
   {
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
-    double d = 1; // some value
+    double d = cur_param[neuron_id]; // some value
     neuron_model.NextStepSingleNeuronQuiet(
         dym_val, time_in_refractory[neuron_id], spike_time_local, dt,
         t_local, d);
@@ -330,7 +341,7 @@ public:
   { }
 };
 
-// Population: delta interact, constant delay, sine current input
+// Population: delta interact, constant delay, custom current input
 template<class TyNeu>
 class NeuronPopulationDeltaInteractConstantDelayExtI
   :public NeuronPopulationDeltaInteractExtI<TyNeu> 
