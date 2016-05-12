@@ -1,10 +1,10 @@
-% Generate HH neuron data by calling raster_tuning_HH.exe
-% Will use preserved data automatically
+% Generate HH neuron data by calling gen_neu
+% Will use cached data automatically
 %
 %  [X, ISI, ras, pm] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])
 %
 % Usage example 1:       % the items with default value are optional
-%  clear('pm');          % a new parameter set, or pm = [];
+%  pm = [];
 %  pm.neuron_model = 'HH-GH';  % one of LIF-G, LIF-GH, HH-GH
 %  pm.net  = 'net_2_2';  % can also be a connectivity matrix or full file path
 %  pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
@@ -18,9 +18,8 @@
 %  pm.t    = 1e4;
 %  pm.dt   = 1.0/32;     % default: 1/32
 %  pm.stv  = 0.5;        % default: 0.5
-%  pm.seed = 'auto';     % default: 'auto'(or []). Accept integers
-%  pm.extra_cmd = '';    % default: '--RC-filter 0 1'
-%                        % put all other parameters here.
+%  pm.seed = 'auto';     % default: 'auto'. Accept one or several integers
+%  pm.extra_cmd = '';    % put all other parameters here.
 %  [X, ISI, ras] = gen_neu(pm);
 %
 % Usage example 2: Always re-generate data, then read it
