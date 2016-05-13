@@ -43,18 +43,14 @@ public:
   virtual void SetSynapticDelay(double d) { };
 };
 
-// Population: delta interact, no delay, no current input
-template<class TyNeu>  // neuron model
-class NeuronPopulationDeltaInteractTemplate:
+class NeuronPopulationBaseCommon:
   public NeuronPopulationBase,
   public TyNeuronalParams,
   public TyNeuronalDymState
 {
 public:
-  TyNeu neuron_model;
-
-  NeuronPopulationDeltaInteractTemplate(const TyNeuronalParams &_pm)
-    :TyNeuronalParams(_pm), TyNeuronalDymState(_pm, TyNeu::n_var)
+  NeuronPopulationBaseCommon(const TyNeuronalParams &_pm, int n_var)
+    :TyNeuronalParams(_pm), TyNeuronalDymState(_pm, n_var)
   {
   }
 
@@ -62,6 +58,65 @@ public:
   {
     return Get_n_neurons();
   }
+
+  void operator=(const TyNeuronalDymState &neu_dym)
+  {
+    GetDymState() = neu_dym;
+  }
+
+  void ScatterCopy(const struct TyNeuronalDymState &nd,
+                   const std::vector<int> &ids)
+  {
+    GetDymState().ScatterCopy(nd, ids);
+  }
+
+  TyNeuronalDymState & GetDymState()
+  {
+    return *(static_cast<TyNeuronalDymState*>(this));
+  }
+  const TyNeuronalDymState & GetDymState() const
+  {
+    return *(static_cast<const TyNeuronalDymState*>(this));
+  }
+  TyNeuronalDymState * GetDymStatePtr()
+  {
+    return static_cast<TyNeuronalDymState*>(this);
+  }
+  const TyNeuronalDymState * GetDymStatePtr() const
+  {
+    return static_cast<const TyNeuronalDymState*>(this);
+  }
+  double GetDymState(int neuron_id, int id_dym) const
+  {
+    return dym_vals(neuron_id, id_dym);
+  }
+  const TyNeuronalParams * GetNeuronalParamsPtr() const
+  {
+    return static_cast<const TyNeuronalParams*>(this);
+  }
+};
+
+// Population: delta interact, no delay, no current input
+template<class TyNeu, class NBase = NeuronPopulationBaseCommon>  // neuron model
+class NeuronPopulationDeltaInteractTemplate:
+    public NBase
+{
+  using NBase::StatePtr;
+  using NBase::time_in_refractory;
+  using NBase::n_E;
+  using NBase::n_I;
+  using NBase::net;
+  using NBase::scee;
+  using NBase::scei;
+  using NBase::scie;
+  using NBase::scii;
+  using NBase::arr_ps;
+public:
+  TyNeu neuron_model;
+
+  NeuronPopulationDeltaInteractTemplate(const TyNeuronalParams &_pm)
+    :NBase(_pm, TyNeu::n_var)
+  {}
 
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events)
@@ -129,42 +184,6 @@ public:
     dym_vals(neuron_id, TyNeu::id_gEInject) += arr_ps[neuron_id];
   }
 
-  void operator=(const TyNeuronalDymState &neu_dym)
-  {
-    GetDymState() = neu_dym;
-  }
-
-  void ScatterCopy(const struct TyNeuronalDymState &nd,
-                   const std::vector<int> &ids)
-  {
-    GetDymState().ScatterCopy(nd, ids);
-  }
-
-  TyNeuronalDymState & GetDymState()
-  {
-    return *(static_cast<TyNeuronalDymState*>(this));
-  }
-  const TyNeuronalDymState & GetDymState() const
-  {
-    return *(static_cast<const TyNeuronalDymState*>(this));
-  }
-  TyNeuronalDymState * GetDymStatePtr()
-  {
-    return static_cast<TyNeuronalDymState*>(this);
-  }
-  const TyNeuronalDymState * GetDymStatePtr() const
-  {
-    return static_cast<const TyNeuronalDymState*>(this);
-  }
-  double GetDymState(int neuron_id, int id_dym) const
-  {
-    return dym_vals(neuron_id, id_dym);
-  }
-  const TyNeuronalParams * GetNeuronalParamsPtr() const
-  {
-    return static_cast<const TyNeuronalParams*>(this);
-  }
-
   const Ty_Neuron_Dym_Base * GetNeuronModel() const
   {
     return &neuron_model;
@@ -214,22 +233,19 @@ public:
 
 };
 
-// Population: delta interact, no delay, sine current input
-template<class TyNeu>  // neuron model
-class NeuronPopulationDeltaInteractSine
-  :public NeuronPopulationDeltaInteractTemplate<TyNeu>
+class NeuronPopulationBaseSine: public NeuronPopulationBaseCommon
 {
-public:
   typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> TySineParamVec;
   TySineParamVec sin_par;
 
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::n_neurons;
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::StatePtr;
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::neuron_model;
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::time_in_refractory;
+public:
+  typedef NeuronPopulationBaseCommon NBase;
+  using NBase::n_neurons;
+  using NBase::StatePtr;
+  using NBase::time_in_refractory;
 
-  NeuronPopulationDeltaInteractSine(const TyNeuronalParams &_pm)
-    :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
+  NeuronPopulationBaseSine(const TyNeuronalParams &_pm, int n_var)
+    :NeuronPopulationBaseCommon(_pm, n_var)
   {
     sin_par.resize(n_neurons(), 4);  // 3 or 4 both ok
     for (int j=0; j<n_neurons(); j++) {
@@ -253,6 +269,25 @@ public:
       sin_par(j, 1) = w;
     }
   }
+};
+
+// Population: delta interact, no delay, sine current input
+template<class TyNeu>  // neuron model
+class NeuronPopulationDeltaInteractSine
+  :public NeuronPopulationDeltaInteractTemplate<TyNeu, NeuronPopulationBaseSine>
+{
+public:
+  typedef NeuronPopulationDeltaInteractTemplate<TyNeu, NeuronPopulationBaseSine> NBase;
+  using NBase::n_neurons;
+  using NBase::StatePtr;
+  using NBase::neuron_model;
+  using NBase::time_in_refractory;
+  using NBase::sin_par;
+
+  NeuronPopulationDeltaInteractSine(const TyNeuronalParams &_pm)
+    :NBase(_pm)
+  {
+  }
 
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events) override
@@ -275,13 +310,14 @@ class NeuronPopulationDeltaInteractExtI
   :public NeuronPopulationDeltaInteractTemplate<TyNeu>
 {
 public:
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::n_neurons;
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::StatePtr;
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::neuron_model;
-  using NeuronPopulationDeltaInteractTemplate<TyNeu>::time_in_refractory;
+  typedef NeuronPopulationDeltaInteractTemplate<TyNeu> NBase;
+  using NBase::n_neurons;
+  using NBase::StatePtr;
+  using NBase::neuron_model;
+  using NBase::time_in_refractory;
 
   NeuronPopulationDeltaInteractExtI(const TyNeuronalParams &_pm)
-    :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
+    :NBase(_pm)
   {
   }
 

@@ -14,6 +14,7 @@ Currently there are (parenthesis: Name used inside the code):
   * Leaky Integrate-and-Fire models with "alpha function" conductance (LIF-GH).
   * Hodgkin Huxley neuron model with exponential decay conductance (HH-G).
   * Hodgkin Huxley neuron model with "alpha function" conductance (HH-GH).
+  * Hodgkin Huxley neuron model with continous (but peak at spike) synaptic interaction.
 
 Optional:
 
