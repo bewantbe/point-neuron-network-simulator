@@ -233,23 +233,13 @@ int MainLoop(const po::variables_map &vm)
 	  cerr << "stv / dt > INT_MAX ! (dt too small or stv too large)" << endl;
 	  return 2;
   }
-  
+
   // Parameters about sine current input
-  if (enum_neuron_model == HH_GH_sine) {
-    auto p_neu_pop_sine = static_cast<
-      NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine> *>(p_neu_pop);
-    if (vm.count("current-sine-amp")) {
-      p_neu_pop_sine->SetSineAmplitude(
-          vm["current-sine-amp"].as<double>());
-    }
-    if (vm.count("current-sine-freq")) {
-      p_neu_pop_sine->SetSineFrequency(
-          vm["current-sine-freq"].as<double>());
-    }
-  }
-  if (enum_neuron_model == HH_G_sine) {
-    auto p_neu_pop_sine = static_cast<
-      NeuronPopulationDeltaInteractSine<Ty_HH_G_sine> *>(p_neu_pop);
+  if (enum_neuron_model == HH_GH_sine
+      || enum_neuron_model == HH_G_sine
+      || enum_neuron_model ==  HH_FT_GH_sine) {
+    auto p_neu_pop_sine = dynamic_cast<
+        NeuronPopulationBaseSine *>(p_neu_pop);
     if (vm.count("current-sine-amp")) {
       p_neu_pop_sine->SetSineAmplitude(
           vm["current-sine-amp"].as<double>());
@@ -261,17 +251,10 @@ int MainLoop(const po::variables_map &vm)
   }
 
   // Parameters about -extI current input
-  if (enum_neuron_model == HH_G_extI) {
-    auto p_neu_pop_extI = static_cast<
-      NeuronPopulationDeltaInteractExtI<Ty_HH_G_extI> *>(p_neu_pop);
-    if (vm.count("extI")) {
-      p_neu_pop_extI->SetExtI(
-          vm["extI"].as<double>());
-    }
-  }
-  if (enum_neuron_model == HH_GH_extI) {
-    auto p_neu_pop_extI = static_cast<
-      NeuronPopulationDeltaInteractExtI<Ty_HH_GH_extI> *>(p_neu_pop);
+  if (enum_neuron_model == HH_G_extI
+      ||enum_neuron_model == HH_GH_extI) {
+    auto p_neu_pop_extI = dynamic_cast<
+      NeuronPopulationBaseExtI *>(p_neu_pop);
     if (vm.count("extI")) {
       p_neu_pop_extI->SetExtI(
           vm["extI"].as<double>());

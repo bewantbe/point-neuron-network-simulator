@@ -101,6 +101,7 @@ template<class TyNeu, class NBase = NeuronPopulationBaseCommon>  // neuron model
 class NeuronPopulationDeltaInteractTemplate:
     public NBase
 {
+public:
   using NBase::StatePtr;
   using NBase::time_in_refractory;
   using NBase::n_E;
@@ -111,7 +112,8 @@ class NeuronPopulationDeltaInteractTemplate:
   using NBase::scie;
   using NBase::scii;
   using NBase::arr_ps;
-public:
+  using NBase::dym_vals;
+
   TyNeu neuron_model;
 
   NeuronPopulationDeltaInteractTemplate(const TyNeuronalParams &_pm)
@@ -235,10 +237,10 @@ public:
 
 class NeuronPopulationBaseSine: public NeuronPopulationBaseCommon
 {
+public:
   typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> TySineParamVec;
   TySineParamVec sin_par;
 
-public:
   typedef NeuronPopulationBaseCommon NBase;
   using NBase::n_neurons;
   using NBase::StatePtr;
@@ -285,9 +287,8 @@ public:
   using NBase::sin_par;
 
   NeuronPopulationDeltaInteractSine(const TyNeuronalParams &_pm)
-    :NBase(_pm)
-  {
-  }
+    : NBase(_pm)
+  {}
 
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events) override
@@ -304,31 +305,47 @@ public:
   }
 };
 
-// Population: delta interact, no delay, custom current input
-template<class TyNeu>  // neuron model
-class NeuronPopulationDeltaInteractExtI
-  :public NeuronPopulationDeltaInteractTemplate<TyNeu>
+// Base class for custom current input
+class NeuronPopulationBaseExtI
+    :public NeuronPopulationBaseCommon
 {
 public:
-  typedef NeuronPopulationDeltaInteractTemplate<TyNeu> NBase;
+  typedef NeuronPopulationBaseCommon NBase;
   using NBase::n_neurons;
-  using NBase::StatePtr;
-  using NBase::neuron_model;
-  using NBase::time_in_refractory;
-
-  NeuronPopulationDeltaInteractExtI(const TyNeuronalParams &_pm)
-    :NBase(_pm)
-  {
-  }
 
   typedef std::vector<double> TyDVec;
   TyDVec cur_param;
+
+  NeuronPopulationBaseExtI(const TyNeuronalParams &_pm, int n_var)
+    :NBase(_pm, n_var)
+  {}
+
   void SetExtI(double d)
   {
     cur_param.resize(n_neurons());
     for (int i = 0; i < n_neurons(); i++) {
       cur_param[i] = d;
     }
+  }
+};
+
+// Population: delta interact, no delay, custom current input
+template<class TyNeu>  // neuron model
+class NeuronPopulationDeltaInteractExtI
+  :public NeuronPopulationDeltaInteractTemplate<TyNeu, NeuronPopulationBaseExtI>
+{
+public:
+  typedef NeuronPopulationDeltaInteractTemplate<TyNeu, NeuronPopulationBaseExtI> NBase;
+  using NBase::n_neurons;
+  using NBase::StatePtr;
+  using NBase::neuron_model;
+  using NBase::time_in_refractory;
+  using NBase::TyDVec;
+  using NBase::cur_param;
+
+  NeuronPopulationDeltaInteractExtI(const TyNeuronalParams &_pm)
+    :NBase(_pm)
+  {
   }
 
   void NoInteractDt(int neuron_id, double dt, double t_local,
