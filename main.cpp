@@ -1,6 +1,4 @@
-// g++ -g -O0 -std=c++11 -Wall main.cpp math_helper.cpp -lboost_program_options -o bin/vec_IFsimu
-//Could faster:
-// g++ -g -O2 -falign-functions=16 -falign-loops=16
+// Read input options and run the simulation
 
 /*
 TODO:
@@ -12,7 +10,8 @@ TODO:
    * speed up GetDv() in HH model. vectorize the exp() for further speed up.
    * use sorted spike detection and partial update to speed up?
    * merge t_in_ref to dym_val?
-   * possibility to add synaptic delay? add to Poisson event queue?
+   * possibility to add synaptic delay? Partly done.
+   * add to Poisson event queue?
    * isomerisom of neurons in a network?
 */
 

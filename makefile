@@ -6,6 +6,8 @@ CPPFLAGS = -std=c++11 -Wall --pedantic -Wextra -Wno-unused-parameter
 CXXFLAGS = -g -O2
 LDFLAGS = 
 LDLIBS = -lboost_program_options
+# Could faster
+#   g++ -g -O2 -falign-functions=16 -falign-loops=16
 
 # Targets and source files
 BIN = bin/gen_neu

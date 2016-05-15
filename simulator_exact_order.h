@@ -447,6 +447,7 @@ public:
 // A simple simulator for networks with delayed synaptics.
 class NeuronSimulatorBigDelay :public NeuronSimulatorSimple
 {
+protected:
   // or try circular_buffer_space_optimized in boost/circular_buffer.hpp
   typedef std::deque<TySpikeEvent> TySpikeEventQue;
   std::vector< TySpikeEventQue > se_que_vec;  // synaptic events
@@ -513,24 +514,23 @@ public:
     TySpikeEventVec spike_events;
     poisson_time_vec.SaveIdxAndClean();
 
-    // Go one step without spike timing correction.
+    // Go one step.
     NextStepNoInteract(p_neu_pop, spike_events, dt);
 
-    for (auto it_se = spike_events.begin(); it_se != spike_events.end();
-        it_se++) {
-      vec_n_spike[it_se->id]++;  // Count spikes.
+    for (auto const &se : spike_events) {
+      vec_n_spike[se.id]++;  // Count spikes.
     }
+
     std::sort(spike_events.begin(), spike_events.end());
     ras.insert(ras.end(), spike_events.begin(), spike_events.end());
 
     // Insert new synaptic events
     const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
-    for (auto it_se = spike_events.begin(); it_se != spike_events.end();
-        it_se++) {
+    for (auto const &se : spike_events) {
       // Loop over affected neurons.
-      for (SparseMat::InnerIterator it(net, it_se->id); it; ++it) {
+      for (SparseMat::InnerIterator it(net, se.id); it; ++it) {
         se_que_vec[it.row()].emplace_back(
-            it_se->time + synaptic_delay, it_se->id);
+            se.time + synaptic_delay, se.id);
       }
     }
     // Sort events. Not necessary in this constant delay case.

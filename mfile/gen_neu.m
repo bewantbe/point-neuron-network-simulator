@@ -220,7 +220,7 @@ if isfield(pm, 'sine_freq')
   st_neu_param = [st_neu_param,...
     sprintf(' --current-sine-freq %.16e', pm.sine_freq)];
 end
-if isfield(pm, 'synaptic_delay')
+if isfield(pm, 'synaptic_delay') || ~isempty(synaptic_delay)
   st_neu_param = [st_neu_param,...
     sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
 end
