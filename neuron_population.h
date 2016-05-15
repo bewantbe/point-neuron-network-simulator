@@ -41,6 +41,8 @@ public:
 
   virtual double SynapticDelay() const { return 0; }
   virtual void SetSynapticDelay(double d) { };
+  virtual const SparseMat * SynapticDelayNet() const { return nullptr; }
+  virtual void SetSynapticDelayNet(const SparseMat &_dn) { };
 };
 
 class NeuronPopulationBaseCommon:
@@ -407,6 +409,50 @@ public:
   NeuronPopulationDeltaInteractConstantDelayExtI(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractExtI<TyNeu>(_pm)
   { }
+};
+
+// Population: delta interact, net delay, zero current input
+template<class TyNeu>
+class NeuronPopulationDeltaInteractNetDelay
+  :public NeuronPopulationDeltaInteractTemplate<TyNeu>
+{
+public:
+  typedef NeuronPopulationDeltaInteractTemplate<TyNeu> NBase;
+  using NBase::n_neurons;
+  using NBase::net;
+
+  SparseMat synaptic_delay_net;
+  double SynapticDelay() const override
+  {
+    throw "Non-compatible simulator - population pair. You should call SynapticDelayNet() in simulator.";
+    return 0;
+  }
+  void SetSynapticDelay(double d) override
+  {
+    // Set constant delay.
+    // Note: the net should be set properly first.
+    synaptic_delay_net = net;
+    for (int j=0; j<n_neurons(); j++) {
+      for (SparseMat::InnerIterator it(synaptic_delay_net, j); it; ++it) {
+        // it.row() <- j
+        it.valueRef() = d;
+      }
+    }
+  }
+  const SparseMat * SynapticDelayNet() const override
+  {
+    return &synaptic_delay_net;
+  }
+  void SetSynapticDelayNet(const SparseMat &_dn) override
+  {
+    synaptic_delay_net = _dn;
+  }
+
+  NeuronPopulationDeltaInteractNetDelay(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
+  {
+    /* Set synaptic_delay_net ? */
+  }
 };
 
 #endif

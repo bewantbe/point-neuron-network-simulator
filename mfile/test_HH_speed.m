@@ -3,8 +3,8 @@
 clear('pm');
 pm.prog_path = '../bin/gen_neu';
 
-pm.neuron_model = 'LIF-GH'; pm.simu_method  = 'simple';  pm.scee = 0.7145/20;
-%pm.neuron_model = 'HH-GH'; pm.simu_method  = 'simple';  pm.scee = 0.7145/10;
+%pm.neuron_model = 'LIF-GH'; pm.simu_method  = 'simple';  pm.scee = 0.7145/20;
+pm.neuron_model = 'HH-GH'; pm.simu_method  = 'simple';  pm.scee = 0.7145/10;
 %pm.neuron_model = 'HH-GH'; pm.simu_method  = 'SSC';
 %pm.neuron_model = 'HH-GH'; pm.simu_method  = 'SSC-Sparse';
 %pm.neuron_model = 'HH-FT-GH'; pm.simu_method  = 'SSC';

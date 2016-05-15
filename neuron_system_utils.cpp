@@ -68,6 +68,10 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
         }
       }
     }
+    if (!fin_net) {
+      cerr << "Bad network file was read!\n";
+      throw "Bad adjacency file was read!\n";
+    }
   }
 
   pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
@@ -78,5 +82,41 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
   }
   pm.net.prune(std::numeric_limits<double>::min(), 1);  // remove zeros;
   pm.net.makeCompressed();
+
+  if (pm.net.outerSize() != n_neu) {
+    cerr << "Error: number of neurons inconsistant (network file and command line)!\n";
+    throw "Number of neurons inconsistant";
+  }
 }
 
+SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net)
+{
+  typedef Eigen::Triplet<double> TyEdgeTriplet;
+  std::vector<TyEdgeTriplet> net_coef;
+
+  // Read network delay from text file
+  std::ifstream fin_net(dn_name);
+  double ev;
+  int n_neu = net.outerSize();
+  for (int i = 0; i < n_neu; i++) {
+    for (int j = 0; j < n_neu; j++) {
+      fin_net >> ev;
+      // dn and net should have identical size
+      if (net.coeff(i, j) != 0) {
+        net_coef.push_back(TyEdgeTriplet(i, j, ev));
+      }
+    }
+  }
+
+  // Construct the sparse net delay
+  SparseMat dn(n_neu, n_neu);
+  dn.setFromTriplets(net_coef.begin(), net_coef.end());
+  dn.makeCompressed();
+
+  if (!fin_net) {
+    cerr << "Bad network delay file was read!\n";
+    throw "Bad network file was read!\n";
+  }
+
+  return dn;
+}

@@ -505,7 +505,7 @@ public:
   }
 
   void NextDt(NeuronPopulationBase * p_neu_pop,
-      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
   {
     double synaptic_delay = p_neu_pop->SynapticDelay();
     if (synaptic_delay <= dt) {
@@ -524,7 +524,7 @@ public:
     std::sort(spike_events.begin(), spike_events.end());
     ras.insert(ras.end(), spike_events.begin(), spike_events.end());
 
-    // Insert new synaptic events
+    // Insert new synaptic events.
     const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
     for (auto const &se : spike_events) {
       // Loop over affected neurons.
@@ -539,6 +539,49 @@ public:
       std::sort(se_que_vec[i].begin(), se_que_vec[i].end());
     }
     */
+    t += dt;
+  }
+};
+
+class NeuronSimulatorBigNetDelay: public NeuronSimulatorBigDelay
+{
+public:
+  NeuronSimulatorBigNetDelay(const TyNeuronalParams &_pm, double _dt)
+    : NeuronSimulatorBigDelay(_pm, _dt)
+  {}
+
+  void NextDt(NeuronPopulationBase * p_neu_pop,
+      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
+  {
+    const auto & synaptic_delay_net = *(p_neu_pop->SynapticDelayNet());
+    TySpikeEventVec spike_events;
+    poisson_time_vec.SaveIdxAndClean();
+
+    // Go one step.
+    NextStepNoInteract(p_neu_pop, spike_events, dt);
+
+    for (auto const &se : spike_events) {
+      vec_n_spike[se.id]++;  // Count spikes.
+    }
+
+    std::sort(spike_events.begin(), spike_events.end());
+    ras.insert(ras.end(), spike_events.begin(), spike_events.end());
+
+    // Insert new synaptic events.
+    const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
+    for (auto const &se : spike_events) {
+      // Loop over affected neurons.
+      for (SparseMat::InnerIterator it(net, se.id),
+                                    delay_it(synaptic_delay_net, se.id);
+           it; ++it, ++delay_it) {
+        se_que_vec[it.row()].emplace_back(
+            se.time + delay_it.value(), se.id);
+      }
+    }
+    // Sort events.
+    for (int i = 0; i < p_neu_pop->n_neurons(); i++) {
+      std::sort(se_que_vec[i].begin(), se_que_vec[i].end());
+    }
     t += dt;
   }
 };

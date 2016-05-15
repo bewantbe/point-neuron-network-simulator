@@ -123,7 +123,40 @@ int MainLoop(const po::variables_map &vm)
 
   // Set neuron population type
   NeuronPopulationBase * p_neu_pop = nullptr;
-  if (vm.count("synaptic-delay")) {
+  if (vm.count("synaptic-net-delay")) {
+    switch (enum_neuron_model) {
+      case LIF_G:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_LIF_G>(pm);
+        break;
+      case LIF_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_LIF_GH>(pm);
+        break;
+      case HH_G:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_HH_G>(pm);
+        break;
+      case HH_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_HH_GH>(pm);
+        break;
+      default:
+        cerr << "This delay net type is not supported yet.\n";
+        exit(-1);
+    };
+    std::string path = vm["synaptic-net-delay"].as<std::string>();
+    try {
+      SparseMat dn = ReadNetDelay(path, pm.net);
+      p_neu_pop->SetSynapticDelayNet(dn);
+    } catch (const char*) {
+      if (vm.count("synaptic-delay")) {
+        // if ReadNetDelay() somehow failed, we can still do this.
+        cout << "Warning: Using constant delay.\n";
+        p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
+      }
+    }
+  } else if (vm.count("synaptic-delay")) {
     switch (enum_neuron_model) {
       case LIF_G:
         p_neu_pop = new
@@ -294,40 +327,50 @@ int MainLoop(const po::variables_map &vm)
     fout_ras.precision(17);
   }
 
-  // Set simulator for the neural network.
+  // Set simulator for the neuronal network.
   NeuronSimulatorBase *p_neu_simu = nullptr;
-  std::string str_simu_mathod;
+  std::string str_simu_method = "";
   if (vm.count("simulation-method")) {
-    str_simu_mathod = vm["simulation-method"].as<std::string>();
-    if (str_simu_mathod == "simple") {
+    str_simu_method = vm["simulation-method"].as<std::string>();
+  }
+  if (str_simu_method.size() > 0 && str_simu_method != "auto") {
+    str_simu_method = vm["simulation-method"].as<std::string>();
+    if (str_simu_method == "simple") {
       p_neu_simu = new NeuronSimulatorSimple(pm, e_dt);
-    } else if (str_simu_mathod == "SSC") {  // Spike-Spike-Correction
+    } else if (str_simu_method == "SSC") {  // Spike-Spike-Correction
       p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
-    } else if (str_simu_mathod == "SSC-Sparse") {
+    } else if (str_simu_method == "SSC-Sparse") {
       p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
-    } else if (str_simu_mathod == "SSC-Sparse2") {
+    } else if (str_simu_method == "SSC-Sparse2") {
       p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
-    } else if (str_simu_mathod == "big-delay") {
+    } else if (str_simu_method == "big-net-delay") {
+      p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt);
+    } else if (str_simu_method == "big-delay") {
       p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
-    } else if (str_simu_mathod == "cont-syn") {
+    } else if (str_simu_method == "cont-syn") {
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
     } else {
-      cerr << "No this simulation method.\n";
+      cerr << "No this simulation method:\"" << str_simu_method << "\"\n";
     }
   } else {
     // Default simulator
     if (HH_GH_cont_syn == enum_neuron_model) {
-      str_simu_mathod = "cont-syn";
+      str_simu_method = "cont-syn";
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
+    } else if (vm.count("synaptic-net-delay")) {
+      str_simu_method = "big-net-delay";
+      p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt);
     } else if (vm.count("synaptic-delay")) {
-      str_simu_mathod = "big-delay";
+      str_simu_method = "big-delay";
       p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
     } else {
-      str_simu_mathod = "SSC";
+      str_simu_method = "SSC";
       p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
     }
+    cout << "Simulator: " << str_simu_method << "\n";
   }
-  if (vm.count("synaptic-delay") && str_simu_mathod != "big-delay") {
+  if (vm.count("synaptic-delay") && 
+      (str_simu_method != "big-delay" && str_simu_method != "big-net-delay")) {
     cerr << "You select a delayed synaptic network, but use a non-compatible simulator. Try --simulation-method big-delay\n";
     exit(-1);
   }
@@ -456,7 +499,7 @@ int main(int argc, char *argv[])
       ("neuron-model",  po::value<std::string>(),
        "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-G-sine, HH-GH-sine, HH-G-extI, HH-GH-extI, HH-FT-GH, HH_FT-GH-sine, HH-GH-cont-syn.")
       ("simulation-method",  po::value<std::string>(),
-       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, cont-syn. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
+       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",
@@ -503,6 +546,8 @@ int main(int argc, char *argv[])
        "Set the custom current input extI.")
       ("synaptic-delay", po::value<double>(),
        "Set a synaptic delay for the network.")
+      ("synaptic-net-delay", po::value<std::string>(),
+       "Set the synaptic delays for the network. Path to the matrix text file.")
       ("volt-path,o",      po::value<std::string>(),
        "Output volt to path. In raw binary format.")
       ("ras-path",         po::value<std::string>(),
@@ -565,7 +610,12 @@ int main(int argc, char *argv[])
     rand_eng.seed( sseq );
   }
 
-  int rt = MainLoop(vm);
+  int rt = -1;
+  try {
+    rt = MainLoop(vm);
+  } catch (const char *st) {
+    cerr << "Error: " << st << "\n";
+  }
 
   return rt;
 }

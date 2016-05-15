@@ -158,7 +158,8 @@ if ~isfield(pm, 'neuron_model') || isempty(pm.neuron_model)
     error('neuron_model not specified! Should be one of "LIF-G", "LIF-GH", or "HH-GH"');
 end
 if ~isfield(pm, 'simu_method') || isempty(pm.simu_method)
-    pm.simu_method = 'SSC';
+    disp('Warning: .simu_method not set! Using auto mode.');
+    pm.simu_method = 'auto';
 end
 neuron_model_name = pm.neuron_model;
 if ~isfield(pm, 'prog_path')
@@ -220,9 +221,15 @@ if isfield(pm, 'sine_freq')
   st_neu_param = [st_neu_param,...
     sprintf(' --current-sine-freq %.16e', pm.sine_freq)];
 end
-if isfield(pm, 'synaptic_delay') || ~isempty(synaptic_delay)
+if isfield(pm, 'synaptic_delay') && ~isempty(pm.synaptic_delay)
   st_neu_param = [st_neu_param,...
     sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
+end
+if isfield(pm, 'synaptic_net_delay') && ~isempty(pm.synaptic_net_delay)
+  net_delay_path = savenetwork(pm.synaptic_net_delay, ...
+                     [data_dir_prefix 'net_delay_']);
+  st_neu_param = [st_neu_param,...
+    sprintf(' --synaptic-net-delay %s', net_delay_path)];
 end
 if isfield(pm, 'extI')
   st_neu_param = [st_neu_param,...
