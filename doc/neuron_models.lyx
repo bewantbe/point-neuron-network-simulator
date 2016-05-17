@@ -95,7 +95,7 @@ simple
 \begin_deeper
 \begin_layout Standard
 Spike interaction happens at the end of each dt.
- Poisson input still injected at the eact timing.
+ Poisson input still injected at the exact timing.
 \end_layout
 
 \end_deeper
@@ -125,7 +125,7 @@ SSC-Sparse2
 
 \begin_deeper
 \begin_layout Standard
-Spike-spike correction, optimized for sparse network, versioin 2.
+Spike-spike correction, optimized for sparse network, version 2.
 \end_layout
 
 \end_deeper
@@ -191,7 +191,7 @@ cont-syn
 \begin_deeper
 \begin_layout Standard
 Simulate the network with continuous synaptic interaction.
- Spicially for model 
+ Specially for model 
 \begin_inset Quotes eld
 \end_inset
 
@@ -1309,7 +1309,11 @@ The time delay due to long dendrite or axion are ignored.
 \begin_inset Formula $\unit[20]{mV}$
 \end_inset
 
- above resting potential.
+ above resting potential (
+\begin_inset Formula $\unit[0]{mV}$
+\end_inset
+
+).
 \end_layout
 
 \begin_layout Standard
@@ -1389,7 +1393,7 @@ reference "eq:HH-GH-H-input"
 
 \begin_inset Formula 
 \begin{equation}
-g(V_{j}^{\textrm{pre}})=1/\left(1+\exp(-(V_{j}^{\textrm{pre}}-\unit[85]{mV})/2)\right).
+g(V_{j}^{\textrm{pre}})=1/\left(1+\exp(-(V_{j}^{\textrm{pre}}-\unit[85]{mV})/2)\right).\label{eq:HH-GH-cont-syn-g}
 \end{equation}
 
 \end_inset
@@ -1406,6 +1410,762 @@ g(V_{j}^{\textrm{pre}})=1/\left(1+\exp(-(V_{j}^{\textrm{pre}}-\unit[85]{mV})/2)\
 \end_inset
 
 -th neuron.
+\end_layout
+
+\begin_layout Standard
+Note: In this model, the voltage is scaled as 
+\begin_inset Formula $V/10$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Neuron Properties
+\end_layout
+
+\begin_layout Subsection
+Single neuron property (HH-G, HH-GH, HH-GH-cont-syn)
+\end_layout
+
+\begin_layout Subsubsection
+Setting threshold
+\end_layout
+
+\begin_layout Standard
+A common setting for threshold is 
+\begin_inset Formula $\unit[15]{mV}$
+\end_inset
+
+ above the resting state.
+\end_layout
+
+\begin_layout Standard
+From Fig.
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres15mV"
+
+\end_inset
+
+ we can see that there is some non-spike been counted as spike.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1e+01_ps=0.05_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/sub-volt_HH3_pr=1e+01_ps=0.05_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/volt-hist_HH3_pr=1e+01_ps=0.05_thres=15.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $-65+\unit[15]{mV},$
+\end_inset
+
+ HH-GH, pr=
+\begin_inset Formula $\unit[10.0]{kHz}$
+\end_inset
+
+, ps=
+\begin_inset Formula $\unit[0.05]{\Omega^{-1}ms^{-2}}$
+\end_inset
+
+ (strong input, 
+\begin_inset Formula $\unit[97]{Hz}$
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:HH-thres15mV"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=2_ps=0.05_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/sub-volt_HH3_pr=2_ps=0.05_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/volt-hist_HH3_pr=2_ps=0.05_thres=15.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $\unit[-65+15]{mV},$
+\end_inset
+
+ HH-GH, pr=
+\begin_inset Formula $\unit[2.0]{kHz}$
+\end_inset
+
+, ps=
+\begin_inset Formula $\unit[0.05]{\Omega^{-1}ms^{-2}}$
+\end_inset
+
+ (median input, 
+\begin_inset Formula $\unit[52]{Hz}$
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:HH-thres15mV-mid"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1_ps=0.04_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/sub-volt_HH3_pr=1_ps=0.04_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/volt-hist_HH3_pr=1_ps=0.04_thres=15.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $\unit[-65+15]{mV},$
+\end_inset
+
+ HH-GH, pr=
+\begin_inset Formula $\unit[1.0]{kHz}$
+\end_inset
+
+, ps=
+\begin_inset Formula $\unit[0.04]{\Omega^{-1}ms^{-2}}$
+\end_inset
+
+ (low input, 
+\begin_inset Formula $\unit[24]{Hz}$
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:HH-thres15mV-low"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1_ps=0.02_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/sub-volt_HH3_pr=1_ps=0.02_thres=15.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/volt-hist_HH3_pr=1_ps=0.02_thres=15.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $\unit[-65+15]{mV},$
+\end_inset
+
+ HH-GH, pr=
+\begin_inset Formula $\unit[1.0]{kHz}$
+\end_inset
+
+, ps=
+\begin_inset Formula $\unit[0.02]{\Omega^{-1}ms^{-2}}$
+\end_inset
+
+ (tiny input, 
+\begin_inset Formula $\unit[1.4]{Hz}$
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:HH-thres15mV-tiny"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Higher threshold
+\end_layout
+
+\begin_layout Standard
+Use 
+\begin_inset Formula $\unit[20]{mV}$
+\end_inset
+
+ above resting as threshold.
+\end_layout
+
+\begin_layout Standard
+(Fig.
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres20mV"
+
+\end_inset
+
+) Compare to Fig.
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres15mV"
+
+\end_inset
+
+, we see no mis-counted spikes, and the timing is more accurate.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1e+01_ps=0.05_thres=20.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $-65+\unit[20]{mV},$
+\end_inset
+
+ HH-GH, pr=
+\begin_inset Formula $\unit[10.0]{kHz}$
+\end_inset
+
+, ps=
+\begin_inset Formula $\unit[0.05]{\Omega^{-1}ms^{-2}}$
+\end_inset
+
+ (strong input, 
+\begin_inset Formula $\unit[97]{Hz}$
+\end_inset
+
+).
+ 
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:HH-thres20mV"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Use 
+\begin_inset Formula $\unit[84]{mV}$
+\end_inset
+
+ above resting as threshold.
+\end_layout
+
+\begin_layout Standard
+Reason: In 
+\begin_inset Quotes eld
+\end_inset
+
+HH-GH-cont-syn
+\begin_inset Quotes erd
+\end_inset
+
+ model, only when volt above around 
+\begin_inset Formula $\unit[85]{mV}$
+\end_inset
+
+ will the synaptic transmit a signal.
+ In function Eq.
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:HH-GH-cont-syn-g"
+
+\end_inset
+
+, 
+\begin_inset Formula $g(\unit[84]{mV})\approx0.0067$
+\end_inset
+
+, 
+\begin_inset Formula $g(\unit[85]{mV})=0.5$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1e+01_ps=0.05_thres=84.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/sub-volt_HH3_pr=1e+01_ps=0.05_thres=84.eps
+	scale 30
+
+\end_inset
+
+ 
+\begin_inset Graphics
+	filename pic/volt-hist_HH3_pr=1e+01_ps=0.05_thres=84.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $-65+\unit[84]{mV}$
+\end_inset
+
+.
+ Strong input, (see Fig.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres15mV"
+
+\end_inset
+
+).
+ Essentailly all spikes are 
+\begin_inset Quotes eld
+\end_inset
+
+missed
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=2_ps=0.05_thres=84.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Median input, (see Fig.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres15mV-mid"
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1_ps=0.04_thres=84.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Low input, (see Fig.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres15mV-low"
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename pic/spikes_HH3_pr=1_ps=0.02_thres=84.eps
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Tiny input, (see Fig.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "fig:HH-thres15mV-tiny"
+
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Threshold=
+\begin_inset Formula $-65+\unit[84]{mV}$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Discussion of the 
+\begin_inset Quotes eld
+\end_inset
+
+threshold
+\begin_inset Quotes erd
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The concept of the threshold actually has two distinct meanings:
+\end_layout
+
+\begin_layout Enumerate
+Once the voltage pass it (from low to high), then the neuron will fire (sooner
+ or later).
+\end_layout
+
+\begin_layout Enumerate
+The neuron will sent a signal to it down stream around this time.
+\begin_inset CommandInset label
+LatexCommand label
+name "enu:signling-time"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+A related fact is that (in this model, with Poisson input), the action potential
+ is not in a fixed size, there are big and small action potentials.
+ This is what makes the above two concepts essentially differ.
+\end_layout
+
+\begin_layout Standard
+In the simulation and exact understanding of spiking dynamics.
+ The concept 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "enu:signling-time"
+
+\end_inset
+
+ is desired.
+ The proper timing should be the peak time.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Standard
+.
 \end_layout
 
 \end_body
