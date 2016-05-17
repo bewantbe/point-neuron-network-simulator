@@ -85,7 +85,705 @@ xyy
 \end_layout
 
 \begin_layout Section
-The HH model Used
+Simulator Overview
+\end_layout
+
+\begin_layout Itemize
+simple
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Spike interaction happens at the end of each dt.
+ Poisson input still injected at the eact timing.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+SSC
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Spike-spike correction.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+SSC-Sparse
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Spike-spike correction, optimized for sparse network.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+SSC-Sparse2
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Spike-spike correction, optimized for sparse network, versioin 2.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+big-delay
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Network with constant delay.
+ The delay must larger than 1dt (hence the name 
+\begin_inset Quotes eld
+\end_inset
+
+big
+\begin_inset Quotes erd
+\end_inset
+
+).
+ Use option 
+\begin_inset Quotes eld
+\end_inset
+
+--synaptic-delay
+\begin_inset Quotes erd
+\end_inset
+
+ to set the delay.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+big-net-delay
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Network with delay.
+ The delay is set by a 
+\begin_inset Quotes eld
+\end_inset
+
+delay matrix
+\begin_inset Quotes erd
+\end_inset
+
+, by passing a text numerical matrix file path to the option 
+\begin_inset Quotes eld
+\end_inset
+
+--synaptic-net-delay
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+cont-syn
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Simulate the network with continuous synaptic interaction.
+ Spicially for model 
+\begin_inset Quotes eld
+\end_inset
+
+HH-GH-cont-syn
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+auto
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+Auto choose a simulator according to the neuronal model.
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Compatibility matrix
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="8" columns="7">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top" width="3.5cm">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+simple
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SSC/SSC-Sparse/
+\begin_inset Newline newline
+\end_inset
+
+SSC-Sparse2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+cont-syn
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+big-delay
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+big-net-delay
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+auto
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+LIF-G/LIF-GH
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SSC
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+HH-G/HH-GH
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SSC
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+HH-GH-cont-syn
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+cont-syn
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+--synaptic-delay
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+big-delay
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+--synaptic-net-delay
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+big-net-delay
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-sine
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-extI
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Neuron Model Used
+\end_layout
+
+\begin_layout Subsection
+HH-GH
 \end_layout
 
 \begin_layout Standard
@@ -100,14 +798,14 @@ It is the classical Hodgkin-Huxley (HH) neuron model.
 
  obey
 \begin_inset Formula 
-\[
+\begin{equation}
 \left\{ \begin{aligned}C\frac{\mathrm{d}V_{i}}{\mathrm{d}t} & =-(V_{i}-V_{\textrm{Na}})G_{\textrm{Na}}h_{i}m_{i}^{3}-(V_{i}-V_{\textrm{K}})G_{\textrm{K}}n_{i}^{4}-(V_{i}-V_{\textrm{L}})G_{\textrm{L}}+I_{i}^{\textrm{input}}\\
 \frac{\mathrm{d}m_{i}}{\mathrm{d}t} & =(1-m_{i})\alpha_{m}(V_{i})-m_{i}\beta_{m}(V_{i})\\
 \frac{\mathrm{d}h_{i}}{\mathrm{d}t} & =(1-h_{i})\alpha_{h}(V_{i})-h_{i}\beta_{h}(V_{i})\\
 \frac{\mathrm{d}n_{i}}{\mathrm{d}t} & =(1-n_{i})\alpha_{n}(V_{i})-n_{i}\beta_{n}(V_{i})
 \end{aligned}
 \right.
-\]
+\end{equation}
 
 \end_inset
 
@@ -284,9 +982,17 @@ The interaction between neurons and external inputs come from
 
 
 \begin_inset Formula 
-\[
-I_{i}^{\textrm{input}}=I_{i}^{\textrm{E}}+I_{i}^{\textrm{I}},\quad I_{i}^{\textrm{E}}=-(V_{i}-V_{G}^{\textrm{E}})G_{i}^{\textrm{E}},\quad I_{i}^{\textrm{I}}=-(V_{i}-V_{G}^{\textrm{I}})G_{i}^{\textrm{I}}
-\]
+\begin{equation}
+I_{i}^{\textrm{input}}=I_{i}^{\textrm{E}}+I_{i}^{\textrm{I}},
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+I_{i}^{\textrm{E}}=-(V_{i}-V_{G}^{\textrm{E}})G_{i}^{\textrm{E}},\quad I_{i}^{\textrm{I}}=-(V_{i}-V_{G}^{\textrm{I}})G_{i}^{\textrm{I}}
+\end{equation}
 
 \end_inset
 
@@ -317,9 +1023,17 @@ I_{i}^{\textrm{input}}=I_{i}^{\textrm{E}}+I_{i}^{\textrm{I}},\quad I_{i}^{\textr
 
 ) evolves according to
 \begin_inset Formula 
-\[
-\frac{\mathrm{d}G_{i}^{Q}}{\mathrm{d}t}=-\frac{G_{i}^{Q}}{\sigma_{r}^{Q}}+H_{i}^{Q},\quad\frac{\mathrm{d}H_{i}^{Q}}{\mathrm{d}t}=-\frac{H_{i}^{Q}}{\sigma_{d}^{Q}}+\sum_{k}F_{i}^{Q}\delta(t-T_{i,k}^{F})+\sum_{j\neq i}S_{ij}\delta(t-T_{j}^{S})
-\]
+\begin{equation}
+\frac{\mathrm{d}G_{i}^{Q}}{\mathrm{d}t}=-\frac{G_{i}^{Q}}{\sigma_{r}^{Q}}+H_{i}^{Q},\quad\label{eq:HH-GH-G}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\frac{\mathrm{d}H_{i}^{Q}}{\mathrm{d}t}=-\frac{H_{i}^{Q}}{\sigma_{d}^{Q}}+\sum_{k}F_{i}^{Q}\delta(t-T_{i,k}^{F})+\sum_{j\neq i}S_{ij}\delta(t-T_{j}^{S})\label{eq:HH-GH-H-input}
+\end{equation}
 
 \end_inset
 
@@ -462,27 +1176,6 @@ We use adjacency matrix
 \end_inset
 
 -th neuron.
- When we talk about 
-\begin_inset Quotes eld
-\end_inset
-
-homogeneous coupling
-\begin_inset Quotes erd
-\end_inset
-
-, we mean 
-\begin_inset Formula $A_{ij}$
-\end_inset
-
- equals either 
-\begin_inset Formula $1$
-\end_inset
-
- or 
-\begin_inset Formula $0$
-\end_inset
-
-.
 \end_layout
 
 \begin_layout Standard
@@ -613,34 +1306,16 @@ all constant.
 \begin_layout Standard
 The time delay due to long dendrite or axion are ignored.
  The threshold is 
-\begin_inset Formula $\unit[50]{mV}$
+\begin_inset Formula $\unit[20]{mV}$
 \end_inset
 
  above resting potential.
 \end_layout
 
 \begin_layout Standard
-(default parameters)
-\end_layout
-
-\begin_layout Standard
 In numerical simulation, we use explicit fourth-order Runge-Kutta method
  with time step 
 \begin_inset Formula $\unit[1/32]{ms}$
-\end_inset
-
-.
- The data samples (i.e.
- 
-\begin_inset Formula $x_{t}$
-\end_inset
-
-, 
-\begin_inset Formula $y_{t}$
-\end_inset
-
-) we used are voltages obtained in sampling rate 
-\begin_inset Formula $\unit[2]{kHz}$
 \end_inset
 
 .
@@ -652,15 +1327,85 @@ In numerical simulation, we use explicit fourth-order Runge-Kutta method
 \begin_inset Formula $V_{i}(t)$
 \end_inset
 
- just pass through the threshold (
-\begin_inset Formula $\unit[10]{mV}$
-\end_inset
-
- in our case) from low to high, otherwise 
+ just pass through the threshold from low to high, otherwise 
 \begin_inset Formula $x_{t}=0$
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Subsection
+HH-G
+\end_layout
+
+\begin_layout Standard
+Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:HH-GH-G"
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:HH-GH-H-input"
+
+\end_inset
+
+ change to
+\begin_inset Formula 
+\begin{equation}
+\frac{\mathrm{d}G_{i}^{Q}}{\mathrm{d}t}=-\frac{G_{i}^{Q}}{\sigma_{r}^{Q}}+\sum_{k}F_{i}^{Q}\delta(t-T_{i,k}^{F})+\sum_{j\neq i}S_{ij}\delta(t-T_{j}^{S}),\quad\label{eq:HH-G-G}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+HH-GH-cont-syn
+\end_layout
+
+\begin_layout Standard
+Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:HH-GH-H-input"
+
+\end_inset
+
+ change to
+\begin_inset Formula 
+\begin{equation}
+\frac{\mathrm{d}H_{i}^{Q}}{\mathrm{d}t}=-\frac{H_{i}^{Q}}{\sigma_{d}^{Q}}+\sum_{k}F_{i}^{Q}\delta(t-T_{i,k}^{F})+\sum_{j\neq i}S_{ij}g(V_{j}^{\textrm{pre}}),\label{eq:HH-GH-cont-syn-H-input}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+g(V_{j}^{\textrm{pre}})=1/\left(1+\exp(-(V_{j}^{\textrm{pre}}-\unit[85]{mV})/2)\right).
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $V_{j}^{\textrm{pre}}$
+\end_inset
+
+ is the (presynaptic) membrane potential of 
+\begin_inset Formula $j$
+\end_inset
+
+-th neuron.
 \end_layout
 
 \end_body

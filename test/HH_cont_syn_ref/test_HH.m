@@ -25,7 +25,7 @@ pm.stv  = pm.dt;
 pm.seed = 4563;
 pm.extra_cmd = '--save-poisson-events poisson_events.txt -q';
 tic
-[X_ref, ISI_ref, ras_ref] = gen_HH(pm, 'new');
+[X_ref, ISI_ref, ras_ref] = gen_HH(pm, 'rm');
 toc
 X_ref(:, 1) = [];  % somehow the first data point is incorrect.
 
@@ -36,7 +36,7 @@ pm.simu_method  = 'cont-syn';
 pm.extra_cmd = '--initial-state-path init.txt --input-event-path poisson_events.txt';
 
 tic
-[X, ISI, ras] = gen_neu(pm, 'new');
+[X, ISI, ras] = gen_neu(pm, 'rm');
 toc
 X(:, end) = [];
 

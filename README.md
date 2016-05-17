@@ -28,6 +28,11 @@ You can provide external input events in a file or just let the program generate
 
 Refer to `bin/gen_neu --help` for the command line option help (after compilation).
 
+### Note:
+
+   Code still in developing stage, use with care.
+
+
 Comparison to other simulators
 ------------------------------
 
