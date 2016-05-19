@@ -12,6 +12,6 @@ double cubic_hermit_real_root(double x2,
 
 double cubic_hermit_real_peak(double x2,
                    double fx1, double fx2,
-                   double dfx1, double dfx2, double rhs);
+                   double dfx1, double dfx2);
 
 #endif

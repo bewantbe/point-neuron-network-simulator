@@ -596,9 +596,9 @@ struct Ty_HH_PT_GH_CUR_core  // Peak threshold
     double v0 = dym_val[id_V];
     double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
     double &v1 = dym_val[id_V];
-    if (v0 >= V_threshold && v1 <= V_threshold && t_in_refractory == 0) {
-      spike_time_local = cubic_hermit_real_root(dt_local,
-        v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
+    if (v0 >= V_threshold && t_in_refractory == 0) {
+      spike_time_local = cubic_hermit_real_peak(dt_local,
+        v0, v1, k1, GetDv(dym_val, t, extra_data));
     }
     if (dt_local>0) {
       t_in_refractory = 0;
@@ -723,6 +723,9 @@ template<typename ExtraCurrent>
 using Ty_HH_FT_GH_CUR = Ty_HH_shell< Ty_HH_FT_GH_CUR_core<ExtraCurrent> >;
 
 template<typename ExtraCurrent>
+using Ty_HH_PT_GH_CUR = Ty_HH_shell< Ty_HH_PT_GH_CUR_core<ExtraCurrent> >;
+
+template<typename ExtraCurrent>
 using Ty_HH_G_CUR = Ty_HH_shell< Ty_HH_G_CUR_core<ExtraCurrent> >;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -753,6 +756,7 @@ struct Neuron_Zero_Current_Adaper
 /// Declare the model with zero current input
 typedef Neuron_Zero_Current_Adaper< Ty_HH_GH_CUR >  Ty_HH_GH;
 typedef Neuron_Zero_Current_Adaper< Ty_HH_FT_GH_CUR >  Ty_HH_FT_GH;
+typedef Neuron_Zero_Current_Adaper< Ty_HH_PT_GH_CUR >  Ty_HH_PT_GH;
 typedef Neuron_Zero_Current_Adaper< Ty_HH_G_CUR >  Ty_HH_G;
 
 // Template for sine current input
@@ -784,6 +788,7 @@ struct Neuron_Sine_Current_Adaper
 // Declare the models with sine current input
 typedef Neuron_Sine_Current_Adaper< Ty_HH_GH_CUR > Ty_HH_GH_sine;
 typedef Neuron_Sine_Current_Adaper< Ty_HH_FT_GH_CUR > Ty_HH_FT_GH_sine;
+typedef Neuron_Sine_Current_Adaper< Ty_HH_PT_GH_CUR > Ty_HH_PT_GH_sine;
 typedef Neuron_Sine_Current_Adaper< Ty_HH_G_CUR > Ty_HH_G_sine;
 
 // Template for external current input
@@ -816,6 +821,7 @@ struct Neuron_Ext_Current_Adaper
 // Declare the models with external current input
 typedef Neuron_Ext_Current_Adaper< Ty_HH_GH_CUR > Ty_HH_GH_extI;
 typedef Neuron_Ext_Current_Adaper< Ty_HH_FT_GH_CUR > Ty_HH_FT_GH_extI;
+typedef Neuron_Ext_Current_Adaper< Ty_HH_PT_GH_CUR > Ty_HH_PT_GH_extI;
 typedef Neuron_Ext_Current_Adaper< Ty_HH_G_CUR > Ty_HH_G_extI;
 
 // HH model with continuous synaptic interaction

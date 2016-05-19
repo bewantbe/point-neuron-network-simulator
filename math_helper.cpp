@@ -2,7 +2,7 @@
 #define _USE_MATH_DEFINES  // For MSVC, so M_PI is defined
 #include <cmath>
 
-/* poly/solve_cubic.c
+/* GNU Scientific Library  poly/solve_cubic.c
  *
  * Copyright (C) 1996, 1997, 1998, 1999, 2000, 2007, 2009 Brian Gough
  *
@@ -141,9 +141,13 @@ double cubic_hermit_real_root(double x2,
   return NAN;
 }
 
+/** Find the maximum point (abscissa) of the hermit interpolation.
+*   The interpolation uses f(0), f(x2), f'(0), f'(x2).
+*   If no found, return NaN.
+*/
 double cubic_hermit_real_peak(double x2,
                    double fx1, double fx2,
-                   double dfx1, double dfx2, double rhs)
+                   double dfx1, double dfx2)
 {
   // No need to normalize fx1, fx2
   // Normalize to x=[0,1]

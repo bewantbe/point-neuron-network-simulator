@@ -50,7 +50,7 @@ int MainLoop(const po::variables_map &vm)
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
 
   // Set neuron model.
-  enum EnumNeuronModel {LIF_G, LIF_GH, HH_G, HH_GH, HH_G_sine, HH_GH_sine, HH_FT_GH, HH_FT_GH_sine, HH_G_extI, HH_GH_extI, HH_GH_cont_syn };
+  enum EnumNeuronModel {LIF_G, LIF_GH, HH_G, HH_GH, HH_G_sine, HH_GH_sine, HH_FT_GH, HH_PT_GH, HH_FT_GH_sine, HH_PT_GH_sine, HH_G_extI, HH_GH_extI, HH_GH_cont_syn };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
     enum_neuron_model =     LIF_G;
@@ -72,6 +72,10 @@ int MainLoop(const po::variables_map &vm)
     enum_neuron_model =     HH_FT_GH;
   } else if (str_nm ==     "HH-FT-GH-sine") {
     enum_neuron_model =     HH_FT_GH_sine;
+  } else if (str_nm ==     "HH-PT-GH") {
+    enum_neuron_model =     HH_PT_GH;
+  } else if (str_nm ==     "HH-PT-GH-sine") {
+    enum_neuron_model =     HH_PT_GH_sine;
   }  else if (str_nm ==    "HH-GH-cont-syn") {
     enum_neuron_model =     HH_GH_cont_syn;
   } else {
@@ -234,6 +238,12 @@ int MainLoop(const po::variables_map &vm)
         break;
       case HH_FT_GH_sine:
         p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_FT_GH_sine>(pm);
+        break;
+      case HH_PT_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_PT_GH>(pm);
+        break;
+      case HH_PT_GH_sine:
+        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_PT_GH_sine>(pm);
         break;
       case HH_GH_cont_syn:
         p_neu_pop = new NeuronPopulationContSyn(pm);
