@@ -572,6 +572,40 @@ struct Ty_HH_FT_GH_CUR_core  // Falling threshold
   }
 };
 
+// Model that note down spike event when the spike is at the peak.
+template<typename ExtraCurrent>
+struct Ty_HH_PT_GH_CUR_core  // Peak threshold
+  :public Ty_HH_GH_CUR_core<ExtraCurrent>
+{
+  typedef Ty_HH_GH_CUR_core<ExtraCurrent> T0;
+  typedef typename T0::TyCurrentData TyCurrentData;
+  using T0::id_V;
+  using T0::V_threshold;
+  using T0::DymInplaceRK4;
+  using T0::GetDv;
+
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local,
+    double t,
+    const TyCurrentData &extra_data) const
+  {
+    spike_time_local = std::numeric_limits<double>::quiet_NaN();
+    double v0 = dym_val[id_V];
+    double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
+    double &v1 = dym_val[id_V];
+    if (v0 >= V_threshold && v1 <= V_threshold && t_in_refractory == 0) {
+      spike_time_local = cubic_hermit_real_root(dt_local,
+        v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
+    }
+    if (dt_local>0) {
+      t_in_refractory = 0;
+    }
+  }
+};
+
 // Model of classical Hodgkin-Huxley (HH) neuron,
 // with one ODE for G (See Ty_LIF_G_core::NextDtConductance() for details).
 template<typename ExtraCurrent>
@@ -657,6 +691,7 @@ struct Ty_HH_G_CUR_core
   }
 };
 
+// Apply basic functions to the core HH model(adapter).
 template<class TyNeuronModel>
 struct Ty_HH_shell: public TyNeuronModel
 {

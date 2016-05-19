@@ -141,6 +141,44 @@ double cubic_hermit_real_root(double x2,
   return NAN;
 }
 
+double cubic_hermit_real_peak(double x2,
+                   double fx1, double fx2,
+                   double dfx1, double dfx2, double rhs)
+{
+  // No need to normalize fx1, fx2
+  // Normalize to x=[0,1]
+  dfx1 *= x2;
+  dfx2 *= x2;
+
+  double d[3];
+  // Derivative of hermit interpolation:
+  // d[2] x^2 + d[1] x^1 + d[0]
+  d[0] = dfx1;
+  d[1] = 2.0*(-2*dfx1 - dfx2 - 3*(fx1 - fx2));
+  d[2] = 3.0*(dfx1 + dfx2 + 2*(fx1 - fx2));
+
+  double det = d[1]*d[1] - 4*d[2]*d[0];
+  if (det < 0) {
+    // somehow, seems no peak here
+    return NAN;
+  }
+
+  // There shall be two extreme values
+  double s0, s1;
+  det = sqrt(det);
+  s0 = (-d[1] - det)/(2*d[2]);
+  s1 = (-d[1] + det)/(2*d[2]);
+
+  if (0 <= s0 && s0 <= 1 && 2*d[2]*s0+d[1] < 0) {
+    return s0 * x2;
+  }
+  if (0 <= s1 && s1 <= 1 && 2*d[2]*s0+d[1] < 0) {
+    return s1 * x2;
+  }
+  //fprintf(stderr, "No root in this interval\n");
+  return NAN;
+}
+
 // Search the root of hermit interpolated function that
 // passes zero from below to above.
 // Return NAN if no root found.
