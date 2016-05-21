@@ -303,40 +303,6 @@ int MainLoop(const po::variables_map &vm)
     }
   }
 
-  auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
-    -> bool {
-      if (vm.count(st_id)) {
-        std::string st_path = vm[st_id].as<std::string>();
-        CheckDirAndCreate( st_path );
-        fs.open( st_path );
-        if (!fs) {
-          cerr << "Error: Failed to open file \"" << st_path << "\" for output." << "\n";
-          throw "Failed to open file";
-        }
-        return true;
-      } else {
-        return false;
-      }
-    };
-
-  std::ofstream fout_volt;
-  bool b_output_volt = fout_try_open("volt-path", fout_volt);
-
-  std::ofstream fout_G;    // G: conductance
-  bool b_output_G = fout_try_open("conductance-path", fout_G);
-
-  std::ofstream fout_HH_gate;    // File for saving gating variables: h, m, n
-  bool b_output_HH_gate = false;
-  if (str_nm.find("HH") != std::string::npos) {
-    b_output_HH_gate = fout_try_open("ion-gate-path", fout_HH_gate);
-  }
-
-  std::ofstream fout_ras;
-  bool output_ras = fout_try_open("ras-path", fout_ras);
-  if (output_ras) {
-    fout_ras.precision(17);
-  }
-
   // Set simulator for the neuronal network.
   NeuronSimulatorBase *p_neu_simu = nullptr;
   std::string str_simu_method = "";
@@ -379,9 +345,15 @@ int MainLoop(const po::variables_map &vm)
     }
     cout << "Simulator: " << str_simu_method << "\n";
   }
+  // Check inconsistant pair
   if (vm.count("synaptic-delay") && 
       (str_simu_method != "big-delay" && str_simu_method != "big-net-delay")) {
     cerr << "You select a delayed synaptic network, but use a non-compatible simulator. Try --simulation-method big-delay\n";
+    exit(-1);
+  }
+  if ((enum_neuron_model == HH_GH_cont_syn)
+      ^ (str_simu_method == "cont-syn")) {
+    cerr << "Error: Neuron Model \"HH_GH_cont_syn\" must pair with simulator \"cont-syn\".\n";
     exit(-1);
   }
   
@@ -422,6 +394,40 @@ int MainLoop(const po::variables_map &vm)
     FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),
                               vm["input-event-path"].as<std::string>().c_str());
     cout << "input event loaded!" << endl;
+  }
+
+  auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
+    -> bool {
+      if (vm.count(st_id)) {
+        std::string st_path = vm[st_id].as<std::string>();
+        CheckDirAndCreate( st_path );
+        fs.open( st_path );
+        if (!fs) {
+          cerr << "Error: Failed to open file \"" << st_path << "\" for output." << "\n";
+          throw "Failed to open file";
+        }
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+  std::ofstream fout_volt;
+  bool b_output_volt = fout_try_open("volt-path", fout_volt);
+
+  std::ofstream fout_G;    // G: conductance
+  bool b_output_G = fout_try_open("conductance-path", fout_G);
+
+  std::ofstream fout_HH_gate;    // File for saving gating variables: h, m, n
+  bool b_output_HH_gate = false;
+  if (str_nm.find("HH") != std::string::npos) {
+    b_output_HH_gate = fout_try_open("ion-gate-path", fout_HH_gate);
+  }
+
+  std::ofstream fout_ras;
+  bool output_ras = fout_try_open("ras-path", fout_ras);
+  if (output_ras) {
+    fout_ras.precision(17);
   }
 
   // Function for save data to file

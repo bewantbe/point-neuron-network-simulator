@@ -19,13 +19,13 @@ t = (1:floor(pm.t/pm.dt))*pm.stv;
 close all
 
 pm.neuron_model = 'HH-G';
-[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
+[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm, extra_data');
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 
 pm.neuron_model = 'HH-GH';
 pm.ps = pm.ps * 2;
-[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
+[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm, extra_data');
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 
@@ -34,13 +34,13 @@ pm.sine_amp = 1;
 pm.sine_freq   = 0.01;
 pm.pr = 1.0;
 pm.ps = 0.01;
-[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
+[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm, extra_data');
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 
 pm.neuron_model = 'HH-GH-sine';
 pm.ps = pm.ps * 2;
-[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
+[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm, extra_data');
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 
@@ -48,13 +48,13 @@ pm.neuron_model = 'HH-G-extI';
 pm.extI = 6.5;
 pm.pr = 0.5;
 pm.ps = 0.01;
-[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
+[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm, extra_data');
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 
 pm.neuron_model = 'HH-GH-extI';
 pm.ps = pm.ps * 2;
-[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new, extra_data');
+[V, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm, extra_data');
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 

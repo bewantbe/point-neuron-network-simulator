@@ -111,7 +111,7 @@ if ischar(pm.net)
     [~, pm.net] = fileparts(pm.net);          % Use the name without extension
 else
     % so pm.net is connectivity matrix?
-    % save this matrix, so that it can be read by `raster_tuning'
+    % save this matrix, so that it can be read by `gen_neu'
     network = pm.net;
     [mat_path, pm.net] = savenetwork(pm.net, data_dir_prefix);
 end
@@ -291,13 +291,18 @@ else
     rmcmd = 'rm -f ';
 end
 
-have_data = exist(output_RAS_name, 'file');  % test cached file
+% test if there is cached files.
+have_data = exist(output_name, 'file') ...
+         && exist(output_ISI_name, 'file') ...
+         && exist(output_RAS_name, 'file');
 if (~have_data || new_run)...
    && ~mode_read_only...
    && (~mode_rm_only || mode_rm_only && nargout>0)
     % avoid data inconsistancy
     system([rmcmd, output_ISI_name]);
     system([rmcmd, output_RAS_name]);
+    system([rmcmd, output_G_name]);
+    system([rmcmd, output_gating_name]);
     % generate data
     rt = system(cmdst);
     if mode_run_in_background
@@ -399,6 +404,12 @@ if mode_rm_only
     system([rmcmd, output_name]);
     system([rmcmd, output_ISI_name]);
     system([rmcmd, output_RAS_name]);
+    system([rmcmd, output_G_name]);
+    system([rmcmd, output_gating_name]);
+    if ~ischar(pm0.net)  % so pm0.net is adjacency matrix
+      % so we have saved a network file somewhere, now remove it.
+      system([rmcmd, pm.net_path]);
+    end
     return
 end
 
