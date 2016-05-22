@@ -580,6 +580,43 @@ struct Ty_HH_PT_GH_CUR_core  // Peak threshold
   typedef Ty_HH_GH_CUR_core<ExtraCurrent> T0;
   typedef typename T0::TyCurrentData TyCurrentData;
   using T0::id_V;
+  using T0::V_threshold;
+  using T0::DymInplaceRK4;
+  using T0::GetDv;
+
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local,
+    double t,
+    const TyCurrentData &extra_data) const
+  {
+    spike_time_local = std::numeric_limits<double>::quiet_NaN();
+    double v0 = dym_val[id_V];
+    double k0 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
+    if (v0 >= V_threshold) {
+      double k1 = GetDv(dym_val, t, extra_data);
+      if (k0>=0 && k1<0 && t_in_refractory == 0) {
+        double v1 = dym_val[id_V];
+        spike_time_local = cubic_hermit_real_peak(dt_local,
+            v0, v1, k0, k1);
+        /*spike_time_local = k0/(k0-k1) * dt_local;*/
+      }
+    }
+    if (dt_local>0) {
+      t_in_refractory = 0;
+    }
+  }
+};
+
+template<typename ExtraCurrent>
+struct Ty_HH_dPT_GH_CUR_core  // Peak threshold
+  :public Ty_HH_GH_CUR_core<ExtraCurrent>
+{
+  typedef Ty_HH_GH_CUR_core<ExtraCurrent> T0;
+  typedef typename T0::TyCurrentData TyCurrentData;
+  using T0::id_V;
   using T0::id_h;
   using T0::id_m;
   using T0::id_n;
@@ -654,12 +691,6 @@ struct Ty_HH_PT_GH_CUR_core  // Peak threshold
     if (v0 >= V_threshold) {
       double k1 = GetDv(dym_val, t, extra_data);
       if (k0>=0 && k1<0 && t_in_refractory == 0) {
-        /*
-        double v1 = dym_val[id_V];
-        spike_time_local = cubic_hermit_real_peak(dt_local,
-            v0, v1, k0, k1);
-            */
-        /*spike_time_local = k0/(k0-k1) * dt_local;*/
         double dym_d_val0[n_var_soma];
         double dym_d_val[n_var_soma];
         ODE_RHS(dym_val0, dym_d_val0, t, extra_data);

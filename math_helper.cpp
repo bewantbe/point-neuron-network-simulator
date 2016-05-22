@@ -221,24 +221,19 @@ double cubic_hermit_real_peak(double x2,
   d[1] = 2.0*(-2*dfx1 - dfx2 - 3*(fx1 - fx2));
   d[2] = 3.0*(dfx1 + dfx2 + 2*(fx1 - fx2));
 
-  printf("d[0],d[1],d[2] = %.2e,%.2e,%.2e; ", d[0], d[1], d[2]);
   // There shall be two extreme values
   double s0=NAN, s1=NAN;
   int rt = gsl_poly_solve_quadratic(d[2], d[1], d[0], &s0, &s1);
   if (rt == 0) {
     // somehow, seems no peak here
-    printf("\n");
     return NAN;
   }
 
   if (0 <= s0 && s0 <= 1 && 2*d[2]*s0+d[1] < 0) {
     // 2*d[2]*s0+d[1] < 0 means a maximum is there
-    printf("s = %.16e\n", s0);
     return s0 * x2;
   }
   if (0 <= s1 && s1 <= 1 && 2*d[2]*s1+d[1] < 0) {
-    printf("s = %.16e\n", s1);
-    printf("\n");
     return s1 * x2;
   }
   //fprintf(stderr, "No root in this interval\n");
