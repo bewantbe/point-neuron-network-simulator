@@ -14,6 +14,7 @@ pm.prog_path = '../bin/gen_neu';
 %pm.neuron_model = 'HH-GH-cont-syn';  pm.simu_method  = [];  pm.scee = 0.06;
 
 pm.neuron_model = 'HH-PT-GH';  pm.scee = 0.04;  % ? low accuracy
+%pm.simu_method  = 'simple';
 
 pm.net  = ones(15);
 pm.nI   = 0;
@@ -33,6 +34,8 @@ figure(2);
 cla;
 hd = ras_plot(ras0);
 set(hd, 'linewidth', 2);
+xlabel('time (ms)');
+ylabel('neuron id');
 
 figure(3);
 s_t = (1:length(X0))*pm.stv;

@@ -1,3 +1,10 @@
+% Plot raster (spiking events).
+% Usage:
+%   hd = ras_plot(ras);
+%   set(hd, 'linewidth', 2);
+%   xlabel('time (ms)');
+%   ylabel('neuron id');
+
 function hd = ras_plot(ras, t_bg, t_ed, id_neu, y_scale)
 if ~exist('t_bg', 'var') || isempty(t_bg)
   t_bg = 0;
@@ -30,9 +37,6 @@ hd = ...
 line([local_ras(:, 2)'; local_ras(:, 2)']-t_bg,...
      [local_ras(:, 1)'; local_ras(:, 1)'-0.7]*y_scale, ...
      'color', [0 0 0]);
-% , 'linewidth', 5
-xlabel('time (ms)');
-ylabel('neuron id');
 
 axis([0, t_len, [min(id_neu)-1, max(id_neu)]*y_scale]);
 

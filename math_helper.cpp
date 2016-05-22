@@ -107,6 +107,66 @@ gsl_poly_solve_cubic (double a, double b, double c,
     }
 }
 
+/* solve_quadratic.c - finds the real roots of a x^2 + b x + c = 0 */
+int 
+gsl_poly_solve_quadratic (double a, double b, double c, 
+                          double *x0, double *x1)
+{
+  double disc = b * b - 4 * a * c;
+
+  if (a == 0) /* Handle linear case */
+    {
+      if (b == 0)
+        {
+          return 0;
+        }
+      else
+        {
+          *x0 = -c / b;
+          return 1;
+        };
+    }
+
+  if (disc > 0)
+    {
+      if (b == 0)
+        {
+          double r = fabs (0.5 * sqrt (disc) / a);
+          *x0 = -r;
+          *x1 =  r;
+        }
+      else
+        {
+          double sgnb = (b > 0 ? 1 : -1);
+          double temp = -0.5 * (b + sgnb * sqrt (disc));
+          double r1 = temp / a ;
+          double r2 = c / temp ;
+
+          if (r1 < r2) 
+            {
+              *x0 = r1 ;
+              *x1 = r2 ;
+            } 
+          else 
+            {
+              *x0 = r2 ;
+              *x1 = r1 ;
+            }
+        }
+      return 2;
+    }
+  else if (disc == 0) 
+    {
+      *x0 = -0.5 * b / a ;
+      *x1 = -0.5 * b / a ;
+      return 2 ;
+    }
+  else
+    {
+      return 0;
+    }
+}
+
 double cubic_hermit_real_root(double x2,
                    double fx1, double fx2,
                    double dfx1, double dfx2, double rhs)
@@ -161,22 +221,24 @@ double cubic_hermit_real_peak(double x2,
   d[1] = 2.0*(-2*dfx1 - dfx2 - 3*(fx1 - fx2));
   d[2] = 3.0*(dfx1 + dfx2 + 2*(fx1 - fx2));
 
-  double det = d[1]*d[1] - 4*d[2]*d[0];
-  if (det < 0) {
+  printf("d[0],d[1],d[2] = %.2e,%.2e,%.2e; ", d[0], d[1], d[2]);
+  // There shall be two extreme values
+  double s0=NAN, s1=NAN;
+  int rt = gsl_poly_solve_quadratic(d[2], d[1], d[0], &s0, &s1);
+  if (rt == 0) {
     // somehow, seems no peak here
+    printf("\n");
     return NAN;
   }
 
-  // There shall be two extreme values
-  double s0, s1;
-  det = sqrt(det);
-  s0 = (-d[1] - det)/(2*d[2]);
-  s1 = (-d[1] + det)/(2*d[2]);
-
   if (0 <= s0 && s0 <= 1 && 2*d[2]*s0+d[1] < 0) {
+    // 2*d[2]*s0+d[1] < 0 means a maximum is there
+    printf("s = %.16e\n", s0);
     return s0 * x2;
   }
-  if (0 <= s1 && s1 <= 1 && 2*d[2]*s0+d[1] < 0) {
+  if (0 <= s1 && s1 <= 1 && 2*d[2]*s1+d[1] < 0) {
+    printf("s = %.16e\n", s1);
+    printf("\n");
     return s1 * x2;
   }
   //fprintf(stderr, "No root in this interval\n");

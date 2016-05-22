@@ -580,9 +580,63 @@ struct Ty_HH_PT_GH_CUR_core  // Peak threshold
   typedef Ty_HH_GH_CUR_core<ExtraCurrent> T0;
   typedef typename T0::TyCurrentData TyCurrentData;
   using T0::id_V;
+  using T0::id_h;
+  using T0::id_m;
+  using T0::id_n;
+  using T0::id_gE;
+  using T0::id_gI;
+  using T0::id_gE_s1;
+  using T0::id_gI_s1;
+  using T0::n_var;
+  using T0::n_var_soma;
+  using T0::V_Na;
+  using T0::V_K;
+  using T0::V_L;
+  using T0::V_gE;
+  using T0::V_gI;
+  using T0::G_Na;
+  using T0::G_K;
+  using T0::G_L;
+  using T0::tau_gE;
+  using T0::tau_gI;
   using T0::V_threshold;
   using T0::DymInplaceRK4;
   using T0::GetDv;
+  using T0::ODE_RHS;
+
+  // V''(t)
+  inline double GetDDv(const double *dym_val,
+      const double *dym_d_val,
+      double t,
+      const TyCurrentData &extra_data) const
+  {
+    const double &V = dym_val[id_V];
+    const double &h = dym_val[id_h];
+    const double &m = dym_val[id_m];
+    const double &n = dym_val[id_n];
+    const double &dV = dym_d_val[id_V];
+    const double &dh = dym_d_val[id_h];
+    const double &dm = dym_d_val[id_m];
+    const double &dn = dym_d_val[id_n];
+    double dgE = -1.0 / tau_gE * dym_val[id_gE] + dym_val[id_gE_s1];
+    double dgI = -1.0 / tau_gI * dym_val[id_gI] + dym_val[id_gI_s1];
+    /*printf("new. extra_data: %e\n", ExtraCurrent()(t, extra_data));*/
+    // FIXME: Better way to do this?
+    double dext = (ExtraCurrent()(t+1e-7, extra_data)
+                 - ExtraCurrent()(t-1e-7, extra_data)) / 2e-7;
+    return
+      -dV       * G_Na * h  * m * m * m
+      -(V-V_Na) * G_Na * dh * m * m * m
+      -(V-V_Na) * G_Na * h  * m * m * 3.0 * dm
+      -dV       * G_K * n * n * n * n
+      -(V-V_K ) * G_K * n * n * n * dn * 4.0
+      -dV       * G_L
+      -dV       * dym_val[id_gE]
+      -(V-V_gE) * dgE
+      -dV       * dym_val[id_gI]
+      -(V-V_gI) * dgI
+      + dext;
+  }
 
   void NextStepSingleNeuronQuiet(
     double *dym_val,
@@ -594,11 +648,27 @@ struct Ty_HH_PT_GH_CUR_core  // Peak threshold
   {
     spike_time_local = std::numeric_limits<double>::quiet_NaN();
     double v0 = dym_val[id_V];
-    double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
-    double &v1 = dym_val[id_V];
-    if (v0 >= V_threshold && t_in_refractory == 0) {
-      spike_time_local = cubic_hermit_real_peak(dt_local,
-        v0, v1, k1, GetDv(dym_val, t, extra_data));
+    double dym_val0[n_var];
+    memcpy(dym_val0, dym_val, sizeof(dym_val0));
+    double k0 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
+    if (v0 >= V_threshold) {
+      double k1 = GetDv(dym_val, t, extra_data);
+      if (k0>=0 && k1<0 && t_in_refractory == 0) {
+        /*
+        double v1 = dym_val[id_V];
+        spike_time_local = cubic_hermit_real_peak(dt_local,
+            v0, v1, k0, k1);
+            */
+        /*spike_time_local = k0/(k0-k1) * dt_local;*/
+        double dym_d_val0[n_var_soma];
+        double dym_d_val[n_var_soma];
+        ODE_RHS(dym_val0, dym_d_val0, t, extra_data);
+        ODE_RHS(dym_val , dym_d_val , t+dt_local, extra_data);
+        double dd0 = GetDDv(dym_val0, dym_d_val0, t, extra_data);
+        double dd1 = GetDDv(dym_val,  dym_d_val,  t+dt_local, extra_data);
+        spike_time_local = cubic_hermit_real_root(dt_local,
+            k0, k1, dd0, dd1, 0);
+      }
     }
     if (dt_local>0) {
       t_in_refractory = 0;
