@@ -1,0 +1,98 @@
+xde@2.6GHz
+GCC 4.9.2
+without fast exp().
+
+pm.neuron_model = 'HH-PT-GH';
+
+pm.net  = ones(1000);
+pm.nI   = 0;
+pm.scee = 0.002;
+pm.pr   = 1.0;
+pm.ps   = 0.03;
+pm.t    = 1e3;
+pm.dt   = 1.0/32;
+pm.stv  = pm.dt;
+pm.seed = 24;
+
+		seconds		Hz
+simple		14.899	37.3760
+delay-dt	31.569	37.3790
+SSC		46.898	37.3360
+SSC-Sparse	47.325	37.3360
+SSC-Sparse2	46.922	37.3080
+
+
+randMT19937('state', [1 342 232]);
+pm.net  = 1*(randMT19937(1000)<0.1);
+pm.nI   = 0;
+pm.scee = 0.02;
+pm.pr   = 1.0;
+pm.ps   = 0.03;
+pm.t    = 1e3;
+pm.dt   = 1.0/32;
+pm.stv  = pm.dt;
+pm.seed = 24;
+
+simple		14.766	37.1980
+delay-dt	16.554	37.1950
+SSC		46.182	37.2060	
+SSC-Sparse	18.243	37.2870
+SSC-Sparse2	18.303	37.1910
+
+
+pm.neuron_model = 'HH-GH';
+simple		15.305	38.8230
+delay-dt	16.746	38.8580
+SSC		47.140	38.7950
+SSC-Sparse	18.554	38.7960
+SSC-Sparse2	18.680	38.7950
+
+
+randMT19937('state', [1 342 232]);
+pm.net  = 1*(randMT19937(10000)<0.01);
+pm.nI   = 0;
+pm.scee = 0.02;
+pm.pr   = 1.0;
+pm.ps   = 0.03;
+pm.t    = 1e3;
+pm.dt   = 1.0/32;
+pm.stv  = pm.dt;
+pm.seed = 24;
+
+simple		172.482		37.1945
+delay-dt	192.836		37.2032
+SSC		~3365.4
+SSC-Sparse	205.379		37.3122
+SSC-Sparse2	208.465		37.2157
+
+==========================================================
+
+pm.neuron_model = 'LIF-GH';
+
+randMT19937('state', [1 342 232]);
+pm.net  = 1*(randMT19937(1000)<0.1);
+pm.nI   = 0;
+pm.scee = 0.0016;
+pm.pr   = 1.0;
+pm.ps   = 0.0125;
+pm.t    = 1e3;
+pm.dt   = 1.0/32;
+pm.stv  = pm.dt;
+pm.seed = 24;
+
+simple		5.941	38.9080
+delay-dt	6.799	38.9730
+SSC		16.431	38.9320
+SSC-Sparse	7.302	38.9320
+SSC-Sparse2	7.853	38.9320
+
+pm.neuron_model = 'LIF-G';
+
+simple		4.208	38.1240
+delay-dt	4.863	38.1240
+SSC		10.455	38.0960
+SSC-Sparse	5.329	38.0960
+SSC-Sparse2	5.284	38.0960
+
+
+

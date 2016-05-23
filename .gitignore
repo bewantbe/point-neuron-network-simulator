@@ -6,7 +6,9 @@ tags
 *.d
 *.layout
 *.mex
+*.mexa64
 .cccc/
+.ycm_extra_conf.py
 .ycm_extra_conf.pyc
 gmon.out
 perf.data
@@ -15,5 +17,4 @@ bin/
 obj/
 eigen3/
 test/IFsimu
-mfile/BKDRHash.mexa64
 mfile/data/
