@@ -26,12 +26,10 @@ if ~exist(fileparts(pathdir), 'dir')
   mkdir(pathdir);
 end
 
-tic;
 % Give this matrix a name
 p = length(A);
 matname = ['net_', num2str(p), '_0X', BKDRMatrixHash(A)];
 matpath = [pathdir, matname, '.txt'];
-toc
 
 % Solve file name collision by adding extra characters, if any
 matname0 = matname;
@@ -46,11 +44,17 @@ while exist(matpath, 'file')
   matpath = [pathdir, matname, '.txt'];
   warning('savenetwork:hash', 'hash collision occured! File is renamed.');
 end
-tic
+
 % Save the matrix to the file
 if all(floor(A(:)) == A(:))
   % Matrix is consist of integers, so let's save it in a cleaner way
-  A = int2str(int32(A));
+  if max(A(:)) <= 9 && min(A(:)) >= 0 
+    cA = char(zeros(size(A,1), 2*size(A,2)) + ' ');
+    cA(:, 1:2:end) = A + '0';
+    A = cA;
+  else
+    A = int2str(int32(A));      % most slow step
+  end
   fd = fopen(matpath, 'w');
   if fd == -1
     error('Unable to open output file `%s''', matpath);
@@ -63,4 +67,3 @@ else
   % Save the matrix in full precision ascii format
   save('-ascii', '-double', matpath, 'A');
 end
-toc
