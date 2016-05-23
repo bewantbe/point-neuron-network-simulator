@@ -4,7 +4,8 @@ tocs = @(st) fprintf('%s: t = %6.3f s\n', st, toc());
 pm = [];
 pm.prog_path = '../bin/gen_neu';
 %pm.neuron_model = 'HH-PT-GH';
-pm.neuron_model = 'HH-GH';
+%pm.neuron_model = 'HH-GH';
+pm.neuron_model = 'HH-GH-cont-syn';
 
 randMT19937('state', [1 342 232]);
 pm.net  = 1*(randMT19937(1000)<0.1);
@@ -17,8 +18,9 @@ pm.dt   = 1.0/32;
 pm.stv  = pm.dt;
 pm.seed = 24;
 
-s_simu_method  = {'simple', 'big-delay', 'SSC', 'SSC-Sparse', 'SSC-Sparse2'};
+%s_simu_method  = {'simple', 'big-delay', 'SSC', 'SSC-Sparse', 'SSC-Sparse2'};
 %s_simu_method  = {'simple'};
+s_simu_method  = {'cont-syn'};
 
 for id_sm = 1:length(s_simu_method)
     pm.simu_method = s_simu_method{id_sm};

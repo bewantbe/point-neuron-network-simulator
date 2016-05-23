@@ -47,6 +47,8 @@ SSC		47.140	38.7950
 SSC-Sparse	18.554	38.7960
 SSC-Sparse2	18.680	38.7950
 
+pm.neuron_model = 'HH-GH-cont-syn';
+cont-syn	280.580	36.3800
 
 randMT19937('state', [1 342 232]);
 pm.net  = 1*(randMT19937(10000)<0.01);

@@ -66,13 +66,13 @@ Then simply `make`, you will get an executable `bin/gen_neu`.
 
 There are matlab scripts in `mfile/`, notably the interface `mfile/gen_neu.m`.
 
-To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`.
+To use the matlab interface, you need to compile `mfile/BKDRMatrixHash.c` and `mfile/randMT19937.cpp`.
 
 In matlab, use `mfile/` as your working directory.
 
-  * compile `mfile/BKDRHash.c`
+  * compile `mfile/BKDRMatrixHash.c`
 
-		mex BKDRHash.c
+		mex BKDRMatrixHash.c
 	
   * compile `mfile/randMT19937.cpp`
 
