@@ -202,7 +202,15 @@ int MainLoop(const po::variables_map &vm)
         p_neu_pop = new
           NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_FT_GH_sine>(pm);
         break;
-      default:
+      case HH_PT_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_PT_GH>(pm);
+        break;
+      case HH_PT_GH_sine:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_PT_GH_sine>(pm);
+        break;
+      case HH_GH_cont_syn:
         cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
         exit(-1);
     }

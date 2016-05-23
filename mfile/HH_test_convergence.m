@@ -9,12 +9,13 @@ pm.prog_path = '../bin/gen_neu';
 
 %pm.neuron_model = 'HH-GH'; pm.simu_method  = 'SSC';  pm.scee = 0.035;
 
-%pm.neuron_model = 'HH-GH'; pm.synaptic_delay = 0.34;  pm.scee = 0.04;
+pm.neuron_model = 'HH-GH'; pm.synaptic_delay = 0.2493;  pm.scee = 0.04;
 
 %pm.neuron_model = 'HH-GH-cont-syn';  pm.simu_method  = [];  pm.scee = 0.06;
 
-pm.neuron_model = 'HH-PT-GH';  pm.scee = 0.04;  % ? low accuracy
-%pm.simu_method  = 'simple';
+%pm.neuron_model = 'HH-PT-GH';  pm.scee = 0.04;  % ? low accuracy
+%pm.simu_method  = 'SSC-Sparse';
+%pm.simu_method  = 'SSC';
 
 pm.net  = ones(15);
 pm.nI   = 0;
@@ -25,7 +26,6 @@ pm.t    = 1e2;
 pm.dt   = 1.0/32;
 pm.stv  = pm.dt;
 pm.seed = 24;
-pm.extra_cmd = '';
 
 pm.dt = 2 ^ -13;
 [X0, ISI0, ras0] = gen_neu(pm, 'rm');

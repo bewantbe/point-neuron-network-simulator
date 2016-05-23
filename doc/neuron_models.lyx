@@ -1304,16 +1304,16 @@ all constant.
 \end_layout
 
 \begin_layout Standard
-The time delay due to long dendrite or axion are ignored.
- The threshold is 
-\begin_inset Formula $\unit[20]{mV}$
+The threshold is 
+\begin_inset Formula $\unit[65]{mV}$
 \end_inset
 
- above resting potential (
+ above the resting potential (
 \begin_inset Formula $\unit[0]{mV}$
 \end_inset
 
 ).
+ And the synaptic interaction is performed at the time of this crossing.
 \end_layout
 
 \begin_layout Standard
@@ -1418,6 +1418,14 @@ Note: In this model, the voltage is scaled as
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Subsection
+HH-PT-GH
+\end_layout
+
+\begin_layout Standard
+Same as HH-GH, except that the spike timing is at the spike peak.
 \end_layout
 
 \begin_layout Section
@@ -2118,6 +2126,27 @@ reference "enu:signling-time"
 
  is desired.
  The proper timing should be the peak time.
+\end_layout
+
+\begin_layout Section
+Convergence
+\end_layout
+
+\begin_layout Standard
+Refer to code.
+ 
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+mfile/HH_test_convergence.m
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
