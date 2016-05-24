@@ -18,8 +18,8 @@ switch pm.neuron_model
     volt_unit = 15.0;
 end
 
-PSP.volt_unit = volt_unit;
 PSP.neuron_model = pm.neuron_model;
+PSP.volt_unit = volt_unit;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the PSP for external input
@@ -37,8 +37,6 @@ pm.stv = pm.dt;
 
 pm.pr = 0;
 pm.ps = 1e-6;  % some very small value
-%pm.ps = 0.03362;  % some very small value
-%pm.ps = 0.1 * mV_EPSP_PS;
 
 X = gen_neu(pm, 'new,rm');
 V_rest = X(1, floor(t_e/pm.stv) - 1);
@@ -50,10 +48,10 @@ plot(X(1:2000), '-o');
 [v_psp, pos_psp] = max(X);
 t_psp = pos_psp*pm.stv;
 
-mV_EPSP_PS = pm.ps / v_psp;
+mV_EPSP_ps = pm.ps / v_psp;
 
-PSP.mV_PS = mV_EPSP_PS;
-PSP.t_PS = t_psp;
+PSP.mV_ps = mV_EPSP_ps;
+PSP.t_ps = t_psp;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the PSP for spike interaction
@@ -64,7 +62,7 @@ pm.dt = 1/128.0;
 pm.stv = pm.dt;
 
 pm.pr = 0;
-pm.ps = 1.0 * mV_EPSP_PS;
+pm.ps = 1.0 * mV_EPSP_ps;
 
 % write events for neuron 2
 fd = fopen('poisson_events.txt', 'w');
@@ -95,12 +93,9 @@ X = volt_unit * (X - V_rest);
 [v_psp, pos_psp] = max(X(1, :));
 t_psp = pos_psp*pm.stv;
 
-mV_EPSP_SCEE = pm.scee / v_psp
-PSP.mV_SCEE = mV_EPSP_SCEE;
-PSP.t_SCEE = t_psp;
-
-%figure(2);
-%plot(X(1, :));
+mV_EPSP_scee = pm.scee / v_psp;
+PSP.mV_scee = mV_EPSP_scee;
+PSP.t_scee = t_psp;
 
 %% test scei
 
@@ -112,11 +107,8 @@ X = volt_unit * (X - V_rest);
 [v_psp, pos_psp] = min(X(1, :));
 t_psp = pos_psp*pm.stv;
 
-mV_IPSP_SCEI = -pm.scei / v_psp
-PSP.mV_SCEI = mV_IPSP_SCEI;
-PSP.t_SCEI = t_psp;
-
-%figure(2);
-%plot(X(1, :));
+mV_IPSP_scei = -pm.scei / v_psp;
+PSP.mV_scei = mV_IPSP_scei;
+PSP.t_scei = t_psp;
 
 end

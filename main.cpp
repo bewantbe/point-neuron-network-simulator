@@ -351,7 +351,7 @@ int MainLoop(const po::variables_map &vm)
       str_simu_method = "SSC";
       p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
     }
-    cout << "Simulator: " << str_simu_method << "\n";
+    //cout << "Simulator: " << str_simu_method << "\n";  // Debug info
   }
   // Check inconsistant pair
   if (vm.count("synaptic-delay") && 
@@ -401,7 +401,7 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("input-event-path")) {
     FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),
                               vm["input-event-path"].as<std::string>().c_str());
-    cout << "input event loaded!" << endl;
+    //cout << "input event loaded!" << endl;  // Debug info
   }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
