@@ -20,7 +20,7 @@ Optional:
 
   * Add an alternating current to these models.
   * Add an constant current to these models.
-  * Add synaptic delay. (Currently constant delay, and must larger than dt)
+  * Add synaptic delay. (Currently the delay must larger than dt)
 
 See `doc/neuron_models.pdf` for model details.
 
@@ -66,13 +66,13 @@ Then simply `make`, you will get an executable `bin/gen_neu`.
 
 There are matlab scripts in `mfile/`, notably the interface `mfile/gen_neu.m`.
 
-To use the matlab interface, you need to compile `mfile/BKDRMatrixHash.c` and `mfile/randMT19937.cpp`.
+To use the matlab interface, you need to compile `mfile/BKDRHash.c` and `mfile/randMT19937.cpp`.
 
 In matlab, use `mfile/` as your working directory.
 
-  * compile `mfile/BKDRMatrixHash.c`
+  * compile `mfile/BKDRHash.c`
 
-		mex BKDRMatrixHash.c
+		mex BKDRHash.c
 	
   * compile `mfile/randMT19937.cpp`
 

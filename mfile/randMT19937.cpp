@@ -26,7 +26,7 @@ void ShowUsage()
   mexErrMsgTxt(HELP_MSG);
 }
 
-// declare globally, so persist during Octave running
+// Declare globally, so that persist during a session.
 std::random_device rd;
 std::mt19937 global_urng(rd());  // gcc4.8 simd_fast_mersenne_twister_engine  // https://isocpp.org/blog/2013/03/gcc-4.8-released
 std::uniform_real_distribution<> unif_dis(0, 1);
@@ -35,8 +35,8 @@ void SeedRNG(const mxArray *prhs1)
 {
   global_urng.seed(0);  // seems a bug in octave, needed for global_urng.seed(sseq) to work correctly
   if (prhs1 == NULL || mxGetNumberOfElements(prhs1) == 0
-      || mxIsChar(prhs1) && mxGetNumberOfElements(prhs1) == 5
-      && strncmp((const char *)mxGetData(prhs1), "reset", 5) == 0) {
+      || (mxIsChar(prhs1) && mxGetNumberOfElements(prhs1) == 5
+      && strncmp((const char *)mxGetData(prhs1), "reset", 5) == 0)) {
     // rand ("state", "reset")
     // Seed the generator by random source
     std::vector<uint32_t> li = {rd(), rd()};  // initialize with two uint
@@ -67,19 +67,18 @@ void SeedRNG(const mxArray *prhs1)
   mwSize n = mxGetNumberOfElements(prhs1);
   std::vector<int32_t> li;
   int32_t v;
-  double dv;
   for (int i=0; i<n; i++) {
     if (b_int32) {
       v = *(int32_t*)(4*i+px);
       if (v<0) {
-        mexErrMsgTxt("seed_seq should be series of integers in range 0 ~ 2^31-1");
+        mexErrMsgTxt("seeds should be integers in range 0 ~ 2^31-1");
       }
     } else {
-      dv = *(double*)(8*i+px);
-      if (dv<0 || dv>2147483647.0) {
-        mexErrMsgTxt("seed_seq should be series of integers in range 0 ~ 2^31-1");
+      double dv = *(double*)(8*i+px);
+      if (dv<0 || dv>2147483647.0 || dv != floor(dv)) {
+        mexErrMsgTxt("seeds should be integers in range 0 ~ 2^31-1");
       }
-      v = (int)dv;
+      v = (int32_t)dv;
     }
     li.push_back(v);
   }
@@ -90,93 +89,82 @@ void SeedRNG(const mxArray *prhs1)
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs,
                  const mxArray *prhs[])
 {
-  size_t m = 0, n = 0;  // number of rows and columns
-
   if (nrhs == 0) {
     ShowUsage();
   }
   if (mxIsChar(prhs[0])) {
-    // Set or get rand state
-    // Check first argument: rand ("state", ...)
+    // Check argument: rand ("state" [, seed])
     const int len = 6;  // strlen("state")
     char str[len];
-    mxGetString(prhs[0], str, len);
-    if (strcmp(str, "state") != 0 && strcmp(str, "seed") != 0) {
+    mxGetString(prhs[0], str, len);  // might leak
+    if ((strcmp(str, "state") != 0 && strcmp(str, "seed") != 0)
+        || nrhs > 2) {
       ShowUsage();
     }
+    // Output generator state.
     // V = rand ("state"), V = rand("seed")
-    // Output generator state
-    if (nrhs == 1) {
+    if (nlhs == 1) {
       std::stringstream ss_rng_state;
       ss_rng_state << global_urng;
       plhs[0] = mxCreateString(ss_rng_state.str().c_str());
-      return;
     }
-    if (nrhs > 2) {
-      ShowUsage();
+    // Set generator state.
+    if (nrhs == 2) {
+      SeedRNG(prhs[1]);
     }
-    // Now nrhs == 2
-    SeedRNG(prhs[1]);
     return;
   }
-  // Get desired dimensions
+  if (!mxIsNumeric(prhs[0])) {
+    ShowUsage();
+  }
+  // Get desired array dimensions.
   size_t ndim = 0;            // number of dimensions
-  const mwSize *dims = NULL;  // number of elements in each dimension
-  std::vector<mwSize> vec_dims;
+  std::vector<double> vec_dims;
   if (nrhs == 1) {
-    if (!mxIsNumeric(prhs[0])) {
-      ShowUsage();
-    }
     if (mxGetNumberOfElements(prhs[0]) > 1) {
-      // rand ([N M ...])
+      // rand ([N1 N2 ...])
       ndim = mxGetNumberOfElements(prhs[0]);  // ndim >= 2 always
-      // convert double to mwSize
       vec_dims.reserve(ndim);
       double *pr = mxGetPr(prhs[0]);
       for (int k = 0; k < ndim; k++) {
-        if (pr[k] < 0) {
-          mexErrMsgTxt("Negative dimension size is not supported!");
-          return;
-        }
-        vec_dims[k] = (mwSize)pr[k];
+        vec_dims[k] = pr[k];
       }
-      dims = vec_dims.data();
     } else {
       // rand (N)
-      if (mxGetScalar(prhs[0]) < 0) {
-        mexErrMsgTxt("Negative dimension size is not supported!");
-        return;
-      }
-      vec_dims.reserve(2);
-      vec_dims[0] = vec_dims[1] = mxGetScalar(prhs[0]);
-      dims = vec_dims.data();
       ndim = 2;
+      vec_dims.reserve(ndim);
+      vec_dims[0] = vec_dims[1] = mxGetScalar(prhs[0]);
     }
-  }
-  if (ndim == 0) {
+  } else { // nrhs >= 2
+    // rand (N1, N2, ...)
     // read dimensions from each argument
-    vec_dims.reserve(nrhs);
-    for (int k = 0; k < nrhs; k++) {
+    ndim = nrhs;
+    vec_dims.reserve(ndim);
+    for (int k = 0; k < ndim; k++) {
       if (!mxIsNumeric(prhs[k]) || mxGetNumberOfElements(prhs[k])!=1) {
         ShowUsage();
       }
-      if (mxGetScalar(prhs[k]) < 0) {
-        mexErrMsgTxt("Negative dimension size is not supported!");
-        return;
-      }
       vec_dims[k] = mxGetScalar(prhs[k]);
     }
-    dims = vec_dims.data();
-    ndim = nrhs;
   }
-  // test if there is negative dimension size
-  for (int k = 0; k < vec_dims.size(); k++) {
+  
+  // Number of elements (in mwSize) in each dimensions.
+  std::vector<mwSize> vec_mwSize_dims(ndim);
+
+  // Test if there is negative dimension size.
+  for (int k = 0; k < ndim; k++) {
     if (vec_dims[k] < 0) {
       mexErrMsgTxt("Negative dimension size is not supported!");
-      return;
     }
+    if (vec_dims[k] != floor(vec_dims[k])) {
+      mexErrMsgTxt("Non-integer dimension!");
+    }
+    // Note: No overflow detection.
+    vec_mwSize_dims[k] = (mwSize)vec_dims[k];
   }
-  // Generate random real in [0,1)
+
+  const mwSize *dims = vec_mwSize_dims.data();  
+  // Generate random real in [0,1). Not exactly Matlab convention (0,1).
   plhs[0] = mxCreateNumericArray(ndim, dims, mxDOUBLE_CLASS, mxREAL);
   double *R = mxGetPr(plhs[0]);
   size_t numel = mxGetNumberOfElements(plhs[0]);
@@ -190,6 +178,7 @@ randMT19937
 randMT19937(-1)
 randMT19937(0)
 randMT19937(1)
+randMT19937(1.5)
 randMT19937(2)
 randMT19937(2,3,4)
 randMT19937([2,3,4])
@@ -198,4 +187,6 @@ randMT19937('state',c);  randMT19937(1)
 randMT19937('state',c);  randMT19937(1)
 randMT19937('state', 123);  randMT19937(1)
 randMT19937('state', 123);  randMT19937(1)
+randMT19937('state', [1 2 3]);  randMT19937(1)
+randMT19937('state', [1 2 3]);  randMT19937(1)
 */
