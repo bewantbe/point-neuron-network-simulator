@@ -28,7 +28,7 @@ end
 
 % Give this matrix a name
 p = length(A);
-matname = ['net_', num2str(p), '_0X', BKDRMatrixHash(A)];
+matname = ['net_', num2str(p), '_0X', BKDRHash(A)];
 matpath = [pathdir, matname, '.txt'];
 
 % Solve file name collision by adding extra characters, if any

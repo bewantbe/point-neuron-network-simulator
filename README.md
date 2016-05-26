@@ -178,21 +178,20 @@ The interface `gen_neu.m` is a wrapper for `bin/gen_neu`.
 
 ```matlab
 	pm = [];
-	pm.neuron_model = 'HH-GH';  % e.g. LIF-G, LIF-GH, HH-G, HH-GH.
-	                            % See bin/gen_neu --help for complete list.
-	pm.net  = 'net_2_2';  % Can also be a connectivity (adjacency) matrix,
-	                      % or a file path.
-	pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
-			              %             Indexes are later half
+	pm.neuron_model = 'HH-PT-GH';  % e.g. LIF-G, LIF-GH, HH-G, HH-GH.
+	                       % See bin/gen_neu --help for a complete list.
+	pm.net  = [0 1; 0 0];  % Can also be a text file path.
+	pm.nI   = 0;           % default: 0. Number of Inhibitory neurons.
+			               %             Indexes are later half
 	pm.scee = 0.05;
 	pm.scie = 0.00;       % default: 0. Strength from Ex. to In.
 	pm.scei = 0.00;       % default: 0. Strength from In. to Ex.
 	pm.scii = 0.00;       % default: 0.
-	pm.pr   = 1.6;        % Poisson input rate
-	pm.ps   = 0.04;       % Poisson input strength
+	pm.pr   = 1.6;        % Poisson input rate.
+	pm.ps   = 0.04;       % Poisson input strength.
 	pm.t    = 1e4;        % Simulation time.
-	pm.dt   = 1.0/32;     % Simulation time step. Default: 1/32
-	pm.stv  = 0.5;        % Output time step.
+	pm.dt   = 1.0/32;     % Simulation time step. Default: 1/32.
+	pm.stv  = 0.5;        % Output time step, must be multiples of dt.
 	pm.seed = 'auto';     % default: 'auto'(or []). Also accept integers.
 	pm.extra_cmd = '';    % Optional: put all other command line options here.
 	[V, ISI, ras] = gen_neu(pm, 'rm');

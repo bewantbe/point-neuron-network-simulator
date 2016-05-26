@@ -6,9 +6,10 @@
 %  PSP = neu_psp_test(pm)
 
 function PSP = neu_psp_test(pm)
+events_file_path = 'poisson_events.txt';
 
 pm.simu_method  = 'auto';
-pm.extra_cmd = '--input-event-path poisson_events.txt';
+pm.extra_cmd = sprintf('--input-event-path %s', events_file_path);
 
 volt_unit = 1.0;
 switch pm.neuron_model
@@ -26,7 +27,7 @@ PSP.volt_unit = volt_unit;
 
 t_e = 50.0;
 
-fd = fopen('poisson_events.txt', 'w');
+fd = fopen(events_file_path, 'w');
 fprintf(fd, '0 %.16e\n', t_e);
 fclose(fd);
 
@@ -42,8 +43,6 @@ X = gen_neu(pm, 'new,rm');
 V_rest = X(1, floor(t_e/pm.stv) - 1);
 X(:, 1:floor(t_e/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
-
-plot(X(1:2000), '-o');
 
 [v_psp, pos_psp] = max(X);
 t_psp = pos_psp*pm.stv;
@@ -65,7 +64,7 @@ pm.pr = 0;
 pm.ps = 1.0 * mV_EPSP_ps;
 
 % write events for neuron 2
-fd = fopen('poisson_events.txt', 'w');
+fd = fopen(events_file_path, 'w');
 t = t_e;
 n_event = 0;
 while (t < pm.t && n_event < 30)
@@ -76,6 +75,7 @@ end
 fclose(fd);
 
 %% test scee
+
 pm.nI = 0;
 pm.scee = 1e-6;   % some small value
 
@@ -110,5 +110,7 @@ t_psp = pos_psp*pm.stv;
 mV_IPSP_scei = -pm.scei / v_psp;
 PSP.mV_scei = mV_IPSP_scei;
 PSP.t_scei = t_psp;
+
+delete(events_file_path);
 
 end

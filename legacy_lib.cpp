@@ -17,7 +17,6 @@
 #  include <sys/types.h>
 #  include <sys/stat.h>    // for stat()
 #  include <unistd.h>
-#  define Sleep(msec) usleep((msec)*1000)  // replace Sleep() in winbase.h (in Windows)
 #endif
 
 #ifndef _WINDOWS_USE_
@@ -134,29 +133,4 @@ int CheckDirAndCreate(const std::string &filepath)
   }
   return 0;
 }
-
-#ifdef _WINDOWS_USE_
-unsigned int GetSeedFromTime()
-{
-  SYSTEMTIME sys_time;
-  GetLocalTime(&sys_time);
-  //QueryPerformanceCounter
-  return (unsigned int)sys_time.wMilliseconds+(((sys_time.wDay*24+sys_time.wHour)*60+sys_time.wMinute)*60+sys_time.wSecond) * 1000;
-}
-#else
-#include <sys/time.h>
-unsigned int GetSeedFromTime()
-{
-  struct timeval tv;
-  if (gettimeofday(&tv, NULL) != 0) {
-    printf("Error: gettimeofday: Fail to get system time! (for random seed)");
-    perror("");
-    tv.tv_sec = time(NULL);
-    if (tv.tv_sec == ((time_t) -1)) {
-      perror("Tried to use time(), but failed.");
-    }
-  }
-  return (unsigned int)(tv.tv_sec*1000000 + tv.tv_usec);
-}
-#endif
 
