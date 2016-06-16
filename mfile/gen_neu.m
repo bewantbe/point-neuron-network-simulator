@@ -89,7 +89,7 @@ while ~isempty(gen_cmd)
     case 'cmd'
         mode_show_cmd = true;   % Show the command to call, then exit
     case 'ext_T'
-        ext_T = 1e3;            % extra calculation time
+        ext_T = 1e2;            % extra calculation time
     case 'extra_data'
         mode_extra_data = true; % output extra data: G, h, m, n
         % data will be in struct extra_data
@@ -280,6 +280,7 @@ end
 cmdst = sprintf('%s %s %s %s %s',...
                 program_name, st_neu_param, st_sim_param, st_paths, pm.extra_cmd);
 extra_data.cmdst = cmdst;
+pm.cmd_str = cmdst;
 if mode_show_cmd
     disp(cmdst);
     return

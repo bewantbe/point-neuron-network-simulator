@@ -145,6 +145,14 @@ int MainLoop(const po::variables_map &vm)
         p_neu_pop = new
           NeuronPopulationDeltaInteractNetDelay<Ty_HH_GH>(pm);
         break;
+      case HH_FT_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_HH_FT_GH>(pm);
+        break;
+      case HH_PT_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_HH_PT_GH>(pm);
+        break;
       default:
         cerr << "This delay net type is not supported yet.\n";
         exit(-1);
@@ -420,6 +428,7 @@ int MainLoop(const po::variables_map &vm)
       }
     };
 
+  // Try open the files for data dump
   std::ofstream fout_volt;
   bool b_output_volt = fout_try_open("volt-path", fout_volt);
 

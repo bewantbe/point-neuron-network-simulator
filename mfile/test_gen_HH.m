@@ -1,3 +1,5 @@
+%
+
 addpath('/home/xyy/matcode/prj_GC_clean/HH');
 
   clear('pm');          % a new parameter set, or pm = [];
