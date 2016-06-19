@@ -44,11 +44,15 @@
 		<Unit filename="main.cpp" />
 		<Unit filename="math_helper.cpp" />
 		<Unit filename="math_helper.h" />
+		<Unit filename="neuron_population.h" />
+		<Unit filename="neuron_population_cont_synaptic.cpp" />
+		<Unit filename="neuron_population_cont_synaptic.h" />
 		<Unit filename="neuron_system_utils.cpp" />
 		<Unit filename="neuron_system_utils.h" />
 		<Unit filename="poisson_generator.cpp" />
 		<Unit filename="poisson_generator.h" />
 		<Unit filename="simulator_base.h" />
+		<Unit filename="simulator_cont_synaptic.h" />
 		<Unit filename="simulator_exact_order.h" />
 		<Unit filename="simulator_v0.h" />
 		<Unit filename="single_neuron_dynamics.h" />
