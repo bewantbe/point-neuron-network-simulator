@@ -243,11 +243,6 @@ public:
   typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> TySineParamVec;
   TySineParamVec sin_par;
 
-  typedef NeuronPopulationBaseCommon NBase;
-  using NBase::n_neurons;
-  using NBase::StatePtr;
-  using NBase::time_in_refractory;
-
   NeuronPopulationBaseSine(const TyNeuronalParams &_pm, int n_var)
     :NeuronPopulationBaseCommon(_pm, n_var)
   {
@@ -312,14 +307,11 @@ class NeuronPopulationBaseExtI
     :public NeuronPopulationBaseCommon
 {
 public:
-  typedef NeuronPopulationBaseCommon NBase;
-  using NBase::n_neurons;
-
   typedef std::vector<double> TyDVec;
   TyDVec cur_param;
 
   NeuronPopulationBaseExtI(const TyNeuronalParams &_pm, int n_var)
-    :NBase(_pm, n_var)
+    :NeuronPopulationBaseCommon(_pm, n_var)
   {}
 
   void SetExtI(double d)

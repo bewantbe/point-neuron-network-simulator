@@ -164,9 +164,12 @@
     <ClInclude Include="fmath.hpp" />
     <ClInclude Include="legacy_lib.h" />
     <ClInclude Include="math_helper.h" />
+    <ClInclude Include="neuron_population.h" />
+    <ClInclude Include="neuron_population_cont_synaptic.h" />
     <ClInclude Include="neuron_system_utils.h" />
     <ClInclude Include="poisson_generator.h" />
     <ClInclude Include="simulator_base.h" />
+    <ClInclude Include="simulator_cont_synaptic.h" />
     <ClInclude Include="simulator_exact_order.h" />
     <ClInclude Include="simulator_v0.h" />
     <ClInclude Include="single_neuron_dynamics.h" />
@@ -175,6 +178,7 @@
     <ClCompile Include="legacy_lib.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="math_helper.cpp" />
+    <ClCompile Include="neuron_population_cont_synaptic.cpp" />
     <ClCompile Include="neuron_system_utils.cpp" />
     <ClCompile Include="poisson_generator.cpp" />
   </ItemGroup>
