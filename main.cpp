@@ -417,7 +417,7 @@ int MainLoop(const po::variables_map &vm)
       if (vm.count(st_id)) {
         std::string st_path = vm[st_id].as<std::string>();
         CheckDirAndCreate( st_path );
-        fs.open( st_path );
+        fs.open( st_path, std::ios::binary );
         if (!fs) {
           cerr << "Error: Failed to open file \"" << st_path << "\" for output." << "\n";
           throw "Failed to open file";

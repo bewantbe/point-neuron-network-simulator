@@ -4,7 +4,6 @@
 #include "common_header.h"
 #include "math_helper.h"
 
-/*
 // Fast code for exp(x)
 #include "fmath.hpp"
 //#define exp(x) fmath::expd(x)
@@ -18,7 +17,6 @@ inline double my_expd(const double &x)
 { return fmath::expd(x); }
 
 #define exp(x) my_expd(x)
-*/
 
 struct Ty_Neuron_Dym_Base
 {
