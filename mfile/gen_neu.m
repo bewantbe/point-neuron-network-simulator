@@ -1,14 +1,16 @@
 % Generate HH neuron data by calling gen_neu
 % Will use cached data automatically
 %
-%  [X, ISI, ras, pm] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])
+%  [X, isi, ras, pm, extra_data] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])
 %
 % Usage example 1:       % the items with default value are optional
 %  pm = [];
-%  pm.neuron_model = 'HH-GH';  % one of LIF-G, LIF-GH, HH-GH
-%  pm.net  = 'net_2_2';  % can also be a connectivity matrix or full file path
+%  pm.prog_path = '../bin/gen_neu';  % path to the executable.
+%  pm.neuron_model = 'HH-GH';  % LIF-G, LIF-GH, HH-GH etc. See gen_neu --help
+%  pm.simu_method = 'SSC';     % Use Spike-Spike-Correction.
+%  pm.net  = [0 1; 0 0]; % Connectivity matrix or file to the matrix.
 %  pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
-%                        %             Indexes are later half
+%                        %             Indexes are later half.
 %  pm.scee = 0.05;
 %  pm.scie = 0.00;       % default: 0. Strength from Ex. to In.
 %  pm.scei = 0.00;       % default: 0. Strength from In. to Ex.
@@ -16,17 +18,25 @@
 %  pm.pr   = 1.6;        % can be a vector (not yet)
 %  pm.ps   = 0.04;       % can be a vector (not yet)
 %  pm.t    = 1e4;
-%  pm.dt   = 1.0/32;     % default: 1/32
+%  pm.dt   = 2^-5;       % default: 1/32
 %  pm.stv  = 0.5;        % default: 0.5
-%  pm.seed = 'auto';     % default: 'auto'. Accept one or several integers
-%  pm.extra_cmd = '';    % put all other parameters here.
+%  pm.seed = 'auto';     % default: 'auto'. Accept an integer or an integer vector
+%  pm.extra_cmd = '-v';  % All other parameters here.
 %  [X, ISI, ras] = gen_neu(pm);
 %
-% Usage example 2: Always re-generate data, then read it
+% Usage example 2: Always re-generate data, then read it.
 %  X = gen_neu(pm, 'new');
 %
-% Usage example 3: Generate data if not exist, read it, then remove data files
+% Usage example 3: Generate data if not exist, read it, then remove data files.
 %  X = gen_neu(pm, 'rm');
+%
+% Usage example 4: Get also conductance and gating variables.
+%  [X, isi, ras, pm, extra_data] = gen_neu(pm,'new,extra_data');
+%  extra_data.G(1)  % E conductance of #1 neuron.
+%  extra_data.G(2)  % I conductance of #1 neuron.
+%  extra_data.G(3)  % E conductance of #2 neuron.
+%  extra_data.G(4)  % I conductance of #2 neuron.
+%  etc.
 %
 % Other possible values for "gen_cmd":
 %  'read'   Read data files if exist, otherwise do nothing and return [];
