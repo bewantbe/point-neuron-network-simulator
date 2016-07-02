@@ -60,6 +60,7 @@
 
 function [X, ISI, ras, pm, extra_data] ...
          = gen_neu(pm, gen_cmd, data_dir_prefix)
+t_start = tic;
 if nargin()==0
     disp(' [X, ISI, ras] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])');
     disp(' Type "help gen_neu" for more help');
@@ -78,6 +79,7 @@ mode_show_cmd  = false;
 mode_read_only = false;
 mode_extra_data = false;
 mode_run_in_background = false;
+b_verbose = isfield(pm, 'extra_cmd') && (~isempty([strfind(pm.extra_cmd,'-v') strfind(pm.extra_cmd,'--verbose')]));  % show time cost
 ext_T = 0;
 
 % Read generator parameters
@@ -314,15 +316,28 @@ if (~have_data || new_run)...
     system([rmcmd, output_RAS_name]);
     system([rmcmd, output_G_name]);
     system([rmcmd, output_gating_name]);
+    if b_verbose
+        fprintf('Parameter Preparing  : %.3f s\n', toc(t_start));
+        fprintf('Command execution\n');
+    end
+    t_start = tic();
     % generate data
     rt = system(cmdst);
     if mode_run_in_background
         ISI=rt;
         return
     end
+    if b_verbose
+        fprintf('  Total              : %.3f s\n', toc(t_start));
+    end
 else
+    if b_verbose
+        fprintf('Parameter Preparing  : %.3f s\n', toc(t_start));
+    end
     rt = 0;
 end
+
+t_start = tic;
 
 if mode_read_only
     % Test if the file is exist and filled (modified more than 1 sec ago)?
@@ -418,10 +433,13 @@ if mode_rm_only
     system([rmcmd, output_G_name]);
     system([rmcmd, output_gating_name]);
     if ~ischar(pm0.net)  % so pm0.net is adjacency matrix
-      % so we have saved a network file somewhere, now remove it.
+      % Remove the saved network file.
       system([rmcmd, pm.net_path]);
     end
-    return
+end
+
+if b_verbose
+    fprintf('Load data and clean  : %.3f s\n', toc(t_start));
 end
 
 end  % end of function

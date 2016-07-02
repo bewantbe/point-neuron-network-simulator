@@ -41,13 +41,42 @@ double g_rand()
   return udis(rand_eng);
 }
 
+// Define wall clock
+#ifdef _WINDOWS_
+#include <time.h>
+clock_t tic()
+{ return clock(); }
+double toc(const clock_t &t_begin)
+{ return (clock()-t_begin)/(1.0*CLOCKS_PER_SEC); }
+#else
+#include <sys/time.h>
+timeval tic()
+{
+  timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv;
+}
+double toc(const timeval &t0)
+{
+  timeval t1;
+  gettimeofday(&t1, NULL);
+  return (t1.tv_sec - t0.tv_sec)+1e-6*(t1.tv_usec - t0.tv_usec);
+}
+#endif
+
 int MainLoop(const po::variables_map &vm)
 {
+  auto t_begin = tic();
   if (!vm.count("neuron-model")) {
     cerr << "Error: Neuron model not specified. See --help.\n";
     return -1;
   }
   const std::string &str_nm = vm["neuron-model"].as<std::string>();
+
+  bool b_verbose = false;
+  if (vm.count("verbose")) {
+    b_verbose = true;
+  }
 
   // Set neuron model.
   enum EnumNeuronModel {LIF_G, LIF_GH, HH_G, HH_GH, HH_G_sine, HH_GH_sine, HH_FT_GH, HH_PT_GH, HH_FT_GH_sine, HH_PT_GH_sine, HH_G_extI, HH_GH_extI, HH_GH_cont_syn };
@@ -491,7 +520,17 @@ int MainLoop(const po::variables_map &vm)
   int count_n_dt_in_stv = n_dt_in_stv;
   size_t n_step = (size_t)(e_t / e_dt);
 
+  // Show progress
+  if (b_verbose) {
+    printf("  Initialization     : %3.3f s\n", toc(t_begin));
+    fflush(stdout);
+    printf("  Simulation complete: ");
+  }
+
   // Main loop
+  t_begin = tic();
+  int progress_percent = 0;
+  int str_len = 0;
   for (size_t i = 0; i < n_step; i++) {
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);
     //p_neu_simu->SaneTestState();
@@ -508,6 +547,20 @@ int MainLoop(const po::variables_map &vm)
     }
     count_n_dt_in_stv = n_dt_in_stv;
     func_save_dym_values(*p_neu_pop);
+    
+    // Show progress
+    if (b_verbose && (i+1.0)/n_step >= (progress_percent+1.0)/100) {
+      progress_percent = (int)((i+1.0)/n_step * 100);
+      // For matlab compatible (otherwise just printf('\r') will be fine)
+      for (int j=0; j<str_len; j++) printf("\b");
+      str_len = printf("%d%% time elapsed: %3.3f s     ",
+                       progress_percent, toc(t_begin));
+      fflush(stdout);
+    }
+  }
+  if (b_verbose) {
+    printf("\n");
+    fflush(stdout);
   }
 
   if (vm.count("isi-path")) {
@@ -517,7 +570,7 @@ int MainLoop(const po::variables_map &vm)
       fout_isi << e_t / vec_n_spike[j] << '\t';
     }
   }
-  
+
 //  delete p_neu_simu;
 
   return 0;

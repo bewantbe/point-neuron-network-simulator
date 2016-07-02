@@ -28,7 +28,15 @@ typedef std::vector<double> TyArrVals;
 extern std::mt19937 rand_eng;
 double g_rand();
 
+// For profiling
 //#define MACRO_NO_INLINE __attribute__((noinline))
 #define MACRO_NO_INLINE
+
+// Macro for detecting OS
+#if defined(_WIN32) || defined(__WIN32__)
+#  define _WINDOWS_
+#else  // Assume Linux, no Mac OS support
+#  undef _WINDOWS_
+#endif
 
 #endif
