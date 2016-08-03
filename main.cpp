@@ -130,7 +130,7 @@ int MainLoop(const po::variables_map &vm)
     const auto &v = vm["pr-mul"].as< std::vector<double> >();
     if (v.size() != (size_t)n_neu) {
       cerr << "parameter --pr-mul should have the same number of data as neuron number.\n";
-      exit(-1);
+      return -1;
     }
     for (int i = 0; i < n_neu; i++) {
       pm.arr_pr[i] *= v[i];
@@ -151,7 +151,7 @@ int MainLoop(const po::variables_map &vm)
     FillNetFromPath(pm, name_net);
   } else {
     cout << "You must specify the network. (--net)" << endl;
-    exit(-1);
+    return -1;
   }
 
   // Set neuron population type
@@ -184,7 +184,7 @@ int MainLoop(const po::variables_map &vm)
         break;
       default:
         cerr << "This delay net type is not supported yet.\n";
-        exit(-1);
+        return -1;
     };
     std::string path = vm["synaptic-net-delay"].as<std::string>();
     try {
@@ -249,7 +249,7 @@ int MainLoop(const po::variables_map &vm)
         break;
       case HH_GH_cont_syn:
         cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
-        exit(-1);
+        return -1;
     }
     p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
   } else {
@@ -372,6 +372,7 @@ int MainLoop(const po::variables_map &vm)
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
     } else {
       cerr << "No this simulation method:\"" << str_simu_method << "\"\n";
+      return -2;
     }
   } else {
     // Default simulator
@@ -394,12 +395,12 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("synaptic-delay") && 
       (str_simu_method != "big-delay" && str_simu_method != "big-net-delay")) {
     cerr << "You select a delayed synaptic network, but use a non-compatible simulator. Try --simulation-method big-delay\n";
-    exit(-1);
+    return -1;
   }
   if ((enum_neuron_model == HH_GH_cont_syn)
       ^ (str_simu_method == "cont-syn")) {
     cerr << "Error: Neuron Model \"HH_GH_cont_syn\" must pair with simulator \"cont-syn\".\n";
-    exit(-1);
+    return -1;
   }
   
   bool b_init_loaded = false;
@@ -484,21 +485,22 @@ int MainLoop(const po::variables_map &vm)
     p_neuron_model]
     (const NeuronPopulationBase &neu_pop) {
     if (b_output_volt) {
+      std::vector<double> v(neu_pop.n_neurons());
       int id_V = p_neuron_model->Get_id_V();
       for (int j = 0; j < neu_pop.n_neurons(); j++) {
-        double d = neu_pop.GetDymState().dym_vals(j, id_V);
-        fout_volt.write((char*)&d, sizeof(double));
+        v[j] = neu_pop.GetDymState().dym_vals(j, id_V);
       }
+      fout_volt.write((char*)v.data(), neu_pop.n_neurons()*sizeof(double));
     }
     if (b_output_G) {
       int id_gE = p_neuron_model->Get_id_gE();
       int id_gI = p_neuron_model->Get_id_gI();
+      std::vector<double> v(2*neu_pop.n_neurons());
       for (int j = 0; j < neu_pop.n_neurons(); j++) {
-        double d1 = neu_pop.GetDymState().dym_vals(j, id_gE);
-        double d2 = neu_pop.GetDymState().dym_vals(j, id_gI);
-        fout_G.write((char*)&d1, sizeof(double));
-        fout_G.write((char*)&d2, sizeof(double));
+        v[2*j  ] = neu_pop.GetDymState().dym_vals(j, id_gE);
+        v[2*j+1] = neu_pop.GetDymState().dym_vals(j, id_gI);
       }
+      fout_G.write((char*)v.data(), 2*neu_pop.n_neurons()*sizeof(double));
     }
     if (b_output_HH_gate) {
       int id_gating = p_neuron_model->Get_id_V() + 1;

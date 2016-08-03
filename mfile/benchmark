@@ -2,6 +2,8 @@ xde@2.6GHz
 GCC 4.9.2
 without fast exp().
 
+pm = [];
+
 pm.neuron_model = 'HH-PT-GH';
 
 pm.net  = ones(1000);
@@ -14,7 +16,11 @@ pm.dt   = 1.0/32;
 pm.stv  = pm.dt;
 pm.seed = 24;
 
-		seconds		Hz
+pm.prog_path='../bin/gen_neu';
+pm.extra_cmd='-v';
+[X ISI]=gen_neu(pm,'new,rm'); mean(ISI)
+
+pm.simu_method	seconds		Hz
 simple		14.899	37.3760
 delay-dt	31.569	37.3790
 SSC		46.898	37.3360
@@ -96,5 +102,43 @@ SSC		10.455	38.0960
 SSC-Sparse	5.329	38.0960
 SSC-Sparse2	5.284	38.0960
 
+
+==============================================
+
+pm = [];
+
+pm.neuron_model = 'LIF-G';
+
+randMT19937('state', [1 342 232]);
+pm.net  = 1*(randMT19937(1000)<0.1);
+pm.nI   = 0;
+pm.scee = 0.0008;
+pm.pr   = 1.0;
+pm.ps   = 0.00625;
+pm.t    = 1e3;
+pm.dt   = 1.0/32;
+pm.stv  = pm.dt;
+pm.seed = 24;
+
+pm.prog_path='../bin/gen_neu';
+pm.extra_cmd='-v';
+[X ISI]=gen_neu(pm,'new,rm'); mean(ISI)
+
+pm.simu_method	seconds		Hz
+simple		2.191	26.2797
+delay-dt	2.990	25.4969			big-delay  pm.synaptic_delay=1
+SSC		6.325	26.3766
+SSC-Sparse	2.929	26.3766
+SSC-Sparse2	3.036	26.3766
+
+pm.net  = 1*(randMT19937(10000)<0.1);
+pm.scee = 0.0001;
+
+pm.simu_method	seconds		Hz
+simple		
+delay-dt				big-delay  pm.synaptic_delay=1
+SSC		
+SSC-Sparse	
+SSC-Sparse2	
 
 

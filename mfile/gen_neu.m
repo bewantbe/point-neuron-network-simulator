@@ -66,6 +66,10 @@ if nargin()==0
     disp(' Type "help gen_neu" for more help');
     error('Lack of input parameters.');
 end
+if ~exist('fflush', 'builtin')
+    fflush = @(a) 0;
+    stdout = 0;
+end
 X=[];
 ISI=[];
 ras=[];
@@ -81,6 +85,10 @@ mode_extra_data = false;
 mode_run_in_background = false;
 b_verbose = isfield(pm, 'extra_cmd') && (~isempty([strfind(pm.extra_cmd,'-v') strfind(pm.extra_cmd,'--verbose')]));  % show time cost
 ext_T = 0;
+
+if ~isfield(pm, 'extra_cmd')
+    pm.extra_cmd = '';
+end
 
 % Read generator parameters
 if ~exist('gen_cmd','var') || isempty(gen_cmd)
@@ -105,6 +113,8 @@ while ~isempty(gen_cmd)
     case 'extra_data'
         mode_extra_data = true; % output extra data: G, h, m, n
         % data will be in struct extra_data
+    case 'h'
+        pm.extra_cmd = '-h';            % extra calculation time
     otherwise
         error('no this option: "%s"', tok);
     end
@@ -157,9 +167,6 @@ if ~isfield(pm, 'scei') || isempty(pm.scei)
 end
 if ~isfield(pm, 'scii') || isempty(pm.scii)
     pm.scii = 0;
-end
-if ~isfield(pm, 'extra_cmd')
-    pm.extra_cmd = '';
 end
 s_tmp = strtrim(pm.extra_cmd);
 if ~isempty(s_tmp) && strcmp(s_tmp(end), '&') == 1
@@ -320,6 +327,7 @@ if (~have_data || new_run)...
         fprintf('Parameter Preparing  : %.3f s\n', toc(t_start));
         fprintf('Command execution\n');
     end
+    fflush(stdout);
     t_start = tic();
     % generate data
     rt = system(cmdst);
