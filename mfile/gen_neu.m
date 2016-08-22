@@ -75,6 +75,16 @@ ISI=[];
 ras=[];
 pm0 = pm;  % do a backup
 
+if ~isfield(pm, 'prog_path')
+    pathdir = fileparts(mfilename('fullpath'));
+    exepath = sprintf('%s%s..%sbin%sgen_neu', pathdir, filesep, filesep, filesep);
+    if ~exist(exepath, 'file')
+        exepath = sprintf('%s%sgen_neu', pathdir, filesep);
+    end
+else
+    exepath = pm.prog_path;
+end
+
 % Default generator settings
 new_run        = false;
 return_X_name  = false;
@@ -114,7 +124,8 @@ while ~isempty(gen_cmd)
         mode_extra_data = true; % output extra data: G, h, m, n
         % data will be in struct extra_data
     case 'h'
-        pm.extra_cmd = '-h';            % extra calculation time
+        system([exepath ' -h']);
+        return
     otherwise
         error('no this option: "%s"', tok);
     end
@@ -174,24 +185,16 @@ if ~isempty(s_tmp) && strcmp(s_tmp(end), '&') == 1
     mode_run_in_background = true;  
 end
 if ~isfield(pm, 'neuron_model') || isempty(pm.neuron_model)
-    error('neuron_model not specified! Should be one of "LIF-G", "LIF-GH", or "HH-GH"');
+    error('neuron_model not specified!');
 end
 if ~isfield(pm, 'simu_method') || isempty(pm.simu_method)
     disp('Warning: .simu_method not set! Using auto mode.');
     pm.simu_method = 'auto';
 end
 neuron_model_name = pm.neuron_model;
-if ~isfield(pm, 'prog_path')
-    %   consider use 'which raster_tuning_HH3_gcc.' to find path?
-    pathdir = fileparts(mfilename('fullpath'));
-    program_name = sprintf(...
-        '%s%sgen_neu --neuron-model %s --simulation-method %s',...
-        pathdir, filesep, pm.neuron_model, pm.simu_method);
-else
-    program_name = sprintf(...
-        '%s --neuron-model %s --simulation-method %s',...
-        pm.prog_path, pm.neuron_model, pm.simu_method);
-end
+program_name = sprintf(...
+    '%s --neuron-model %s --simulation-method %s',...
+    exepath, pm.neuron_model, pm.simu_method);
 
 if ~isfield(pm, 'st_extra_inf_post')
     pm.st_extra_inf_post = '';

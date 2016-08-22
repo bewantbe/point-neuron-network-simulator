@@ -526,7 +526,7 @@ int MainLoop(const po::variables_map &vm)
   if (b_verbose) {
     printf("  Initialization     : %3.3f s\n", toc(t_begin));
     fflush(stdout);
-    printf("  Simulation complete: ");
+    printf("  Simulation         : ");
   }
 
   // Main loop
@@ -555,8 +555,8 @@ int MainLoop(const po::variables_map &vm)
       progress_percent = (int)((i+1.0)/n_step * 100);
       // For matlab compatible (otherwise just printf('\r') will be fine)
       for (int j=0; j<str_len; j++) printf("\b");
-      str_len = printf("%d%% time elapsed: %3.3f s     ",
-                       progress_percent, toc(t_begin));
+      str_len = printf("%3.3f s (%d%%)",
+                       toc(t_begin), progress_percent);
       fflush(stdout);
     }
   }
@@ -597,7 +597,7 @@ int main(int argc, char *argv[])
       ("dt",   po::value<double>()->default_value(1.0/32),
        "Simulation delta t (dt, time step), in ms.")
       ("stv",  po::value<double>(),
-       "Delta t for output (sampling). Must be multiples of dt.")
+       "Output sampling interval. Must be multiples of dt. Default set to dt.")
       ("nE",   po::value<unsigned int>()->default_value(1),
        "Number of excitatory neurons.")
       ("nI",   po::value<unsigned int>()->default_value(0),
@@ -672,7 +672,11 @@ int main(int argc, char *argv[])
       }
       return filename;
     };
-    cout << "Usage: " << basename(argv[0]) << " [OPTION]..." << "\n";
+    cout << "Usage: " << basename(argv[0]);
+    cout << " --neuron-model [arg]";
+    cout << " --net [arg]";
+    cout << " --ps [arg]";
+    cout << " [OPTION]..." << "\n";
     cout << "Neuron model simulator, with accurate firing timing and computation.\n";
     cout << desc << "\n";
     return 1;

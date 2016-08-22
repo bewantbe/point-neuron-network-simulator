@@ -124,12 +124,13 @@ pm.prog_path='../bin/gen_neu';
 pm.extra_cmd='-v';
 [X ISI]=gen_neu(pm,'new,rm'); mean(ISI)
 
-pm.simu_method	seconds		Hz
-simple		2.191	26.2797
-delay-dt	2.990	25.4969			big-delay  pm.synaptic_delay=1
-SSC		6.325	26.3766
-SSC-Sparse	2.929	26.3766
-SSC-Sparse2	3.036	26.3766
+					GCC 5.3 no out
+pm.simu_method	sec	Hz		sec
+simple		2.191	26.2797		1.880	1.766
+delay-dt	2.990	25.4969		2.646	2.458	big-delay  pm.synaptic_delay=1
+SSC		6.325	26.3766		6.028	5.572
+SSC-Sparse	2.929	26.3766		2.587	2.327
+SSC-Sparse2	3.036	26.3766		2.682	2.435
 
 pm.net  = 1*(randMT19937(10000)<0.1);
 pm.scee = 0.0001;

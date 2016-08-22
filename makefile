@@ -19,7 +19,6 @@ $(BIN): $(OBJS)
 	$(CXX) $(LDFLAGS) -o $(BIN) $(OBJS) $(LDLIBS)
 
 .PHONY : static-link
-static-link: CPPFLAGS += -DNDEBUG
 static-link: LDFLAGS = -static -pthread
 static-link: $(BIN)
 
