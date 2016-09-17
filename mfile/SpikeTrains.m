@@ -1,6 +1,6 @@
 % Output spike train from spike time data
 
-function X = SpikeTrainsFast(ras, p, len, stv, st_mode)
+function X = SpikeTrains(ras, p, len, stv, st_mode)
   if any(ras(:,1)>p)
     error('!! any(ras(:,1)>p)');
   end

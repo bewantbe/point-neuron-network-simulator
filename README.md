@@ -36,21 +36,23 @@ Refer to `bin/gen_neu --help` for the command line option help (after compilatio
 Comparison to other simulators
 ------------------------------
 
-* NEST
+* [NEST](http://www.nest-simulator.org/)
 
     NEST is a full featured point neuron simulator. While this one (APNNS) has much less neuron models and tunable settings. The function of APNNS is extended by directly modifying the source code.
 
     NEST is a big project. APNNS is rather small, roughly about 3 thousand lines of C++ code.
     
-    NEST use a high order ODE solver for each neurons (by default it is Runge–Kutta–Fehlberg method (aka rkf45 or ode45()) through GNU Scientific Library). But the interactions between neurons has only order one accuracy. Because the interactions is performed at the boundary of time step. While APNNS will deal with this case accurately.
+    NEST use a high order ODE solver for each neurons (by default it is Runge–Kutta–Fehlberg method (aka rkf45 or ode45()) through GNU Scientific Library). But the interactions between neurons has only order one accuracy, because the interactions is performed at the boundary of time step. APNNS, in contrast, will deal with these spike timings accurately.
 
-* NEURON
+* [NEURON](https://www.neuron.yale.edu/neuron/)
 
     NEURON is a more detailed/physiology simulator. APNNS only simulate "point" neurons.
 
-* Brian
+* [Brian](http://briansimulator.org/)
 
-    (Not yet compared)
+    A clock-driven simulator, includes several integrators both for ODE and SDE. The spikes can only occur on the time grid hence the overall accuracy is O(dt).
+
+    The dynamical equations are input as code string and then be translate to native code (e.g. by cpython) for computation. This makes the simulator very flexible and extensible while been fast.
 
 
 Build from source
