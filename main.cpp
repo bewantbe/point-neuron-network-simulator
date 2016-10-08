@@ -129,7 +129,7 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("pr-mul")) {
     const auto &v = vm["pr-mul"].as< std::vector<double> >();
     if (v.size() != (size_t)n_neu) {
-      cerr << "parameter --pr-mul should have the same number of data as neuron number.\n";
+      cerr << "parameter --pr-mul should have the same number of terms as neuron number.\n";
       return -1;
     }
     for (int i = 0; i < n_neu; i++) {
@@ -137,8 +137,19 @@ int MainLoop(const po::variables_map &vm)
     }
   }
 
+  if (vm.count("ps-mul")) {
+    const auto &v = vm["ps-mul"].as< std::vector<double> >();
+    if (v.size() != (size_t)n_neu) {
+      cerr << "parameter --ps-mul should have the same number of terms as neuron number.\n";
+      return -1;
+    }
+    for (int i = 0; i < n_neu; i++) {
+      pm.arr_ps[i] *= v[i];
+    }
+  }
+
   if (vm.count("psi") || vm.count("pri")) {
-    cerr << "option --psi and --pri not support yet!" << endl;
+    cerr << "option --psi and --pri are not supported yet!" << endl;
   }
 
   pm.scee = vm["scee"].as<double>();
@@ -622,6 +633,8 @@ int main(int argc, char *argv[])
        "Poisson input rate, inhibitory type.")
       ("pr-mul", po::value< std::vector<double> >()->multitoken(),
        "Poisson input rate multiper.")
+      ("ps-mul", po::value< std::vector<double> >()->multitoken(),
+       "Poisson input strength multiper.")
       ("seed",   po::value< VecUInt >()->multitoken()->default_value(VecUInt{1}, "1"),
        "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
       ("seed-auto",

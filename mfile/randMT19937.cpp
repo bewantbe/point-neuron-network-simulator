@@ -1,5 +1,5 @@
 // mex randMT19937, essentially the same function as rand().
-// But compatible for both Octave and Matlab
+// But generate the same result in both Octave and Matlab for the same input parameter.
 
 // Compile in Matlab using GCC
 // mex CXXFLAGS="\$CXXFLAGS -std=c++11" CXXOPTIMFLAGS="-O3 -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp" randMT19937.cpp
