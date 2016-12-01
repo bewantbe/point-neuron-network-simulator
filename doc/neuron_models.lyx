@@ -135,7 +135,7 @@ big-delay
 
 \begin_deeper
 \begin_layout Standard
-Network with constant delay.
+SSC for network with constant delay.
  The delay must larger than 1dt (hence the name 
 \begin_inset Quotes eld
 \end_inset
@@ -149,7 +149,11 @@ big
 \begin_inset Quotes eld
 \end_inset
 
+
+\family typewriter
 --synaptic-delay
+\family default
+
 \begin_inset Quotes erd
 \end_inset
 
@@ -163,7 +167,7 @@ big-net-delay
 
 \begin_deeper
 \begin_layout Standard
-Network with delay.
+SSC for network with delay.
  The delay is set by a 
 \begin_inset Quotes eld
 \end_inset
@@ -176,7 +180,11 @@ delay matrix
 \begin_inset Quotes eld
 \end_inset
 
+
+\family typewriter
 --synaptic-net-delay
+\family default
+
 \begin_inset Quotes erd
 \end_inset
 
@@ -1456,7 +1464,7 @@ reference "fig:HH-thres15mV"
 
 \end_inset
 
- we can see that there is some non-spike been counted as spike.
+ we can see that some non-spike trajectory been counted as spikes.
 \end_layout
 
 \begin_layout Standard

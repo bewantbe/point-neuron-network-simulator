@@ -1,11 +1,11 @@
-%
-
-%[X_ref, ISI_ref, ras_ref] = gen_neu(pm, 'new,rm');
-%t_range = 20;
-%id_from = 1;
-%id_to = 1;
-%[Y, T] = SpikeSlicing(X_ref, ras_ref, pm.stv, id_to, id_from, t_range);
-%plot(T', Y');
+% Extract sections of sample points (of id_to) around spikes (of id_from)
+% Usage example:
+%  [X_ref, ISI_ref, ras_ref] = gen_neu(pm, 'new,rm');
+%  t_range = 20;  % -10 ~ 10 ms
+%  id_from = 1;
+%  id_to = 1;
+%  [Y, T] = SpikeSlicing(X_ref, ras_ref, pm.stv, id_to, id_from, t_range);
+%  plot(T', Y');
 
 function [Y, T, id_s] = SpikeSlicing(X, ras, stv, id_to, id_from, t_range)
 
@@ -20,13 +20,13 @@ else  % numel(t_range)==2
   t_u = t_range(2);
 end
 
-% remove boundary
+% Remove boundary spikes
 t_c( t_c + t_l <= 0.5*stv | t_c + t_u >= t_end - 0.5*stv ) = [];
 
-n_s = floor((t_u - t_l)/stv);   % point length
-n_l = fix(t_l/stv);             % lower point (in dot)
+n_s = floor((t_u - t_l)/stv);   % point length of each slice
+n_l = fix(t_l/stv);             % lower relative position (in dot)
 
-i_c = round(t_c / stv);         % center point (in dot)
+i_c = round(t_c / stv);         % spike position (in dot)
 
 id_s = bsxfun(@plus, n_l + (0:n_s-1), i_c);  % indexes that should be extracted
 
