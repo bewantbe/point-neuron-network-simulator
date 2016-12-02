@@ -6,7 +6,7 @@
 %  PSP = get_neu_psp(pm)
 
 function PSP = get_neu_psp(pm)
-events_file_path = 'poisson_events.txt';
+events_file_path = '._get_neu_psp_poisson_events.txt';
 
 pm.simu_method  = 'auto';
 pm.extra_cmd = sprintf('--input-event-path %s', events_file_path);
