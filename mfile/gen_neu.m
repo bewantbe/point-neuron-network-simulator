@@ -140,13 +140,13 @@ if ~isfield(pm, 'net') || isempty(pm.net)
     pm.net = 'net_1_0';
 end
 if ischar(pm.net)
-    [network, mat_path] = getnetwork(pm.net, data_dir_prefix);
+    [network, mat_path] = get_network(pm.net, data_dir_prefix);
     [~, pm.net] = fileparts(pm.net);          % Use the name without extension
 else
     % so pm.net is connectivity matrix?
     % save this matrix, so that it can be read by `gen_neu'
     network = pm.net;
-    [mat_path, pm.net] = savenetwork(pm.net, data_dir_prefix);
+    [mat_path, pm.net] = save_network(pm.net, data_dir_prefix);
 end
 pm.net_path = mat_path;
 pm.net_adj  = network;
@@ -248,7 +248,7 @@ if isfield(pm, 'synaptic_delay') && ~isempty(pm.synaptic_delay)
     sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
 end
 if isfield(pm, 'synaptic_net_delay') && ~isempty(pm.synaptic_net_delay)
-  net_delay_path = savenetwork(pm.synaptic_net_delay, ...
+  net_delay_path = save_network(pm.synaptic_net_delay, ...
                      [data_dir_prefix 'net_delay_']);
   st_neu_param = [st_neu_param,...
     sprintf(' --synaptic-net-delay %s', net_delay_path)];

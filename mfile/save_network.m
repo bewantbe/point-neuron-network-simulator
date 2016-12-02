@@ -1,9 +1,9 @@
 % Save the adjacency matrix `A' in path `pathdir' with a hashed file name:
-%   matpath = savenetwork(A, pathdir);
+%   matpath = save_network(A, pathdir);
 % To read the matrix from the file:
 %   A = load('-ascii', matpath);
 
-function [matpath, matname] = savenetwork(A, pathdir)
+function [matpath, matname] = save_network(A, pathdir)
 
 % sane test of the matrix A
 if ~exist('A','var') || isempty(A) || (~isnumeric(A) && ~islogical(A))
@@ -42,7 +42,7 @@ while exist(matpath, 'file')
   k = k + 1;
   matname = sprintf('%s_%s', matname0, lower(dec2base(k,16)));
   matpath = [pathdir, matname, '.txt'];
-  warning('savenetwork:hash', 'hash collision occured! File is renamed.');
+  warning('save_network:hash', 'hash collision occured! File is renamed.');
 end
 
 % Save the matrix to the file

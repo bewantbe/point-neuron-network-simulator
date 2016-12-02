@@ -31,7 +31,7 @@ fd = fopen(events_file_path, 'w');
 fprintf(fd, '0 %.16e\n', t_e);
 fclose(fd);
 
-pm.net = 1;
+pm.net = 'net_1_0';
 pm.t  = 200 + t_e;   % assume the PSP will not last too long
 pm.dt = 1/128.0;
 pm.stv = pm.dt;
@@ -55,7 +55,7 @@ PSP.t_ps = t_psp;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the PSP for spike interaction
 
-pm.net = [0 1; 0 0];
+pm.net = 'net_2_2_T';
 pm.t  = 500;
 pm.dt = 1/128.0;
 pm.stv = pm.dt;

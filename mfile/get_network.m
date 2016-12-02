@@ -5,7 +5,7 @@
 %   dir of this function.
 % It also possible to specifies the full path in `netstr'.
 
-function [network, matname] = getnetwork(netstr, pathdir)
+function [network, matname] = get_network(netstr, pathdir)
 
 if ~ischar(netstr)
   error('Input should be the name of the matrix');
@@ -37,11 +37,10 @@ s_matname = {...
 for matname = s_matname
   matname = matname{1};
   %fprintf('f=%s\n', matname);
-  if ~exist(matname, 'file')
-    continue
+  if exist(matname, 'file')
+    network = load('-ascii', matname);
+    break
   end
-  network = load('-ascii', matname);
-  break
 end
 if ~exist('network','var')
   error('Network file not found!');

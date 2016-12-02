@@ -78,8 +78,13 @@ int MainLoop(const po::variables_map &vm)
     b_verbose = true;
   }
 
-  // Set neuron model.
-  enum EnumNeuronModel {LIF_G, LIF_GH, HH_G, HH_GH, HH_G_sine, HH_GH_sine, HH_FT_GH, HH_PT_GH, HH_FT_GH_sine, HH_PT_GH_sine, HH_G_extI, HH_GH_extI, HH_GH_cont_syn };
+  // Neuron models.
+  enum EnumNeuronModel {
+    LIF_G, LIF_GH, HH_G, HH_GH, HH_PT_GH, HH_FT_GH,
+    HH_G_sine, HH_GH_sine, HH_PT_GH_sine, HH_FT_GH_sine,
+    HH_G_extI, HH_GH_extI,
+    HH_GH_cont_syn
+  };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
     enum_neuron_model =     LIF_G;
@@ -89,22 +94,22 @@ int MainLoop(const po::variables_map &vm)
     enum_neuron_model =     HH_G;
   } else if (str_nm ==     "HH-GH") {
     enum_neuron_model =     HH_GH;
+  } else if (str_nm ==     "HH-PT-GH") {
+    enum_neuron_model =     HH_PT_GH;
+  } else if (str_nm ==     "HH-FT-GH") {
+    enum_neuron_model =     HH_FT_GH;
   } else if (str_nm ==     "HH-G-sine") {
     enum_neuron_model =     HH_G_sine;
   } else if (str_nm ==     "HH-GH-sine") {
     enum_neuron_model =     HH_GH_sine;
+  } else if (str_nm ==     "HH-PT-GH-sine") {
+    enum_neuron_model =     HH_PT_GH_sine;
+  } else if (str_nm ==     "HH-FT-GH-sine") {
+    enum_neuron_model =     HH_FT_GH_sine;
   } else if (str_nm ==     "HH-G-extI") {
     enum_neuron_model =     HH_G_extI;
   } else if (str_nm ==     "HH-GH-extI") {
     enum_neuron_model =     HH_GH_extI;
-  } else if (str_nm ==     "HH-FT-GH") {
-    enum_neuron_model =     HH_FT_GH;
-  } else if (str_nm ==     "HH-FT-GH-sine") {
-    enum_neuron_model =     HH_FT_GH_sine;
-  } else if (str_nm ==     "HH-PT-GH") {
-    enum_neuron_model =     HH_PT_GH;
-  } else if (str_nm ==     "HH-PT-GH-sine") {
-    enum_neuron_model =     HH_PT_GH_sine;
   }  else if (str_nm ==    "HH-GH-cont-syn") {
     enum_neuron_model =     HH_GH_cont_syn;
   } else {
@@ -185,13 +190,13 @@ int MainLoop(const po::variables_map &vm)
         p_neu_pop = new
           NeuronPopulationDeltaInteractNetDelay<Ty_HH_GH>(pm);
         break;
-      case HH_FT_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractNetDelay<Ty_HH_FT_GH>(pm);
-        break;
       case HH_PT_GH:
         p_neu_pop = new
           NeuronPopulationDeltaInteractNetDelay<Ty_HH_PT_GH>(pm);
+        break;
+      case HH_FT_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractNetDelay<Ty_HH_FT_GH>(pm);
         break;
       default:
         cerr << "This delay net type is not supported yet.\n";
@@ -226,6 +231,14 @@ int MainLoop(const po::variables_map &vm)
         p_neu_pop = new
           NeuronPopulationDeltaInteractConstantDelay<Ty_HH_GH>(pm);
         break;
+      case HH_PT_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_PT_GH>(pm);
+        break;
+      case HH_FT_GH:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH>(pm);
+        break;
       case HH_G_sine:
         p_neu_pop = new
           NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_G_sine>(pm);
@@ -234,6 +247,14 @@ int MainLoop(const po::variables_map &vm)
         p_neu_pop = new
           NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_GH_sine>(pm);
         break;
+      case HH_PT_GH_sine:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_PT_GH_sine>(pm);
+        break;
+      case HH_FT_GH_sine:
+        p_neu_pop = new
+          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_FT_GH_sine>(pm);
+        break;
       case HH_G_extI:
         p_neu_pop = new
           NeuronPopulationDeltaInteractConstantDelayExtI<Ty_HH_G_extI>(pm);
@@ -241,22 +262,6 @@ int MainLoop(const po::variables_map &vm)
       case HH_GH_extI:
         p_neu_pop = new
           NeuronPopulationDeltaInteractConstantDelayExtI<Ty_HH_GH_extI>(pm);
-        break;
-      case HH_FT_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH>(pm);
-        break;
-      case HH_FT_GH_sine:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_FT_GH_sine>(pm);
-        break;
-      case HH_PT_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_PT_GH>(pm);
-        break;
-      case HH_PT_GH_sine:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_PT_GH_sine>(pm);
         break;
       case HH_GH_cont_syn:
         cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
@@ -277,29 +282,29 @@ int MainLoop(const po::variables_map &vm)
       case HH_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_GH>(pm);
         break;
+      case HH_PT_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_PT_GH>(pm);
+        break;
+      case HH_FT_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_FT_GH>(pm);
+        break;
       case HH_G_sine:
         p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_G_sine>(pm);
         break;
       case HH_GH_sine:
         p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_GH_sine>(pm);
         break;
+      case HH_PT_GH_sine:
+        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_PT_GH_sine>(pm);
+        break;
+      case HH_FT_GH_sine:
+        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_FT_GH_sine>(pm);
+        break;
       case HH_G_extI:
         p_neu_pop = new NeuronPopulationDeltaInteractExtI<Ty_HH_G_extI>(pm);
         break;
       case HH_GH_extI:
         p_neu_pop = new NeuronPopulationDeltaInteractExtI<Ty_HH_GH_extI>(pm);
-        break;
-      case HH_FT_GH:
-        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_FT_GH>(pm);
-        break;
-      case HH_FT_GH_sine:
-        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_FT_GH_sine>(pm);
-        break;
-      case HH_PT_GH:
-        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_HH_PT_GH>(pm);
-        break;
-      case HH_PT_GH_sine:
-        p_neu_pop = new NeuronPopulationDeltaInteractSine<Ty_HH_PT_GH_sine>(pm);
         break;
       case HH_GH_cont_syn:
         p_neu_pop = new NeuronPopulationContSyn(pm);
@@ -596,7 +601,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-G-sine, HH-GH-sine, HH-G-extI, HH-GH-extI, HH-FT-GH, HH_FT-GH-sine, HH-GH-cont-syn.")
+       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn.")
       ("simulation-method",  po::value<std::string>(),
        "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
