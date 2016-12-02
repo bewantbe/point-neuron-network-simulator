@@ -3,9 +3,9 @@
 %  pm = [];
 %  pm.prog_path = '../bin/gen_neu';
 %  pm.neuron_model = 'HH-GH-cont-syn';
-%  PSP = neu_psp_test(pm)
+%  PSP = get_neu_psp(pm)
 
-function PSP = neu_psp_test(pm)
+function PSP = get_neu_psp(pm)
 events_file_path = 'poisson_events.txt';
 
 pm.simu_method  = 'auto';

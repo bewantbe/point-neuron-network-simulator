@@ -1,4 +1,4 @@
-% Using neu_psp_test
+% Using get_neu_psp
 
 pm = [];
 pm.prog_path = '../bin/gen_neu';
@@ -11,7 +11,7 @@ s_neuron_model = {'HH-G', 'HH-GH', 'HH-GH-cont-syn'};
 for id_nm = 1:length(s_neuron_model)
     pm.neuron_model = s_neuron_model{id_nm};
 
-    PSP = neu_psp_test(pm);
+    PSP = get_neu_psp(pm);
 
     pm.simu_method  = 'auto';
     pm.net  = ones(15);
