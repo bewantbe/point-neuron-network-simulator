@@ -43,6 +43,7 @@
 %  'nameX'  return path to the voltage data file, instead of read it;
 %  'cmd'    Show command call to raster_tuning_HH, then exit. Useful for debug
 %  'ext_T'  Generate a bit more data, so reduce "head effect".
+%  'v'      Be verbose, with 'cmd' will also run and show cmd.
 %
 % return value pm is a "normalized" input parameter set
 
@@ -123,8 +124,10 @@ while ~isempty(gen_cmd)
     case 'extra_data'
         mode_extra_data = true; % output extra data: G, h, m, n
         % data will be in struct extra_data
+    case {'verbose', 'v'}
+        b_verbose = true;
     case 'h'
-        system([exepath ' -h']);
+        system(['"' exepath '" -h']);
         return
     otherwise
         error('no this option: "%s"', tok);
@@ -193,7 +196,7 @@ if ~isfield(pm, 'simu_method') || isempty(pm.simu_method)
 end
 neuron_model_name = pm.neuron_model;
 program_name = sprintf(...
-    '%s --neuron-model %s --simulation-method %s',...
+    '"%s" --neuron-model %s --simulation-method %s',...
     exepath, pm.neuron_model, pm.simu_method);
 
 if ~isfield(pm, 'st_extra_inf_post')
@@ -230,7 +233,7 @@ st_neu_s =...
     sprintf('--scee %.16e --scie %.16e --scei %.16e --scii %.16e',...
             pm.scee, pm.scie, pm.scei, pm.scii);
 st_neu_param =...
-    sprintf('--nE %d --nI %d --net %s --pr %.16e --ps %.16e %s',...
+    sprintf('--nE %d --nI %d --net "%s" --pr %.16e --ps %.16e %s',...
             pm.nE, pm.nI, mat_path, pm.pr, pm.ps, st_neu_s);
 st_neu_param = [st_neu_param, get_mul_st(pm, 'pr_mul')];
 st_neu_param = [st_neu_param, get_mul_st(pm, 'ps_mul')];
@@ -292,11 +295,11 @@ else
     st_sim_param = [st_sim_param, ' --seed-auto'];
 end
 st_paths =...
-    sprintf(' --volt-path %s --isi-path %s --ras-path %s',...
+    sprintf(' --volt-path "%s" --isi-path "%s" --ras-path "%s"',...
             output_name, output_ISI_name, output_RAS_name);
 if mode_extra_data
     st_paths = [st_paths ...
-        sprintf(' --conductance-path %s --ion-gate-path %s',...
+        sprintf(' --conductance-path "%s" --ion-gate-path "%s"',...
                 output_G_name, output_gating_name)];
 end
 cmdst = sprintf('%s %s %s %s %s',...
@@ -305,7 +308,9 @@ extra_data.cmdst = cmdst;
 pm.cmd_str = cmdst;
 if mode_show_cmd
     disp(cmdst);
-    return
+    if ~b_verbose
+        return
+    end
 end
 
 if ispc()
