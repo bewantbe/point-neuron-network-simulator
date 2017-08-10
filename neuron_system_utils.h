@@ -145,5 +145,6 @@ int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net);
 SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net);
+int ReadSpikeList(TySpikeEventVec &spike_list, const char *path);
 
 #endif

@@ -9,6 +9,7 @@
 class NeuronSimulatorBase
 {
 public:
+  virtual double GetT() const = 0;
   virtual void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) = 0;
   virtual const TyPoissonTimeVec & Get_poisson_time_vec() const = 0;

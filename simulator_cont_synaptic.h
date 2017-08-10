@@ -20,6 +20,11 @@ public:
     poisson_time_vec.Init(pm.arr_pr, t);
   }
 
+  double GetT() const
+  {
+    return t;
+  }
+
   TySpikeEventVec tmp_poisson_events;
 
 public:

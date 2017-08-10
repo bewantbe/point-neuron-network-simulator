@@ -120,3 +120,19 @@ SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net)
 
   return dn;
 }
+
+int ReadSpikeList(TySpikeEventVec &spike_list, const char *path)
+{
+  std::ifstream fin(path);
+  if (fin.fail()) {
+    cerr << "Fail to read file! \"" << path << "\"" << endl;
+    return -1;
+  }
+  spike_list.resize(0);
+  size_t id;
+  double time;
+  while (fin >> id >> time) {
+    spike_list.emplace_back(time, id);
+  }
+  return 0;
+}

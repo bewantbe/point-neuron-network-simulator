@@ -64,6 +64,24 @@ double toc(const timeval &t0)
 }
 #endif
 
+void ForceSpikeOnList(NeuronPopulationBase *p_neu_pop,
+                      const TySpikeEventVec &force_spike_list, double t, double dt)
+{
+  static size_t id_next_spike = 0;
+  if (p_neu_pop == nullptr) {
+    id_next_spike = 0;
+    return;
+  }
+  if (id_next_spike >=force_spike_list.size())
+    return;
+
+  const double t_fire = force_spike_list[id_next_spike].time;
+  if (t <= t_fire && t_fire < t+dt) {
+    p_neu_pop->ForceReset(force_spike_list[id_next_spike].id);
+    id_next_spike++;
+  }
+}
+
 int MainLoop(const po::variables_map &vm)
 {
   auto t_begin = tic();
@@ -496,6 +514,14 @@ int MainLoop(const po::variables_map &vm)
   if (output_ras) {
     fout_ras.precision(17);
   }
+  
+  // 
+  TySpikeEventVec force_spike_list;
+  if (vm.count("force-spike-list")) {
+    ReadSpikeList(force_spike_list, 
+      vm["force-spike-list"].as<std::string>().c_str());
+    printf("ReadSpikeList l=%lu\n", force_spike_list.size());
+  }
 
   // Function for save data to file
   auto func_save_dym_values = [
@@ -554,7 +580,9 @@ int MainLoop(const po::variables_map &vm)
   int progress_percent = 0;
   int str_len = 0;
   for (size_t i = 0; i < n_step; i++) {
+    ForceSpikeOnList(p_neu_pop, force_spike_list, p_neu_simu->GetT(), e_dt);
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);
+    
     //p_neu_simu->SaneTestState();
     if (output_ras) {
       for (size_t j = 0; j < ras.size(); j++) {
@@ -678,6 +706,8 @@ int main(int argc, char *argv[])
        "Read input event from path.")
       ("parameter-path", po::value<std::string>(),
        "Read parameters from path, in INI style.")
+      ("force-spike-list", po::value<std::string>(),
+       "Read force spike list.")
   ;
   // ps-mul
   // verbose : for progress percentage

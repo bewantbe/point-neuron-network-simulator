@@ -21,6 +21,11 @@ public:
     poisson_time_vec.Init(pm.arr_pr, t);
   }
 
+  double GetT() const
+  {
+    return t;
+  }
+
 protected:
   // Evolve all neurons without synaptic interaction
   MACRO_NO_INLINE void NextStepNoInteract(NeuronPopulationBase * p_neu_pop,
