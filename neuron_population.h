@@ -26,6 +26,7 @@ public:
   virtual void SynapticInteraction(int neuron_id, const TySpikeEvent &se) = 0;
   virtual void InjectPoissonE(int neuron_id) = 0;
   virtual void ForceReset(int neuron_id) = 0;
+  virtual void DisableThreshold() = 0;
 
   virtual int n_neurons() const = 0;
   virtual void operator=(const TyNeuronalDymState &neu_dym) = 0;
@@ -180,6 +181,11 @@ public:
   {
     neuron_model.VoltHandReset(StatePtr(neuron_id));
     time_in_refractory[neuron_id] = std::numeric_limits<double>::min();
+  }
+  
+  void DisableThreshold()
+  {
+    neuron_model.V_threshold = std::numeric_limits<double>::infinity();
   }
 
   void InjectPoissonE(int neuron_id)

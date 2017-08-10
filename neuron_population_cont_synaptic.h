@@ -268,6 +268,11 @@ public:
   void ForceReset(int neuron_id)
   {
   }
+  
+  void DisableThreshold()
+  {
+    V_threshold = std::numeric_limits<double>::infinity();
+  }
 
   void InjectPoissonE(int neuron_id)
   {

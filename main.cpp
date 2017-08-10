@@ -419,6 +419,10 @@ int MainLoop(const po::variables_map &vm)
     return -1;
   }
   
+  if (vm.count("no-threshold")) {
+    p_neu_pop->DisableThreshold();
+  }
+  
   bool b_init_loaded = false;
   if (vm.count("initial-state-path")) {
     int rt = FillNeuStateFromFile(p_neu_pop->GetDymState(),
@@ -644,6 +648,8 @@ int main(int argc, char *argv[])
        "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
       ("seed-auto",
        "Auto set random seed. This option overrides --seed.")
+      ("no-threshold",
+       "Disable the threshold detection and voltage reset. Note that HH based neurons will still fire.")
       ("current-sine-amp",         po::value<double>(),
        "Set the current input sine amplitude.")
       ("current-sine-freq", po::value<double>(),
