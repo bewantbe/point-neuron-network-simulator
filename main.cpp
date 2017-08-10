@@ -520,7 +520,11 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("force-spike-list")) {
     ReadSpikeList(force_spike_list, 
       vm["force-spike-list"].as<std::string>().c_str());
-    printf("ReadSpikeList l=%lu\n", force_spike_list.size());
+  }
+
+  // Set Time_refractory
+  if (vm.count("refractory-time")) {
+    p_neu_pop->SetRefractoryTime(vm["refractory-time"].as<double>());
   }
 
   // Function for save data to file
@@ -688,6 +692,8 @@ int main(int argc, char *argv[])
        "Set a synaptic delay for the network.")
       ("synaptic-net-delay", po::value<std::string>(),
        "Set the synaptic delays for the network. Path to the matrix text file.")
+      ("refractory-time", po::value<double>(),
+       "Set refractory time.")
       ("volt-path,o",      po::value<std::string>(),
        "Output volt to path. In raw binary format.")
       ("ras-path",         po::value<std::string>(),

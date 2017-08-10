@@ -247,28 +247,32 @@ public:
     k4.resize(n, m);
   }
 
-  int n_neurons() const
+  int n_neurons() const override
   {
     return Get_n_neurons();
   }
 
   void NoInteractDt(int neuron_id, double dt, double t_local,
-                    TySpikeEventVec &spike_events)
+                    TySpikeEventVec &spike_events) override
   {
     fprintf(stderr, "Evoluate each neuron separately is not supported.\n");
     throw "Evoluate each neuron separately is not supported.";
   }
 
   void NoInteractDt(double dt, double t_local,
-                    TySpikeEventVec &spike_events)
+                    TySpikeEventVec &spike_events) override
   {
     runge_kutta4_vec(dym_vals, dt, t_local, spike_events);
   }
 
-  void ForceReset(int neuron_id)
+  void ForceReset(int neuron_id) override
   {
   }
-  
+
+  void SetRefractoryTime(double t_ref) override
+  {
+  }
+
   void DisableThreshold()
   {
     V_threshold = std::numeric_limits<double>::infinity();

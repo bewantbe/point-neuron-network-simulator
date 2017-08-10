@@ -27,6 +27,7 @@ public:
   virtual void InjectPoissonE(int neuron_id) = 0;
   virtual void ForceReset(int neuron_id) = 0;
   virtual void DisableThreshold() = 0;
+  virtual void SetRefractoryTime(double t_ref) = 0;
 
   virtual int n_neurons() const = 0;
   virtual void operator=(const TyNeuronalDymState &neu_dym) = 0;
@@ -177,10 +178,15 @@ public:
     }
   }
 
-  void ForceReset(int neuron_id)
+  void ForceReset(int neuron_id) override
   {
     neuron_model.VoltHandReset(StatePtr(neuron_id));
     time_in_refractory[neuron_id] = std::numeric_limits<double>::min();
+  }
+
+  void SetRefractoryTime(double t_ref) override
+  {
+    neuron_model.Set_Time_Refractory(t_ref);
   }
   
   void DisableThreshold()

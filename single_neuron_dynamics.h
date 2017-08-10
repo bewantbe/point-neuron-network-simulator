@@ -27,6 +27,7 @@ struct Ty_Neuron_Dym_Base
   virtual int Get_id_gEInject() const = 0;  // index of gE injection variable
   virtual int Get_id_gIInject() const = 0;  // index of gI injection variable
   virtual int Get_n_dym_vars() const = 0;   // number of state variables
+  virtual void Set_Time_Refractory(double t_ref) = 0;
   virtual void NextStepSingleNeuronQuiet(
     double *dym_val,
     double &t_in_refractory,
@@ -242,6 +243,14 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
   int Get_id_V() const override {return id_V;}
   int Get_id_gE() const override {return id_gE;}
   int Get_id_gI() const override {return id_gI;}
+
+  void Set_Time_Refractory(double t_ref) override {
+    if (t_ref>=0) {
+      Time_Refractory = t_ref;  // No error checking
+    } else {
+      cerr << "Setting Time_Refractory < 0 : t_ref = " << t_ref << "\n";
+    }
+  }
 
   // Used when reset the voltage by hand. (e.g. outside this class)
   inline void VoltHandReset(double *dym_val) const override
@@ -813,6 +822,8 @@ struct Ty_HH_shell: public TyNeuronModel
   {
     // no force reset required for HH
   }
+  void Set_Time_Refractory(double t_ref) override
+  {}
 };
 
 template<typename ExtraCurrent>
@@ -975,6 +986,8 @@ struct Ty_HH_GH_cont_syn
     double dt_local) const override
   {  }
   void VoltHandReset(double *dym_val) const override
+  {}
+  void Set_Time_Refractory(double t_ref) override
   {}
 };
 
