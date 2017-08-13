@@ -5,9 +5,11 @@
 %  pm.neuron_model = 'HH-GH-cont-syn';
 %  PSP = get_neu_psp(pm)
 
-function PSP = get_neu_psp(pm)
+function PSP = get_neu_psp(pm0)
 events_file_path = '._get_neu_psp_poisson_events.txt';
 
+pm = [];
+pm.neuron_model = pm0.neuron_model;
 pm.simu_method  = 'auto';
 pm.extra_cmd = sprintf('--input-event-path "%s"', events_file_path);
 

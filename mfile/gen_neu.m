@@ -74,6 +74,25 @@ end
 X=[];
 ISI=[];
 ras=[];
+
+% mV Conversion
+field_v = {'scee', 'scie', 'scei', 'scii', 'ps'};
+% if contains field that needs conversion
+if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
+  PSP = get_neu_psp(pm);
+  PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps];
+  for id_fv = 1:length(field_v)
+    fv = field_v{id_fv};
+    if isfield(pm, [fv '_mV'])
+      s = pm.([fv '_mV']) * PSP_v(id_fv);
+      if isfield(pm, fv) && s ~= pm.(fv)
+        error(['imcompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
+      end
+      pm.(fv) = s;
+    end
+  end
+end
+
 pm0 = pm;  % do a backup
 
 if ~isfield(pm, 'prog_path')
