@@ -11,12 +11,12 @@
 %  pm.net  = [0 1; 0 0]; % Connectivity matrix or file to the matrix.
 %  pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
 %                        %             Indexes are later half.
-%  pm.scee = 0.05;
-%  pm.scie = 0.00;       % default: 0. Strength from Ex. to In.
-%  pm.scei = 0.00;       % default: 0. Strength from In. to Ex.
-%  pm.scii = 0.00;       % default: 0.
-%  pm.pr   = 1.6;        % can be a vector (not yet)
-%  pm.ps   = 0.04;       % can be a vector (not yet)
+%  pm.scee_mV = 0.05;
+%  pm.scie_mV = 0.00;       % default: 0. Strength from Ex. to In.
+%  pm.scei_mV = 0.00;       % default: 0. Strength from In. to Ex.
+%  pm.scii_mV = 0.00;       % default: 0.
+%  pm.pr      = 1.6;        % can be a vector (not yet)
+%  pm.ps_mV   = 0.04;       % can be a vector (not yet)
 %  pm.t    = 1e4;
 %  pm.dt   = 2^-5;       % default: 1/32
 %  pm.stv  = 0.5;        % default: 0.5
@@ -79,18 +79,18 @@ ras=[];
 field_v = {'scee', 'scie', 'scei', 'scii', 'ps'};
 % if contains field that needs conversion
 if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
-  PSP = get_neu_psp(pm);
-  PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps];
-  for id_fv = 1:length(field_v)
-    fv = field_v{id_fv};
-    if isfield(pm, [fv '_mV'])
-      s = pm.([fv '_mV']) * PSP_v(id_fv);
-      if isfield(pm, fv) && s ~= pm.(fv)
-        error(['imcompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
-      end
-      pm.(fv) = s;
+    PSP = get_neu_psp(pm);
+    PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps];
+    for id_fv = 1:length(field_v)
+        fv = field_v{id_fv};
+        if isfield(pm, [fv '_mV'])
+            s = pm.([fv '_mV']) * PSP_v(id_fv);
+            if isfield(pm, fv) && s ~= pm.(fv)
+                error(['imcompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
+            end
+            pm.(fv) = s;
+        end
     end
-  end
 end
 
 pm0 = pm;  % do a backup
@@ -258,26 +258,26 @@ st_neu_param = [st_neu_param, get_mul_st(pm, 'pr_mul')];
 st_neu_param = [st_neu_param, get_mul_st(pm, 'ps_mul')];
 st_neu_param = [st_neu_param, get_mul_st(pm, 'psi_mul')];
 if isfield(pm, 'sine_amp')
-  st_neu_param = [st_neu_param,...
-    sprintf(' --current-sine-amp %.16e', pm.sine_amp)];
+    st_neu_param = [st_neu_param,...
+      sprintf(' --current-sine-amp %.16e', pm.sine_amp)];
 end
 if isfield(pm, 'sine_freq')
-  st_neu_param = [st_neu_param,...
-    sprintf(' --current-sine-freq %.16e', pm.sine_freq)];
+    st_neu_param = [st_neu_param,...
+      sprintf(' --current-sine-freq %.16e', pm.sine_freq)];
 end
 if isfield(pm, 'synaptic_delay') && ~isempty(pm.synaptic_delay)
-  st_neu_param = [st_neu_param,...
-    sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
+    st_neu_param = [st_neu_param,...
+      sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
 end
 if isfield(pm, 'synaptic_net_delay') && ~isempty(pm.synaptic_net_delay)
-  net_delay_path = save_network(pm.synaptic_net_delay, ...
+    net_delay_path = save_network(pm.synaptic_net_delay, ...
                      [data_dir_prefix 'net_delay_']);
-  st_neu_param = [st_neu_param,...
-    sprintf(' --synaptic-net-delay %s', net_delay_path)];
+    st_neu_param = [st_neu_param,...
+      sprintf(' --synaptic-net-delay %s', net_delay_path)];
 end
 if isfield(pm, 'extI')
-  st_neu_param = [st_neu_param,...
-    sprintf(' --extI %.16e', pm.extI)];
+    st_neu_param = [st_neu_param,...
+      sprintf(' --extI %.16e', pm.extI)];
 end
 pm.pr = pm0.pr;
 if isfield(pm, 'pr_mul')
@@ -305,6 +305,27 @@ if isfield(pm, 'psi')
         end
     end
 end
+
+if isfield(pm, 'input_event')
+    poisson_path = [tempname('./') 'external_event.txt'];
+    pm.extra_cmd = [pm.extra_cmd ' --input-event-path ' poisson_path];
+    fd = fopen(poisson_path, 'w');
+    fprintf(fd, '%d %.6f\n', pm.input_event');
+    fclose(fd);
+else
+    poisson_path = [];
+end
+
+if isfield(pm, 'force_spikes')
+    force_spike_path = [tempname('./') 'force_spike.txt'];
+    pm.extra_cmd = [pm.extra_cmd ' --force-spike-list ' force_spike_path];
+    fd = fopen(force_spike_path, 'w');
+    fprintf(fd, '%d %.6f\n', pm.force_spikes');
+    fclose(fd);
+else
+    force_spike_path = [];
+end
+
 st_sim_param =...
     sprintf('--t %.16e --dt %.17e --stv %.17e',...
             pm.t + ext_T, pm.dt, pm.stv);
@@ -471,6 +492,12 @@ if mode_rm_only
       % Remove the saved network file.
       system([rmcmd, pm.net_path]);
     end
+end
+if ~isempty(poisson_path)
+    system([rmcmd, poisson_path]);
+end
+if ~isempty(force_spike_path)
+    system([rmcmd, force_spike_path]);
 end
 
 if b_verbose
