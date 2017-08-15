@@ -567,6 +567,9 @@ int MainLoop(const po::variables_map &vm)
     func_save_dym_values(*p_neu_pop);
   }
 
+  std::ofstream f_poisson_save;
+  bool b_output_poisson_input = fout_try_open("output-poisson-events-path", f_poisson_save);
+
   std::vector<size_t> vec_n_spike(p_neu_pop->n_neurons());  // count the number of spikes
   TySpikeEventVec ras;                            // record spike raster
   int n_dt_in_stv = int(e_stv / e_dt + 0.1);
@@ -586,6 +589,12 @@ int MainLoop(const po::variables_map &vm)
   int str_len = 0;
   for (size_t i = 0; i < n_step; i++) {
     ForceSpikeOnList(p_neu_pop, force_spike_list, p_neu_simu->GetT(), e_dt);
+    if (b_output_poisson_input) {
+      SavePoissonInput(f_poisson_save, p_neu_simu->Get_poisson_time_vec(),
+          p_neu_simu->GetT()+e_dt,
+          p_neu_pop->GetNeuronalParamsPtr()->arr_pr,
+          p_neu_pop->GetNeuronalParamsPtr()->arr_ps);
+    }
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);
     
     //p_neu_simu->SaneTestState();
@@ -707,6 +716,8 @@ int main(int argc, char *argv[])
        "Output gating variables to path. In raw binary format.")
       ("output-first-data-point",
        "Also output initial condition in volt-path and conductance-path.")
+      ("output-poisson-events-path", po::value<std::string>(),
+       "Output generated poisson events to the path")
       ("initial-state-path", po::value<std::string>(),
        "Read initial state from path.")
       ("input-event-path", po::value<std::string>(),
