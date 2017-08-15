@@ -43,7 +43,9 @@ for matname = s_matname
   end
 end
 if ~exist('network','var')
-  error('Network file not found!');
+  warning('Network file not found!');
+  network = [];
+  matname = [];
 end
 
 end

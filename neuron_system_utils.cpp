@@ -132,7 +132,7 @@ int ReadSpikeList(TySpikeEventVec &spike_list, const char *path)
   size_t id;
   double time;
   while (fin >> id >> time) {
-    spike_list.emplace_back(time, id);
+    spike_list.emplace_back(time, id - 1);
   }
   return 0;
 }

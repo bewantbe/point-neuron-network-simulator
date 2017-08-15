@@ -163,6 +163,16 @@ if ~isfield(pm, 'net') || isempty(pm.net)
 end
 if ischar(pm.net)
     [network, mat_path] = get_network(pm.net, data_dir_prefix);
+    if isempty(network)
+        if isfield(pm, 'net_adj') && isnumeric(pm.net_adj) ...
+           && diff(size(pm.net_adj)) == 0
+            network = pm.net_adj;
+            [mat_path, pm.net] = save_network(pm.net_adj, data_dir_prefix);
+            fprintf('Using pm.net_adj as the network\n');
+        else
+            error('Set pm.net the file name of net or adjacency matrix');
+        end
+    end
     [~, pm.net] = fileparts(pm.net);          % Use the name without extension
 else
     % so pm.net is connectivity matrix?
@@ -178,6 +188,7 @@ if ~isfield(pm, 'nI') || isempty(pm.nI)
 end
 if isfield(pm, 'nE') && ~isempty(pm.nE)
     if pm.nI + pm.nE ~= p
+        fprintf('  pm.nI + pm.nE = %d, p_net = %d\n', pm.nI + pm.nE, p);
         error('gen_neu: Number of neurons inconsist with the network!');
     end
 else
@@ -309,8 +320,24 @@ end
 if isfield(pm, 'input_event')
     poisson_path = [tempname('./') 'external_event.txt'];
     pm.extra_cmd = [pm.extra_cmd ' --input-event-path ' poisson_path];
+    if (size(pm.input_event,2) != 2 && size(pm.input_event,2) != 3)
+        error('pm.input_event must be 2 or 3 column, the order is "id time [strength]"');
+    end
+    func_fraction = @(x) x - floor(x);
+    if any(func_fraction(pm.input_event(:,1)))
+        error('pm.input_event first column must be neuron index(0 based).');
+    end
+    if ~issorted(pm.input_event(:,2))
+        warning('pm.input_event is not time sorted, sorting for you.');
+        [~, id_sort] = sort(pm.input_event(:,2));
+        pm.input_event = pm.input_event(id_sort, :);
+    end
     fd = fopen(poisson_path, 'w');
-    fprintf(fd, '%d %.6f\n', pm.input_event');
+    if size(pm.input_event, 2) == 2
+        fprintf(fd, '%d %.16e\n', pm.input_event');
+    else
+        fprintf(fd, '%d %.16e %.16e\n', pm.input_event');
+    end
     fclose(fd);
 else
     poisson_path = [];

@@ -30,7 +30,7 @@ PSP.volt_unit = volt_unit;
 t_e = 50.0;
 
 fd = fopen(events_file_path, 'w');
-fprintf(fd, '0 %.16e\n', t_e);
+fprintf(fd, '1 %.16e\n', t_e);
 fclose(fd);
 
 pm.net = 'net_1_0';
@@ -70,7 +70,7 @@ fd = fopen(events_file_path, 'w');
 t = t_e;
 n_event = 0;
 while (t < pm.t && n_event < 30)
-  fprintf(fd, '1 %.16e\n', t);
+  fprintf(fd, '2 %.16e\n', t);
   t = t + 0.3 + exp(-t*0.1);
   n_event = n_event + 1;
 end
