@@ -1,6 +1,11 @@
 #ifndef HEADER_COMMON_HEADER
 #define HEADER_COMMON_HEADER
 
+#ifndef NDEBUG
+#  define NDEBUG  // disable assert() and disable checks in Eigen
+#endif
+#include <cassert>
+
 #include <stdio.h>  // printf is good
 #define _USE_MATH_DEFINES  // For MSVC, so M_PI is defined
 #include <cmath>

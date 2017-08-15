@@ -18,12 +18,14 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
   }
   while (fin.getline(buf_str, buf_size)) {
     std::istringstream stin(buf_str);
-    if (!(stin >> time >> id)) {
+    if (!(stin >> id >> time)) {
       cerr << "Bad input file:\"" << path << "\"\n";
       exit(-1);
     }
     if (id >= poisson_time_vec.size()) {
-      cerr << "FillPoissonEventsFromFile(): number of neuron does not match!" << endl;
+      cerr << "FillPoissonEventsFromFile(): number of neuron does not match!"
+        << "read id = " << id << "  number of neuron = " << poisson_time_vec.size()
+        << endl;
       exit(-8);
     }
     strength = arr_ps[id];
@@ -47,7 +49,7 @@ void SavePoissonInput(std::ofstream &fout, TyPoissonTimeVec &poisson_time_vec, d
     const double ps = arr_ps[j];
     while (poisson_time_seq.Front().time < t_step_end) {
       fout << j << " " << poisson_time_seq.Front().time
-        << " " << poisson_time_seq.Front().strength;
+        << " " << poisson_time_seq.Front().strength << "\n";
       poisson_time_seq.PopAndFill(pr, ps);  // Next event
     }
   }

@@ -17,7 +17,6 @@ TODO:
 
 #define NDEBUG  // disable assert() and disable checks in Eigen
 
-#include <cassert>
 #include "common_header.h"
 #include "legacy_lib.h"
 
@@ -516,6 +515,12 @@ int MainLoop(const po::variables_map &vm)
     fout_ras.precision(17);
   }
   
+  std::ofstream fout_poisson;
+  bool b_output_poisson_input = fout_try_open("output-poisson-events-path", fout_poisson);
+  if (b_output_poisson_input) {
+    fout_poisson.precision(17);
+  }
+
   // 
   TySpikeEventVec force_spike_list;
   if (vm.count("force-spike-list")) {
@@ -567,9 +572,6 @@ int MainLoop(const po::variables_map &vm)
     func_save_dym_values(*p_neu_pop);
   }
 
-  std::ofstream f_poisson_save;
-  bool b_output_poisson_input = fout_try_open("output-poisson-events-path", f_poisson_save);
-
   std::vector<size_t> vec_n_spike(p_neu_pop->n_neurons());  // count the number of spikes
   TySpikeEventVec ras;                            // record spike raster
   int n_dt_in_stv = int(e_stv / e_dt + 0.1);
@@ -590,7 +592,7 @@ int MainLoop(const po::variables_map &vm)
   for (size_t i = 0; i < n_step; i++) {
     ForceSpikeOnList(p_neu_pop, force_spike_list, p_neu_simu->GetT(), e_dt);
     if (b_output_poisson_input) {
-      SavePoissonInput(f_poisson_save, p_neu_simu->Get_poisson_time_vec(),
+      SavePoissonInput(fout_poisson, p_neu_simu->Get_poisson_time_vec(),
           p_neu_simu->GetT()+e_dt,
           p_neu_pop->GetNeuronalParamsPtr()->arr_pr,
           p_neu_pop->GetNeuronalParamsPtr()->arr_ps);

@@ -21,7 +21,7 @@
 %  pm.dt   = 2^-5;       % default: 1/32
 %  pm.stv  = 0.5;        % default: 0.5
 %  pm.seed = 'auto';     % default: 'auto'. Accept an integer or an integer vector
-%  pm.extra_cmd = '-v';  % All other parameters here.
+%  pm.extra_cmd = '-v';  % All other parameters go here.
 %  [X, ISI, ras] = gen_neu(pm);
 %
 % Usage example 2: Always re-generate data, then read it.
