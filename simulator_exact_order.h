@@ -18,7 +18,7 @@ public:
   {
     dt = _dt;
     t = 0;
-    poisson_time_vec.Init(pm.arr_pr, t);
+    poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, t);
   }
 
   double GetT() const
@@ -28,6 +28,7 @@ public:
 
 protected:
   // Evolve all neurons without synaptic interaction
+  // TODO: consider move this function to population class
   MACRO_NO_INLINE void NextStepNoInteract(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &spike_events, double dt)
   {
@@ -35,14 +36,15 @@ protected:
     // Loop over neurons
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
-      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
+      const double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
+      const double ps = p_neu_pop->GetNeuronalParamsPtr()->arr_ps[j];
       double t_local = t;
       // Loop over Poisson events in this dt
-      while (poisson_time_seq.Front() < t_step_end) {
-        p_neu_pop->NoInteractDt(j, poisson_time_seq.Front() - t_local, t_local, spike_events);
-        t_local = poisson_time_seq.Front();
-        p_neu_pop->InjectPoissonE(j);
-        poisson_time_seq.PopAndFill(pr);  // Next event
+      while (poisson_time_seq.Front().time < t_step_end) {
+        p_neu_pop->NoInteractDt(j, poisson_time_seq.Front().time - t_local, t_local, spike_events);
+        t_local = poisson_time_seq.Front().time;
+        p_neu_pop->InjectDeltaInput(j, poisson_time_seq.Front().strength);
+        poisson_time_seq.PopAndFill(pr, ps);  // Next event
       }
       p_neu_pop->NoInteractDt(j, t_step_end - t_local, t_local, spike_events);
     }
@@ -191,21 +193,23 @@ protected:
       double t_step_end)
   {
     for (size_t jj = 0; jj < ids_affected.size(); jj++) {
-      int j = ids_affected[jj];
+      const int j = ids_affected[jj];
+      const double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
+      const double ps = p_neu_pop->GetNeuronalParamsPtr()->arr_ps[j];
       dbg_printf("----- NextStepNoInteractToTime(), Neuron %d, t = %f .. %f\n", j, bk_state_time[j], t_step_end);
       //! tmp_neu_state.dym_vals must be Row major !
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
       double t_local = bk_state_time[j];
-      while (poisson_time_seq.Front() < t_step_end) {
+      while (poisson_time_seq.Front().time < t_step_end) {
         dbg_printf("  receive %lu-th (%lu) Poisson input at %f\n",
                    poisson_time_seq.id_seq, poisson_time_seq.size(),
-                   poisson_time_seq.Front());
-        dbg_printf("  time from %f to %f\n", t_local, poisson_time_seq.Front());
+                   poisson_time_seq.Front().time);
+        dbg_printf("  time from %f to %f\n", t_local, poisson_time_seq.Front().time);
         p_neu_pop->NoInteractDt(j,
-            poisson_time_seq.Front() - t_local, t_local, spike_events);
-        t_local = poisson_time_seq.Front();
-        p_neu_pop->InjectPoissonE(j);
-        poisson_time_seq.PopAndFill(p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j]);
+            poisson_time_seq.Front().time - t_local, t_local, spike_events);
+        t_local = poisson_time_seq.Front().time;
+        p_neu_pop->InjectDeltaInput(j, poisson_time_seq.Front().strength);
+        poisson_time_seq.PopAndFill(pr, ps);
       }
       dbg_printf("  time from %f to %f\n", t_local, t_step_end);
       p_neu_pop->NoInteractDt(j,
@@ -463,24 +467,25 @@ protected:
   {
     double t_step_end = t + dt;
     
-    TySpikeEventVec se_list;   // id<0 poisson; id>0 spike
+    std::vector<TySpikeEventStrength> se_list;   // id<0 poisson; id>=0 spike
 
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
       se_list.clear();
 
       // All Poisson events for neuron j in this dt.
       TyPoissonTimeSeq &pe_seq = poisson_time_vec[j];
-      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
-      while (pe_seq.Front() < t_step_end) {
-        se_list.emplace_back(pe_seq.Front(), -1);
-        pe_seq.PopAndFill(pr);
+      const double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
+      const double ps = p_neu_pop->GetNeuronalParamsPtr()->arr_ps[j];
+      while (pe_seq.Front().time < t_step_end) {
+        se_list.emplace_back(pe_seq.Front().time, -1, ps);
+        pe_seq.PopAndFill(pr, ps);
       }
       
       // All Spike events for neuron j in this dt.
       TySpikeEventQue  &se_que = se_que_vec[j];
       while (se_que.size() != 0
             && se_que.front().time < t_step_end) {
-        se_list.emplace_back(se_que.front());
+        se_list.emplace_back(se_que.front().time, se_que.front().id, qNaN);
         se_que.pop_front();
       }
 
@@ -492,9 +497,9 @@ protected:
         p_neu_pop->NoInteractDt(j, se_list[i].time - t_local, t_local, spike_events);
         t_local = se_list[i].time;
         if (se_list[i].id >= 0) {
-          p_neu_pop->SynapticInteraction(j, se_list[i]);
+          p_neu_pop->SynapticInteraction(j, se_list[i].id);
         } else {
-          p_neu_pop->InjectPoissonE(j);
+          p_neu_pop->InjectDeltaInput(j, se_list[i].strength);
         }
       }
 

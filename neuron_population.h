@@ -23,8 +23,9 @@ public:
 
   // Perform an interaction
   virtual void SynapticInteraction(const TySpikeEvent &se) = 0;
-  virtual void SynapticInteraction(int neuron_id, const TySpikeEvent &se) = 0;
+  virtual void SynapticInteraction(int neuron_id, const int spike_from_id) = 0;
   virtual void InjectPoissonE(int neuron_id) = 0;
+  virtual void InjectDeltaInput(int neuron_id, double strength) = 0;
   virtual void ForceReset(int neuron_id) = 0;
   virtual void DisableThreshold() = 0;
   virtual void SetRefractoryTime(double t_ref) = 0;
@@ -125,7 +126,7 @@ public:
   {}
 
   void NoInteractDt(int neuron_id, double dt, double t_local,
-                    TySpikeEventVec &spike_events)
+                    TySpikeEventVec &spike_events) override
   {
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
@@ -136,7 +137,7 @@ public:
     }
   }
 
-  void SynapticInteraction(const TySpikeEvent &se)
+  void SynapticInteraction(const TySpikeEvent &se) override
   {
     if (se.id < n_E) {
       // Excitatory neuron fired
@@ -159,9 +160,9 @@ public:
     }
   }
 
-  void SynapticInteraction(int neuron_id, const TySpikeEvent &se)
+  void SynapticInteraction(int neuron_id, const int spike_from_id) override
   {
-    if (se.id < n_E) {
+    if (spike_from_id < n_E) {
       // Excitatory neuron fired
       if (neuron_id < n_E) {
         dym_vals(neuron_id, TyNeu::id_gEInject) += scee;
@@ -189,18 +190,27 @@ public:
     neuron_model.Set_Time_Refractory(t_ref);
   }
   
-  void DisableThreshold()
+  void DisableThreshold() override
   {
     neuron_model.V_threshold = std::numeric_limits<double>::infinity();
   }
 
-  void InjectPoissonE(int neuron_id)
+  void InjectPoissonE(int neuron_id) override
   {
     // Add Poisson input
     dym_vals(neuron_id, TyNeu::id_gEInject) += arr_ps[neuron_id];
   }
 
-  const Ty_Neuron_Dym_Base * GetNeuronModel() const
+  void InjectDeltaInput(int neuron_id, double strength) override
+  {
+    if (strength>=0) {
+      dym_vals(neuron_id, TyNeu::id_gEInject) += strength;
+    } else {
+      dym_vals(neuron_id, TyNeu::id_gIInject) -= strength;
+    }
+  }
+
+  const Ty_Neuron_Dym_Base * GetNeuronModel() const override
   {
     return &neuron_model;
   }

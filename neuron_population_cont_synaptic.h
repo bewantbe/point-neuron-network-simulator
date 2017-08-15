@@ -273,33 +273,42 @@ public:
   {
   }
 
-  void DisableThreshold()
+  void DisableThreshold() override
   {
     V_threshold = std::numeric_limits<double>::infinity();
   }
 
-  void InjectPoissonE(int neuron_id)
+  void InjectPoissonE(int neuron_id) override
   {
     // Add Poisson input
     dym_vals(neuron_id, id_gEInject) += arr_ps[neuron_id];
   }
 
-  void operator=(const TyNeuronalDymState &neu_dym)
+  void InjectDeltaInput(int neuron_id, double strength) override
+  {
+    if (strength>=0) {
+      dym_vals(neuron_id, id_gEInject) += strength;
+    } else {
+      dym_vals(neuron_id, id_gIInject) -= strength;
+    }
+  }
+
+  void operator=(const TyNeuronalDymState &neu_dym) override
   {
     GetDymState() = neu_dym;
   }
 
   void ScatterCopy(const struct TyNeuronalDymState &nd,
-                   const std::vector<int> &ids)
+                   const std::vector<int> &ids) override
   {
     GetDymState().ScatterCopy(nd, ids);
   }
 
-  TyNeuronalDymState & GetDymState()
+  TyNeuronalDymState & GetDymState() override
   {
     return *(static_cast<TyNeuronalDymState*>(this));
   }
-  const TyNeuronalDymState & GetDymState() const
+  const TyNeuronalDymState & GetDymState() const override
   {
     return *(static_cast<const TyNeuronalDymState*>(this));
   }
@@ -311,21 +320,21 @@ public:
   {
     return static_cast<const TyNeuronalDymState*>(this);
   }
-  double GetDymState(int neuron_id, int id_dym) const
+  double GetDymState(int neuron_id, int id_dym) const override
   {
     return dym_vals(neuron_id, id_dym);
   }
-  const TyNeuronalParams * GetNeuronalParamsPtr() const
+  const TyNeuronalParams * GetNeuronalParamsPtr() const override
   {
     return static_cast<const TyNeuronalParams*>(this);
   }
-  const Ty_Neuron_Dym_Base * GetNeuronModel() const
+  const Ty_Neuron_Dym_Base * GetNeuronModel() const override
   {
     return &neuron_model;
   }
 
   void SynapticInteraction(const TySpikeEvent &se) override
   {}
-  void SynapticInteraction(int neuron_id, const TySpikeEvent &se) override
+  void SynapticInteraction(int neuron_id, const int id) override
   {}
 };

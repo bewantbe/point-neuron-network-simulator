@@ -78,7 +78,6 @@ struct Ty_LIF_G_core
   // Return derivative k1 at t_n, for later interpolation.
   MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
   {
-
     double v_n = dym_val[id_V];
     double k1, k2, k3, k4;
     double exp_E = exp(-0.5 * dt / Time_ExCon);
@@ -244,7 +243,8 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
   int Get_id_gE() const override {return id_gE;}
   int Get_id_gI() const override {return id_gI;}
 
-  void Set_Time_Refractory(double t_ref) override {
+  void Set_Time_Refractory(double t_ref) override
+  {
     if (t_ref>=0) {
       Time_Refractory = t_ref;  // No error checking
     } else {

@@ -17,7 +17,7 @@ public:
   {
     dt = _dt;
     t = 0;
-    poisson_time_vec.Init(pm.arr_pr, t);
+    poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, t);
   }
 
   double GetT() const
@@ -41,10 +41,11 @@ public:
     tmp_poisson_events.clear();
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
-      double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
-      while (poisson_time_seq.Front() < t_step_end) {
-        tmp_poisson_events.emplace_back(poisson_time_seq.Front(), j);
-        poisson_time_seq.PopAndFill(pr);
+      const double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
+      const double ps = p_neu_pop->GetNeuronalParamsPtr()->arr_ps[j];
+      while (poisson_time_seq.Front().time < t_step_end) {
+        tmp_poisson_events.emplace_back(poisson_time_seq.Front().time, j);
+        poisson_time_seq.PopAndFill(pr, ps);
       }
     }
     sort(tmp_poisson_events.begin(), tmp_poisson_events.end());

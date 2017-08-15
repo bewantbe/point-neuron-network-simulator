@@ -126,6 +126,21 @@ struct TySpikeEvent
   { return time == b.time && id == b.id; }
 };
 
+struct TySpikeEventStrength: public TySpikeEvent
+{
+  double strength;
+
+  TySpikeEventStrength()
+    :TySpikeEvent()
+  {
+    strength = qNaN;
+  }
+
+  TySpikeEventStrength(double _time, int _id, double _strength)
+    :TySpikeEvent(_time, _id), strength(_strength)
+  {}
+};
+
 // Can be used to sort spikes increasely.
 typedef std::priority_queue<
     TySpikeEvent,

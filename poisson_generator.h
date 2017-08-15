@@ -3,7 +3,14 @@
 
 #include "common_header.h"
 
-typedef std::vector<double> TyInternalVec;
+struct EventTimeStrength {
+  double time, strength;
+  EventTimeStrength(double _t, double _s)
+    :time(_t), strength(_s)
+  {}
+};
+
+typedef std::vector<EventTimeStrength> TyInternalVec;
 
 // Used to generate Poisson events for one neuron
 class TyPoissonTimeSeq: public TyInternalVec
@@ -19,40 +26,40 @@ public:
   {}
 
   // Requirements: rate >= 0, t_until <= inf.
-  void AddEventsUntilTime(double rate, double t_until)
+  void AddEventsUntilTime(double rate, double strength, double t_until)
   {
     assert(rate >= 0);
     std::exponential_distribution<> exp_dis(rate);
-    while (back() < t_until) {
-      push_back( back() + exp_dis(rand_eng) );
+    while (back().time < t_until) {
+      emplace_back( back().time + exp_dis(rand_eng), strength );
     }
   }
 
-  void Init(double rate, double t0)
+  void Init(double rate, double strength, double t0)
   {
     assert(rate >= 0);
     clear();
     std::exponential_distribution<> exp_dis(rate);
-    push_back(t0 + exp_dis(rand_eng));
+    emplace_back(t0 + exp_dis(rand_eng), strength);
     id_seq = 0;
   }
 
-  double Front() const
+  const EventTimeStrength & Front() const
   {
     return operator[](id_seq);
   }
 
-  void PopAndFill(double rate, bool auto_shrink = false)
+  void PopAndFill(double rate, double strength, bool auto_shrink = false)
   {
     assert(id_seq < size());
     id_seq++;
     if (id_seq == size()) {
       assert(size() > 0);
-      if (std::isfinite(back())) {
+      if (std::isfinite(back().time)) {
         if (auto_shrink) {
-          Init(rate, back());
+          Init(rate, strength, back().time);
         }
-        AddEventsUntilTime(rate, back() + 12.0 / rate);
+        AddEventsUntilTime(rate, strength, back().time + 12.0 / rate);
       } else {
         id_seq--;
       }
@@ -72,19 +79,19 @@ class TyPoissonTimeVec: public std::vector<TyPoissonTimeSeq>
 {
   std::vector<TyPoissonTimeSeq::TyIdx> id_seq_vec;  // point to current event
 public:
-  void Init(const TyArrVals &rate_vec, double t0)
+  void Init(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0)
   {
     // each TyPoissonTimeSeq should have at least one event
     resize(rate_vec.size());
     for (size_t j = 0; j < rate_vec.size(); j++) {
-      operator[](j).Init(rate_vec[j], t0);
+      operator[](j).Init(rate_vec[j], arr_ps[j], t0);
     }
     id_seq_vec.resize(rate_vec.size());
   }
 
-  TyPoissonTimeVec(const TyArrVals &rate_vec, double t0 = 0)
+  TyPoissonTimeVec(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0 = 0)
   {
-    Init(rate_vec, t0);
+    Init(rate_vec, arr_ps, t0);
   }
 
   TyPoissonTimeVec() = default;  // enable all other default constructors
@@ -128,6 +135,6 @@ public:
   }
 };
 
-void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path);
+void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path, const TyArrVals &arr_ps);
 
 #endif

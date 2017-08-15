@@ -476,7 +476,8 @@ int MainLoop(const po::variables_map &vm)
 
   if (vm.count("input-event-path")) {
     FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),
-                              vm["input-event-path"].as<std::string>().c_str());
+                              vm["input-event-path"].as<std::string>().c_str(),
+                              p_neu_pop->GetNeuronalParamsPtr()->arr_ps);
     //cout << "input event loaded!" << endl;  // Debug info
   }
 
