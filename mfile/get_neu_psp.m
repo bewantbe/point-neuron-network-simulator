@@ -6,7 +6,8 @@
 %  PSP = get_neu_psp(pm)
 
 function PSP = get_neu_psp(pm0)
-events_file_path = '._get_neu_psp_poisson_events.txt';
+[~, tmp_f_name] = fileparts(tempname('./'));
+events_file_path = ['./data/._tmp_neu_psp_poisson_' tmp_f_name '.txt'];
 
 pm = [];
 pm.neuron_model = pm0.neuron_model;
@@ -41,7 +42,7 @@ pm.stv = pm.dt;
 pm.pr = 0;
 pm.ps = 1e-6;  % some very small value
 
-X = gen_neu(pm, 'new,rm');
+X = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
 V_rest = X(1, floor(t_e/pm.stv) - 1);
 X(:, 1:floor(t_e/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
@@ -81,7 +82,7 @@ fclose(fd);
 pm.nI = 0;
 pm.scee = 1e-6;   % some small value
 
-[X, ~, ras] = gen_neu(pm, 'new,rm');
+[X, ~, ras] = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
 if isempty(ras)
   error('failed to generate spike');
 end
@@ -103,7 +104,7 @@ PSP.t_scee = t_psp;
 
 pm.nI = 1;
 pm.scei = 1e-6;
-[X, ~, ras] = gen_neu(pm, 'new,rm');
+[X, ~, ras] = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
 X(:, 1:floor(ras(1, 2)/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
 [v_psp, pos_psp] = min(X(1, :));

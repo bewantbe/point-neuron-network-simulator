@@ -113,7 +113,8 @@ mode_show_cmd  = false;
 mode_read_only = false;
 mode_extra_data = false;
 mode_run_in_background = false;
-b_verbose = isfield(pm, 'extra_cmd') && (~isempty([strfind(pm.extra_cmd,'-v') strfind(pm.extra_cmd,'--verbose')]));  % show time cost
+pm.extra_cmd = [' ' pm.extra_cmd ' '];
+b_verbose = isfield(pm, 'extra_cmd') && (~isempty([strfind(pm.extra_cmd,' -v ') strfind(pm.extra_cmd,' --verbose ')]));  % show time cost
 ext_T = 0;
 
 if ~isfield(pm, 'extra_cmd')
@@ -318,7 +319,8 @@ if isfield(pm, 'psi')
 end
 
 if isfield(pm, 'input_event')
-    poisson_path = [tempname('./') 'external_event.txt'];
+    [~, tmp_f_name] = fileparts(tempname('./'));
+    poisson_path = [data_dir_prefix 'external_event_' tmp_f_name '.txt'];
     pm.extra_cmd = [pm.extra_cmd ' --input-event-path ' poisson_path];
     if (size(pm.input_event,2) != 2 && size(pm.input_event,2) != 3)
         error('pm.input_event must be 2 or 3 column, the order is "id time [strength]"');

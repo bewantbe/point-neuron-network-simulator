@@ -121,7 +121,7 @@ public:
       } else {
         // Find out the first spike.
         heading_spike_event = *std::min_element(spike_events.begin(), spike_events.end());
-        dbg_printf("Neuron [%d] spike at t = %f\n",
+        dbg_printf("Neuron [%d] spike at t = %.17g\n",
                    heading_spike_event.id, heading_spike_event.time);
         // Really evolve the whole system.
         poisson_time_vec.RestoreIdx();          // replay the poisson events
@@ -135,7 +135,7 @@ public:
           if (spike_events[i].id == heading_spike_event.id) {
             b_heading_spike_pushed = true;
           } else {
-            fprintf(stderr, "Unexpected spike before \"first\" spike: [%lu] id = %d, t = %g - %g\n",
+            fprintf(stderr, "Unexpected spike before \"first\" spike: [%lu] id = %d, t = %.17g - %.17g\n",
                 i, spike_events[i].id, heading_spike_event.time,
                 heading_spike_event.time - spike_events[i].time);
           }
@@ -277,7 +277,7 @@ public:
       for (SparseMat::InnerIterator it(net, heading_spike_event.id); it; ++it) {
         ids_affected.push_back(it.row());
         bool_affected[it.row()] = true;
-        dbg_printf("  %ld", it.row());
+        dbg_printf("  %d", it.row());
       }
       ids_affected.push_back(heading_spike_event.id);
       bool_affected[heading_spike_event.id] = true;
@@ -400,7 +400,7 @@ public:
       for (SparseMat::InnerIterator it(net, heading_spike_event.id); it; ++it) {
         ids_affected.push_back(it.row());
         bool_affected[it.row()] = true;
-        dbg_printf("  %ld", it.row());
+        dbg_printf("  %d", it.row());
       }
       dbg_printf(".\n");
 
