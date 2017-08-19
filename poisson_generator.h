@@ -3,6 +3,38 @@
 
 #include "common_header.h"
 
+// Used to generate poisson events
+class TyPoissonSource {
+  double rate, strength, t;
+  std::exponential_distribution<> exp_dis;
+public:
+  double CurrentEventTime() const
+  { return t; }
+
+  double Strength() const
+  { return strength; }
+
+  double NextEventTime()
+  { return t += exp_dis(rand_eng); }
+
+  double Init(double _rate, double _strength, double t0)
+  {
+    assert(rate >= 0);
+    rate = _rate;
+    strength = _strength;
+    t = t0;
+    exp_dis = std::exponential_distribution<>(rate);
+    return NextEventTime();
+  }
+
+  TyPoissonSource()
+  { Init(0.0, 0.0, 0.0); }
+
+  TyPoissonSource(double _rate, double _strength, double t0)
+    : rate(_rate), strength(_strength), t(t0), exp_dis(_rate)
+  { NextEventTime(); }
+};
+
 struct EventTimeStrength {
   double time, strength;
   EventTimeStrength() = default;
@@ -34,22 +66,12 @@ public:
     id_seq(pts.id_seq)
   {}
 
-  // Used for generating excititory-inhibitory mixed events.
-  TyTimeStrengthVec buf_event_vec1, buf_event_vec2;
-
   void InitEventVec(TyTimeStrengthVec &event_vec, double rate, double strength, double t0) const
   {
     assert(rate >= 0);
     event_vec.clear();
     std::exponential_distribution<> exp_dis(rate);
     event_vec.emplace_back(t0 + exp_dis(rand_eng), strength);
-  }
-
-  // Used before refill an event_vec.
-  void KeepOnlyLatestEvent(TyTimeStrengthVec &event_vec) const
-  {
-    event_vec[0] = event_vec.back();
-    event_vec.resize(1);
   }
 
   // Requirements:
@@ -65,26 +87,62 @@ public:
     }
   }
 
-  void RefillEvents(TyTimeStrengthVec &event_vec, double rate, double strength, double t_until) const
+  TyPoissonSource poisson_src1, poisson_src2;
+
+  // Fill poisson events upto t_until and no less than n_least_fill new
+  // events when possible.
+  void FillEvents(TyTimeStrengthVec &event_vec, double t_until, int n_least_fill)
   {
+    // Assume the last status are stored in corresponding PoissonSources.
+    double tp[2] = {poisson_src1.CurrentEventTime(),
+                    poisson_src2.CurrentEventTime()};
+    int id_smaller = 1*(tp[1] <= tp[0]);
+    if (!std::isfinite(tp[id_smaller])) { // Both sources give Inf
+      if (event_vec.size() == 0 || std::isfinite(event_vec.back().time)) {
+        // Add tailing Inf when the queue do not have one.
+        event_vec.emplace_back(Inf, 0);
+      }
+      return;
+    }
+    TyPoissonSource * const psrc[2] = {&poisson_src1, &poisson_src2};
+    double sp[2] = {poisson_src1.Strength(), poisson_src2.Strength()};
+    while (tp[id_smaller] < t_until || --n_least_fill >= 0) {
+      event_vec.emplace_back(tp[id_smaller], sp[id_smaller]);
+      tp[id_smaller] = (psrc[id_smaller])->NextEventTime();
+      id_smaller = 1*(tp[1] <= tp[0]);
+    }
   }
 
+  // Use for E and I type Poisson input.
+  void Init(double rate1, double strength1, double rate2, double strength2, double t0)
+  {
+    poisson_src1.Init(rate1, strength1, t0);
+    poisson_src2.Init(rate2, strength2, t0);
+    clear();
+    id_seq = 0;
+    FillEvents(*this, t0, 1);  // t_until is not important here
+  }
 
+  // Use for E type Poisson input.
   void Init(double rate, double strength, double t0)
   {
     InitEventVec(*this, rate, strength, t0);
     id_seq = 0;
   }
 
-  void Init(double rate1, double strength1, double rate2, double strength2, double t0)
+  void PopAndFill(double t_until, bool auto_shrink = false)
   {
-    InitEventVec(buf_event_vec1, rate1, strength1, t0);
-    InitEventVec(buf_event_vec2, rate2, strength2, t0);
-    this->resize(2);
-    std::merge(buf_event_vec1.begin(), buf_event_vec1.end(),
-               buf_event_vec2.begin(), buf_event_vec2.end(),
-               this->begin());
-    id_seq = 0;
+    id_seq++;
+    if (id_seq == size()) {
+      if (std::isfinite(back().time)) {
+        if (auto_shrink && size() > EVENT_VEC_SIZE_LIMIT) {
+          Shrink();
+        }
+        FillEvents(*this, t_until, 12);
+      } else {
+        id_seq--;
+      }
+    }
   }
 
   const EventTimeStrength & Front() const
@@ -92,6 +150,7 @@ public:
     return operator[](id_seq);
   }
 
+  // For E type poisson input.
   // Use of the two versions of PopAndFill must NOT mixed.
   // If you do want to mix, call Init when change version.
   void PopAndFill(double rate, double strength, bool auto_shrink = false)
@@ -109,35 +168,6 @@ public:
         id_seq--;
       }
     }
-  }
-
-  // Assume buf_event_vec1 and buf_event_vec2 each contains exactly one element.
-  // Assume this->size()>1, the two tailing events should be belong to buf_event_vec1 and buf_event_vec2 each.
-  void PopAndFill(double rate1, double strength1, double rate2, double strength2, double t_until, bool auto_shrink = false)
-  {
-    assert(size() >= 2);
-    assert(id_seq + 2 <= size());
-    if (id_seq + 2 == size()) {  // only two elements left
-      assert(buf_event_vec1.size() == 1);
-      assert(buf_event_vec2.size() == 1);
-      if (auto_shrink && size() > EVENT_VEC_SIZE_LIMIT) {
-        Shrink();
-      }
-      // Generate new poisson events until t_until.
-      AddEventsUntilTime(buf_event_vec1, rate1, strength1, t_until);
-      AddEventsUntilTime(buf_event_vec2, rate2, strength2, t_until);
-      // merge to main event vec
-      this->resize(id_seq + buf_event_vec1.size() + buf_event_vec2.size());
-      std::merge(buf_event_vec1.begin(), buf_event_vec1.end(),
-                 buf_event_vec2.begin(), buf_event_vec2.end(),
-                 this->begin()+id_seq);
-      /*if (buf_event_vec1.size() == 1 && buf_event_vec1*/
-      // TODO: when no new event added.
-      // clear buf
-      KeepOnlyLatestEvent(buf_event_vec1);
-      KeepOnlyLatestEvent(buf_event_vec2);
-    }
-    id_seq++;
   }
 
   void Shrink()

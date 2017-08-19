@@ -28,6 +28,8 @@ using std::endl;
 #define dbg_printf printf
 #endif
 
+static const double Inf = std::numeric_limits<double>::infinity();
+
 typedef std::vector<double> TyArrVals;
 
 extern std::mt19937 rand_eng;
