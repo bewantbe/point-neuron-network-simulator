@@ -15,7 +15,9 @@ TODO:
    * isomerisom of neurons in a network?
 */
 
+#ifndef DEBUG
 #define NDEBUG  // disable assert() and disable checks in Eigen
+#endif
 
 #include "common_header.h"
 #include "legacy_lib.h"

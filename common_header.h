@@ -1,8 +1,8 @@
 #ifndef HEADER_COMMON_HEADER
 #define HEADER_COMMON_HEADER
 
-#ifndef NDEBUG
-#  define NDEBUG  // disable assert() and disable checks in Eigen
+#ifndef DEBUG
+#define NDEBUG  // disable assert() and disable checks in Eigen
 #endif
 #include <cassert>
 

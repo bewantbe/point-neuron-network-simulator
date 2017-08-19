@@ -121,7 +121,9 @@ public:
       } else {
         // Find out the first spike.
         heading_spike_event = *std::min_element(spike_events.begin(), spike_events.end());
-        dbg_printf("Neuron [%d] spike at t = %.17g\n",
+        dbg_printf("NextDt(): Restart calculation from t = %.17g up to %.17g\n",
+                   t, heading_spike_event.time);
+        dbg_printf("          For dealing neuron [%d] spike at t = %.17g\n",
                    heading_spike_event.id, heading_spike_event.time);
         // Really evolve the whole system.
         poisson_time_vec.RestoreIdx();          // replay the poisson events

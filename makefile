@@ -11,6 +11,7 @@ LDLIBS = -lboost_program_options
 
 # Targets and source files
 BIN = bin/gen_neu
+BIN_DBG = bin/gen_neu_dbg
 SRCS = main.cpp math_helper.cpp legacy_lib.cpp neuron_system_utils.cpp poisson_generator.cpp
 OBJS = $(SRCS:.cpp=.o)
 
@@ -29,6 +30,12 @@ debug: $(BIN)
 .PHONY : debug-O2
 debug-O2: CXXFLAGS = -g -O2 -fno-omit-frame-pointer
 debug-O2: $(BIN)
+
+.PHONY : debug-log
+debug-log: CPPFLAGS += -DDEBUG
+debug-log: $(BIN_DBG)
+$(BIN_DBG): $(BIN)
+	mv $(BIN) $(BIN_DBG)
 
 .PHONY : debug-O2-gprof
 debug-O2-gprof: CXXFLAGS = -pg -g -O2

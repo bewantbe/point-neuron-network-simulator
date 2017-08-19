@@ -128,6 +128,7 @@ public:
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events) override
   {
+    dbg_printf("NoInteractDt(): neuron_id = %d\n", neuron_id);
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
     neuron_model.NextStepSingleNeuronQuiet(

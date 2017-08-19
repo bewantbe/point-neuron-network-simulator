@@ -19,10 +19,10 @@ for id_nm = 1 %:length(s_neuron_model)
     pm.scee_mV = 1.0;
     pm.pr      = 4.0;
     pm.ps_mV   = 1.0;
-    pm.t    = 1e4;
+    pm.t    = 1e2;
     pm.dt   = 1.0/32;
     pm.stv  = 0.5;
-    pm.seed = 95;
+    pm.seed = 5866;
     pm.extra_cmd = '-v';
 
     [X_ref, ISI, ~] = gen_neu(pm, 'new,rm');
@@ -36,7 +36,8 @@ for id_nm = 1 %:length(s_neuron_model)
 
     % Test reading of poisson events
     pm.extra_cmd = '-v --input-event-path poi.txt';
-    [X_poi, ~] = gen_neu(pm, 'new,rm');
+    [X_poi, ~, ras, pm] = gen_neu(pm, 'new,rm');
+    pm.cmd_str
     fprintf('--> Result: Max diff poi = %g\n', maxabs(X_poi - X));
 
     % Test exporting spike events to a neuron
@@ -73,6 +74,7 @@ for id_nm = 1 %:length(s_neuron_model)
         pm.nE      = 1;
         pm.nI      = 0;
         [X_single, ~, ~, pm] = gen_neu(pm, 'new,rm');
+        pm.cmd_str
 
         % The error is generally not zero, but will converge to zero when
         % dt -> 0. The problem is that the Spike-Correction algorithm (SSC)

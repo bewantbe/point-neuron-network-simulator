@@ -268,7 +268,11 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
       std::copy(dym_t, dym_t+n_var, dym_t0);  // copy of init state
       for (int i=n_it-1; i>=0; i--) {
         DymInplaceRK4(dym_t, t_spike);
-        t_spike -= (dym_t[id_V]-V_threshold) / GetDv(dym_t);
+        /*t_spike -= (dym_t[id_V]-V_threshold) / GetDv(dym_t);*/
+        double dt_spike = (dym_t[id_V]-V_threshold) / GetDv(dym_t);
+        t_spike -= dt_spike;
+        dbg_printf("SpikeTimeRefine(): dt = %.17g, t_spike = %.17g, V = %.17g, Dv = %g\n",
+            dt_spike, t_spike, dym_t[id_V], GetDv(dym_t));
         if (i) std::copy(dym_t0, dym_t0+n_var, dym_t);
       }
     }
@@ -289,7 +293,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
         v_n, dym_val[id_V ],
         k1, GetDv(dym_val), V_threshold);
       // refine spike time
-      SpikeTimeRefine(dym_t, spike_time_local, 1);
+      SpikeTimeRefine(dym_t, spike_time_local, 2);
     } else {
       if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms, LIF,G model
         // Try capture some missing spikes that the intermediate value passes
@@ -312,7 +316,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
           spike_time_local = cubic_hermit_real_root(dt,
             v_n, dym_val[id_V ],
             k1, GetDv(dym_val), V_threshold);
-          SpikeTimeRefine(dym_t, spike_time_local, 1);
+          SpikeTimeRefine(dym_t, spike_time_local, 2);
         } else {
           spike_time_local = std::numeric_limits<double>::quiet_NaN();
         }
@@ -329,7 +333,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
   {
     //! at most one spike allowed during this dt_local
     if (t_in_refractory == 0) {
-      dbg_printf("NextStepSingleNeuronQuiet(): dt_local = %f:\n", dt_local);
+      dbg_printf("NextStepSingleNeuronQuiet(): dt_local = %.17g\n", dt_local);
       dbg_printf("NextStepSingleNeuronQuiet(): begin state=%.16e,%.16e,%.16e\n",
                  dym_val[0], dym_val[1], dym_val[2]);
       NextStepSingleNeuronContinuous(dym_val, spike_time_local, dt_local);
@@ -340,9 +344,9 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
         t_in_refractory = dt_local - spike_time_local
                           + std::numeric_limits<double>::min();
         dym_val[id_V] = V_reset;
-        dbg_printf("Reach threshold detected. Neuron reseted.\n");
+        dbg_printf("NextStepSingleNeuronQuiet(): neuron fired, spike_time_local = %.17g\n", spike_time_local);
         if (t_in_refractory >= Time_Refractory) {
-          // Short refractory period (< dt_local), neuron will active again.
+          // Short refractory period (< dt_local), neuron will be actived again.
           dt_local = t_in_refractory - Time_Refractory;
           t_in_refractory = 0;
           // Back to the activation time.
