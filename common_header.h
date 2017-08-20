@@ -29,6 +29,7 @@ using std::endl;
 #endif
 
 static const double Inf = std::numeric_limits<double>::infinity();
+static const double qNaN = std::numeric_limits<double>::quiet_NaN();
 
 typedef std::vector<double> TyArrVals;
 

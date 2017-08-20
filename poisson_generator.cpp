@@ -2,8 +2,6 @@
 #include <fstream>
 #include <sstream>
 
-static const double qNaN = std::numeric_limits<double>::quiet_NaN();
-
 // The event's times for each neuron should be ascending.
 void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path, const TyArrVals &arr_ps)
 {
@@ -13,9 +11,7 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
   double strength;
   const int buf_size = 1024;
   char buf_str[buf_size];
-  for (auto &i : poisson_time_vec) {
-    i.clear();
-  }
+  poisson_time_vec.RemoveEvents();
   while (fin.getline(buf_str, buf_size)) {
     std::istringstream stin(buf_str);
     if (!(stin >> id >> time)) {
@@ -24,8 +20,8 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
     }
     if (id > poisson_time_vec.size() || id == 0) {
       cerr << "FillPoissonEventsFromFile(): number of neuron does not match!"
-        << "read id = " << id << "  number of neuron = " << poisson_time_vec.size()
-        << endl;
+        << "read id = " << id << "  number of neuron = "
+        << poisson_time_vec.size() << endl;
       exit(-8);
     }
     id -= 1;  // convert to 0-based index
@@ -36,8 +32,8 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
     }
     poisson_time_vec[id].emplace_back(time, strength);
   }
-  for (auto &i : poisson_time_vec) {
-    i.emplace_back(qNaN, qNaN);
+  for (auto &i : poisson_time_vec) {  // seal the queue
+    i.emplace_back(Inf, 0.0);
   }
 }
 

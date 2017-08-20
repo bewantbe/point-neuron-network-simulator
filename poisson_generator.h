@@ -4,7 +4,8 @@
 #include "common_header.h"
 
 // Used to generate poisson events
-class TyPoissonSource {
+class TyPoissonSource
+{
   double rate, strength, t;
   std::exponential_distribution<> exp_dis;
 public:
@@ -35,7 +36,8 @@ public:
   { NextEventTime(); }
 };
 
-struct EventTimeStrength {
+struct EventTimeStrength
+{
   double time, strength;
   EventTimeStrength() = default;
   EventTimeStrength(double _t, double _s)
@@ -52,19 +54,32 @@ struct EventTimeStrength {
 
 typedef std::vector<EventTimeStrength> TyTimeStrengthVec;
 
-// Used to generate Poisson events for one neuron
+// Used to generate Poisson events for one neuron.
 class TyPoissonTimeSeq: public TyTimeStrengthVec
 {
 public:
   typedef size_t TyIdx;
   TyIdx id_seq = 0;      // point to current event
-  size_t EVENT_VEC_SIZE_LIMIT = 256;
+  const size_t EVENT_VEC_SIZE_LIMIT = 256;
+  const size_t EVENT_GEN_CHUNK = 12;
 
   TyPoissonTimeSeq() = default;
   TyPoissonTimeSeq(const TyPoissonTimeSeq &pts)
   : TyTimeStrengthVec(pts),
     id_seq(pts.id_seq)
   {}
+
+  void Shrink()
+  {
+    assert(id_seq < size());
+    erase(begin(), begin()+id_seq);
+    id_seq = 0;
+  }
+
+  const EventTimeStrength & Front() const
+  {
+    return operator[](id_seq);
+  }
 
   void InitEventVec(TyTimeStrengthVec &event_vec, double rate, double strength, double t0) const
   {
@@ -87,6 +102,34 @@ public:
     }
   }
 
+  // Use for E type Poisson input.
+  void Init(double rate, double strength, double t0)
+  {
+    InitEventVec(*this, rate, strength, t0);
+    id_seq = 0;
+  }
+
+  // For E type poisson input.
+  // Use of the two versions of PopAndFill must NOT mixed.
+  // If you do want to mix, call Init when change version.
+  void PopAndFill(double rate, double strength, bool auto_shrink = false)
+  {
+    assert(id_seq < size());
+    id_seq++;
+    if (id_seq == size()) {
+      assert(size() > 0);
+      if (std::isfinite(back().time)) {
+        if (auto_shrink) {
+          Init(rate, strength, back().time);
+        }
+        AddEventsUntilTime(*this, rate, strength, back().time + EVENT_GEN_CHUNK / rate);
+      } else {
+        id_seq--;
+      }
+    }
+  }
+
+  // Poisson event generators for E and I type.
   TyPoissonSource poisson_src1, poisson_src2;
 
   // Fill poisson events upto t_until and no less than n_least_fill new
@@ -123,13 +166,7 @@ public:
     FillEvents(*this, t0, 1);  // t_until is not important here
   }
 
-  // Use for E type Poisson input.
-  void Init(double rate, double strength, double t0)
-  {
-    InitEventVec(*this, rate, strength, t0);
-    id_seq = 0;
-  }
-
+  // Use for E and I type Poisson input.
   void PopAndFill(double t_until, bool auto_shrink = false)
   {
     id_seq++;
@@ -138,43 +175,11 @@ public:
         if (auto_shrink && size() > EVENT_VEC_SIZE_LIMIT) {
           Shrink();
         }
-        FillEvents(*this, t_until, 12);
+        FillEvents(*this, t_until, EVENT_GEN_CHUNK);
       } else {
         id_seq--;
       }
     }
-  }
-
-  const EventTimeStrength & Front() const
-  {
-    return operator[](id_seq);
-  }
-
-  // For E type poisson input.
-  // Use of the two versions of PopAndFill must NOT mixed.
-  // If you do want to mix, call Init when change version.
-  void PopAndFill(double rate, double strength, bool auto_shrink = false)
-  {
-    assert(id_seq < size());
-    id_seq++;
-    if (id_seq == size()) {
-      assert(size() > 0);
-      if (std::isfinite(back().time)) {
-        if (auto_shrink) {
-          Init(rate, strength, back().time);
-        }
-        AddEventsUntilTime(*this, rate, strength, back().time + 12.0 / rate);
-      } else {
-        id_seq--;
-      }
-    }
-  }
-
-  void Shrink()
-  {
-    assert(id_seq < size());
-    erase(begin(), begin()+id_seq);
-    id_seq = 0;
   }
 };
 
@@ -190,7 +195,8 @@ public:
     for (size_t j = 0; j < rate_vec.size(); j++) {
       operator[](j).Init(rate_vec[j], arr_ps[j], t0);
     }
-    id_seq_vec.resize(rate_vec.size());
+    id_seq_vec.reserve(rate_vec.size());
+    std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
   }
 
   TyPoissonTimeVec(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0 = 0)
@@ -199,6 +205,16 @@ public:
   }
 
   TyPoissonTimeVec() = default;  // enable all other default constructors
+
+  void RemoveEvents()
+  {
+    assert(size() == id_seq.size());
+    for (auto &i : *this) {
+      i.clear();
+      i.id_seq = 0;
+    }
+    std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
+  }
 
   void RestoreIdx()
   {
