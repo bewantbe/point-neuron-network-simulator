@@ -183,12 +183,15 @@ public:
   // Use for E and I type Poisson input.
   void Init(double rate1, double strength1, double rate2, double strength2, double t0)
   {
-    /*Init(rate1, strength1, t0);*/
+    Init(rate1, strength1, t0);
+    poisson_src1.Set(rate1, strength1, 0);
+    /*
     poisson_src1.Init(rate1, strength1, t0);
     poisson_src2.Init(rate2, strength2, t0);
     clear();
     id_seq = 0;
     FillEvents(*this, t0, 1);  // t_until is not important here
+    */
   }
 
   // Use for E and I type Poisson input.
@@ -211,8 +214,8 @@ public:
 
   void PopAndFill()
   {
-    PopAndFill(-Inf);
-    /*PopAndFillOld(poisson_src1.Rate(), poisson_src1.Strength());*/
+    /*PopAndFill(-Inf);*/
+    PopAndFillOld(poisson_src1.Rate(), poisson_src1.Strength());
   }
 };
 
