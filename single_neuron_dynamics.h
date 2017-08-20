@@ -293,7 +293,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
         v_n, dym_val[id_V ],
         k1, GetDv(dym_val), V_threshold);
       // refine spike time
-      SpikeTimeRefine(dym_t, spike_time_local, 2);
+      /*SpikeTimeRefine(dym_t, spike_time_local, 2);*/
     } else {
       if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms, LIF,G model
         // Try capture some missing spikes that the intermediate value passes
@@ -316,7 +316,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
           spike_time_local = cubic_hermit_real_root(dt,
             v_n, dym_val[id_V ],
             k1, GetDv(dym_val), V_threshold);
-          SpikeTimeRefine(dym_t, spike_time_local, 2);
+          /*SpikeTimeRefine(dym_t, spike_time_local, 2);*/
         } else {
           spike_time_local = std::numeric_limits<double>::quiet_NaN();
         }

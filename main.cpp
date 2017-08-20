@@ -148,6 +148,8 @@ int MainLoop(const po::variables_map &vm)
   for (int i = 0; i < n_neu; i++) {
     pm.arr_pr[i] = vm["pr"].as<double>();
     pm.arr_ps[i] = vm["ps"].as<double>();
+    pm.arr_pri[i] = vm["pri"].as<double>();
+    pm.arr_psi[i] = vm["psi"].as<double>();
   }
 
   if (vm.count("pr-mul")) {
@@ -157,7 +159,8 @@ int MainLoop(const po::variables_map &vm)
       return -1;
     }
     for (int i = 0; i < n_neu; i++) {
-      pm.arr_pr[i] *= v[i];
+      pm.arr_pr [i] *= v[i];
+      pm.arr_pri[i] *= v[i];
     }
   }
 
@@ -168,12 +171,9 @@ int MainLoop(const po::variables_map &vm)
       return -1;
     }
     for (int i = 0; i < n_neu; i++) {
-      pm.arr_ps[i] *= v[i];
+      pm.arr_ps [i] *= v[i];
+      pm.arr_psi[i] *= v[i];
     }
-  }
-
-  if (vm.count("psi") || vm.count("pri")) {
-    cerr << "option --psi and --pri are not supported yet!" << endl;
   }
 
   pm.scee = vm["scee"].as<double>();
@@ -595,9 +595,7 @@ int MainLoop(const po::variables_map &vm)
     ForceSpikeOnList(p_neu_pop, force_spike_list, p_neu_simu->GetT(), e_dt);
     if (b_output_poisson_input) {
       SavePoissonInput(fout_poisson, p_neu_simu->Get_poisson_time_vec(),
-          p_neu_simu->GetT()+e_dt,
-          p_neu_pop->GetNeuronalParamsPtr()->arr_pr,
-          p_neu_pop->GetNeuronalParamsPtr()->arr_ps);
+          p_neu_simu->GetT()+e_dt);
     }
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);
     
@@ -671,25 +669,25 @@ int main(int argc, char *argv[])
       ("net",  po::value<std::string>(),
        "Network file path.")
       ("scee", po::value<double>()->default_value(0.0),
-       "Cortical strength E->E.")
+       "Cortical strength E->E (unscaled).")
       ("scie", po::value<double>()->default_value(0.0),
-       "Cortical strength E->I.")
+       "Cortical strength E->I (unscaled).")
       ("scei", po::value<double>()->default_value(0.0),
-       "Cortical strength I->E.")
+       "Cortical strength I->E (unscaled).")
       ("scii", po::value<double>()->default_value(0.0),
-       "Cortical strength I->I.")
+       "Cortical strength I->I (unscaled).")
+      ("pr",   po::value<double>()->default_value(0.0),
+       "Poisson input rate for Excitatory type, in 1/ms.")
       ("ps",   po::value<double>(),
-       "Poisson input strength.")
-      ("pr",   po::value<double>()->default_value(1.0),
-       "Poisson input rate, in 1/ms.")
-      ("psi",  po::value<double>(),
-       "Poisson input strength, inhibitory type.")
-      ("pri",  po::value<double>(),
-       "Poisson input rate, inhibitory type.")
+       "Poisson input strength for Excitatory type (unscaled).")
+      ("pri",   po::value<double>()->default_value(0.0),
+       "Poisson input rate for inhibitory type, in 1/ms.")
+      ("psi",  po::value<double>()->default_value(0.0),
+       "Poisson input strength, inhibitory type (unscaled).")
       ("pr-mul", po::value< std::vector<double> >()->multitoken(),
-       "Poisson input rate multiper.")
+       "Poisson input rate multiper, affect both E and I type.")
       ("ps-mul", po::value< std::vector<double> >()->multitoken(),
-       "Poisson input strength multiper.")
+       "Poisson input strength multiper, affect both E and I type.")
       ("seed",   po::value< VecUInt >()->multitoken()->default_value(VecUInt{1}, "1"),
        "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
       ("seed-auto",

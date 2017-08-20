@@ -17,15 +17,16 @@ public:
   {
     dt = _dt;
     t = 0;
-    poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, t);
+    poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, pm.arr_pri, pm.arr_psi, t);
   }
 
-  double GetT() const
+  double GetT() const override
   {
     return t;
   }
 
-  TySpikeEventVec tmp_poisson_events;
+  /*TySpikeEventVec tmp_poisson_events;*/
+  std::vector<TySpikeEventStrength> tmp_poisson_events;
 
 public:
   void NextDt(NeuronPopulationBase * p_neu_pop,
@@ -41,11 +42,9 @@ public:
     tmp_poisson_events.clear();
     for (int j = 0; j < p_neu_pop->n_neurons(); j++) {
       TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
-      const double pr = p_neu_pop->GetNeuronalParamsPtr()->arr_pr[j];
-      const double ps = p_neu_pop->GetNeuronalParamsPtr()->arr_ps[j];
       while (poisson_time_seq.Front().time < t_step_end) {
-        tmp_poisson_events.emplace_back(poisson_time_seq.Front().time, j);
-        poisson_time_seq.PopAndFill(pr, ps);
+        tmp_poisson_events.emplace_back(poisson_time_seq.Front().time, j, poisson_time_seq.Front().strength);
+        poisson_time_seq.PopAndFill();
       }
     }
     sort(tmp_poisson_events.begin(), tmp_poisson_events.end());
@@ -57,7 +56,8 @@ public:
 //      printf("  P: to %d @ t = %.16e\n", tmp_poisson_events[i].id, tmp_poisson_events[i].time);
       p_neu_pop->NoInteractDt(tmp_poisson_events[i].time - t_local, t_local, ras);
       t_local = tmp_poisson_events[i].time;
-      p_neu_pop->InjectPoissonE(tmp_poisson_events[i].id);
+      /*p_neu_pop->InjectPoissonE(tmp_poisson_events[i].id);*/
+      p_neu_pop->InjectDeltaInput(tmp_poisson_events[i].id, tmp_poisson_events[i].strength);
     }
     p_neu_pop->NoInteractDt(t_step_end - t_local, t_local, ras);
 

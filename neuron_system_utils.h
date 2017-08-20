@@ -15,10 +15,10 @@ struct TyNeuronalParams
   int n_E, n_I;    // Number of neurons, Excitatory and Inhibitory type
   SparseMat net;   // Adjacency matrix, net(i,j) means i is affect by j
   double scee, scie, scei, scii;
-  TyArrVals arr_pr;   // Poisson input rate for each neuron
-  TyArrVals arr_ps;   // Poisson input strength for each neuron
-  // TODO: maybe add Inhibitory Poisson input?
-  //TyArrVals arr_psi;
+  TyArrVals arr_pr;   // Poisson input rate for each neuron, E type.
+  TyArrVals arr_ps;   // Poisson input strength for each neuron, E type.
+  TyArrVals arr_pri;   // Poisson input rate for each neuron, I type.
+  TyArrVals arr_psi;   // Poisson input strength for each neuron, I type.
 
   inline int n_total() const
   { return n_E + n_I; }
@@ -30,6 +30,8 @@ struct TyNeuronalParams
     n_I = _n_I;
     arr_pr.resize(n_total());
     arr_ps.resize(n_total());
+    arr_pri.resize(n_total());
+    arr_psi.resize(n_total());
     net.resize(n_total(), n_total());
   }
 
@@ -146,13 +148,6 @@ typedef std::priority_queue<
     std::greater<TySpikeEvent> > TySpikeEventQueue;
 
 typedef std::vector< TySpikeEvent > TySpikeEventVec;
-
-struct TySpikeTimeStrength
-{
-  double time;
-  double strength;
-  int id_type;      // id_gEInject or id_gIInject
-};
 
 int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 

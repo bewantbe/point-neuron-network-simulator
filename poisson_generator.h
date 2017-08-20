@@ -12,28 +12,52 @@ public:
   double CurrentEventTime() const
   { return t; }
 
+  double Rate() const
+  { return rate; }
+
   double Strength() const
   { return strength; }
 
   double NextEventTime()
-  { return t += exp_dis(rand_eng); }
-
-  double Init(double _rate, double _strength, double t0)
+    /*{ return t += exp_dis(rand_eng); }*/
   {
-    assert(rate >= 0);
+    if (rate == 0)
+      cerr << "WTF, rate == 0\n";
+    return t += exp_dis(rand_eng);
+  }
+
+  void Set(double _rate, double _strength, double t0)
+  {
     rate = _rate;
     strength = _strength;
     t = t0;
     exp_dis = std::exponential_distribution<>(rate);
-    return NextEventTime();
+  }
+
+  double Init(double _rate, double _strength, double t0)
+  {
+    assert(rate >= 0);
+    Set(_rate, _strength, t0);
+    if (_rate == 0) {
+      t = Inf;
+      return Inf;  // avoid a call to rand_eng
+    } else {
+      return NextEventTime();
+    }
   }
 
   TyPoissonSource()
-  { Init(0.0, 0.0, 0.0); }
+  { Set(0.0, 0.0, Inf); }
 
   TyPoissonSource(double _rate, double _strength, double t0)
     : rate(_rate), strength(_strength), t(t0), exp_dis(_rate)
-  { NextEventTime(); }
+  {
+    if (rate == 0) {
+      t = Inf;
+    } else {
+      NextEventTime();
+    }
+  }
 };
 
 struct EventTimeStrength
@@ -112,7 +136,7 @@ public:
   // For E type poisson input.
   // Use of the two versions of PopAndFill must NOT mixed.
   // If you do want to mix, call Init when change version.
-  void PopAndFill(double rate, double strength, bool auto_shrink = false)
+  void PopAndFillOld(double rate, double strength, bool auto_shrink = false)
   {
     assert(id_seq < size());
     id_seq++;
@@ -159,6 +183,7 @@ public:
   // Use for E and I type Poisson input.
   void Init(double rate1, double strength1, double rate2, double strength2, double t0)
   {
+    /*Init(rate1, strength1, t0);*/
     poisson_src1.Init(rate1, strength1, t0);
     poisson_src2.Init(rate2, strength2, t0);
     clear();
@@ -172,14 +197,22 @@ public:
     id_seq++;
     if (id_seq == size()) {
       if (std::isfinite(back().time)) {
+        double t_end = back().time + EVENT_GEN_CHUNK / poisson_src1.Rate();
         if (auto_shrink && size() > EVENT_VEC_SIZE_LIMIT) {
           Shrink();
         }
-        FillEvents(*this, t_until, EVENT_GEN_CHUNK);
+        /*FillEvents(*this, t_until, EVENT_GEN_CHUNK);*/
+        FillEvents(*this, t_end, 0);
       } else {
         id_seq--;
       }
     }
+  }
+
+  void PopAndFill()
+  {
+    PopAndFill(-Inf);
+    /*PopAndFillOld(poisson_src1.Rate(), poisson_src1.Strength());*/
   }
 };
 
@@ -188,6 +221,7 @@ class TyPoissonTimeVec: public std::vector<TyPoissonTimeSeq>
 {
   std::vector<TyPoissonTimeSeq::TyIdx> id_seq_vec;  // point to current event
 public:
+  /*
   void Init(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0)
   {
     // each TyPoissonTimeSeq should have at least one event
@@ -198,11 +232,26 @@ public:
     id_seq_vec.reserve(rate_vec.size());
     std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
   }
+  */
 
+  void Init(const TyArrVals &arr_pr,  const TyArrVals &arr_ps,
+            const TyArrVals &arr_pri, const TyArrVals &arr_psi, double t0)
+  {
+    // each TyPoissonTimeSeq should have at least one event
+    resize(arr_pr.size());
+    for (size_t j = 0; j < arr_pr.size(); j++) {
+      operator[](j).Init(arr_pr[j], arr_ps[j], arr_pri[j], arr_psi[j], t0);
+    }
+    id_seq_vec.reserve(arr_pr.size());
+    std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
+  }
+
+  /*
   TyPoissonTimeVec(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0 = 0)
   {
     Init(rate_vec, arr_ps, t0);
   }
+  */
 
   TyPoissonTimeVec() = default;  // enable all other default constructors
 
@@ -256,6 +305,6 @@ public:
 };
 
 void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path, const TyArrVals &arr_ps);
-void SavePoissonInput(std::ofstream &fout, TyPoissonTimeVec &poisson_time_vec, double t_step_end, const TyArrVals &arr_pr, const TyArrVals &arr_ps);
+void SavePoissonInput(std::ofstream &fout, TyPoissonTimeVec &poisson_time_vec, double t_step_end);
 
 #endif

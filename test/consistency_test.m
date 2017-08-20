@@ -25,23 +25,25 @@ for id_nm = 1 %:length(s_neuron_model)
     pm.seed = 5866;
     pm.extra_cmd = '-v';
 
-    [X_ref, ISI, ~] = gen_neu(pm, 'new,rm');
-    fprintf('  ISI = %g\n', mean(ISI));
+    % Standard data
+    [X_ref, ISI_ref, ~] = gen_neu(pm, 'new,rm');
+    fprintf('  ISI = %g\n', mean(ISI_ref));
     
     % Test new version, reproduce, output of poisson events
     pm.prog_path = path_tag_executable;
     pm.extra_cmd = '-v --output-poisson-events-path poi.txt';
-    [X, ~, ras, pm] = gen_neu(pm, 'new,rm');
+    [X, ISI, ras, pm] = gen_neu(pm, 'new,rm');
+    fprintf('  ISI = %g\n', mean(ISI));
     fprintf('--> Result: Max diff = %g\n', maxabs(X - X_ref));
 
     % Test reading of poisson events
     pm.extra_cmd = '-v --input-event-path poi.txt';
-    [X_poi, ~, ras, pm] = gen_neu(pm, 'new,rm');
-    pm.cmd_str
+    [X_poi, ISI_poi, ras, pm] = gen_neu(pm, 'new,rm');
+    fprintf('  ISI = %g\n', mean(ISI_poi));
     fprintf('--> Result: Max diff poi = %g\n', maxabs(X_poi - X));
 
     % Test exporting spike events to a neuron
-    if isempty(strfind(pm.neuron_model, 'cont'))
+    if isempty(strfind(pm.neuron_model, 'cont')) && false
         % construct input events to neuron "id_test".
         id_test = 1;
         % input from poisson
@@ -82,6 +84,8 @@ for id_nm = 1 %:length(s_neuron_model)
         fprintf('--> Result: Max diff single = %g\n', maxabs(X(1,:) - X_single));
     end
 end
+
+return
 
 %%plot(X, X_ref)
 rg = 1:200;
