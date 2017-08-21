@@ -10,7 +10,7 @@
 %  PSP = get_neu_psp('HH-GH-cont-syn')
 
 function PSP = get_neu_psp(pm0)
-[~, tmp_f_name] = fileparts(tempname('./'));
+[~, tmp_f_name] = fileparts(tempname('./'));  % TODO: use a fix name to benefit from cache, while avoid conflict in parallelism?
 events_file_path = ['./data/._tmp_neu_psp_poisson_' tmp_f_name '.txt'];
 
 pm = [];

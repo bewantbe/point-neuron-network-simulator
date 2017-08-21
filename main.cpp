@@ -506,7 +506,7 @@ int MainLoop(const po::variables_map &vm)
   }
   
   std::ofstream fout_poisson;
-  bool b_output_poisson_input = fout_try_open("output-poisson-events-path", fout_poisson);
+  bool b_output_poisson_input = fout_try_open("output-poisson-path", fout_poisson);
   if (b_output_poisson_input) {
     fout_poisson.precision(17);
   }
@@ -689,7 +689,7 @@ int main(int argc, char *argv[])
       ("synaptic-net-delay", po::value<std::string>(),
        "Set the synaptic delays for the network. Path to the matrix text file.")
       ("refractory-time", po::value<double>(),
-       "Set refractory time.")
+       "Set refractory time for LIF type models.")
       ("volt-path,o",      po::value<std::string>(),
        "Output volt to path. In raw binary format.")
       ("ras-path",         po::value<std::string>(),
@@ -702,7 +702,7 @@ int main(int argc, char *argv[])
        "Output gating variables to path. In raw binary format.")
       ("output-first-data-point",
        "Also output initial condition in volt-path and conductance-path.")
-      ("output-poisson-events-path", po::value<std::string>(),
+      ("output-poisson-path", po::value<std::string>(),
        "Output generated poisson events to the path")
       ("initial-state-path", po::value<std::string>(),
        "Read initial state from path.")

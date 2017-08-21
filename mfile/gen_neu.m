@@ -7,16 +7,16 @@
 %  pm = [];
 %  pm.prog_path = '../bin/gen_neu';  % path to the executable.
 %  pm.neuron_model = 'HH-GH';  % LIF-G, LIF-GH, HH-GH etc. See gen_neu --help
-%  pm.simu_method = 'SSC';     % Use Spike-Spike-Correction.
+%  pm.simu_method = 'SSC';     % Use Spike-Spike-Correction, or 'auto'
 %  pm.net  = [0 1; 0 0]; % Connectivity matrix or file to the matrix.
 %  pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
 %                        %             Indexes are later half.
-%  pm.scee_mV = 0.05;
-%  pm.scie_mV = 0.00;       % default: 0. Strength from Ex. to In.
-%  pm.scei_mV = 0.00;       % default: 0. Strength from In. to Ex.
-%  pm.scii_mV = 0.00;       % default: 0.
-%  pm.pr      = 1.6;        % can be a vector (not yet)
-%  pm.ps_mV   = 0.04;       % can be a vector (not yet)
+%  pm.scee_mV = 0.5;
+%  pm.scie_mV = 0.0;       % default: 0. Strength from Ex. to In.
+%  pm.scei_mV = 0.0;       % default: 0. Strength from In. to Ex.
+%  pm.scii_mV = 0.0;       % default: 0.
+%  pm.pr      = 1.6;       % poisson rate, can be a vector
+%  pm.ps_mV   = 0.4;       % poisson strength, can be a vector
 %  pm.t    = 1e4;
 %  pm.dt   = 2^-5;       % default: 1/32
 %  pm.stv  = 0.5;        % default: 0.5
@@ -44,6 +44,7 @@
 %  'cmd'    Show command call to raster_tuning_HH, then exit. Useful for debug
 %  'ext_T'  Generate a bit more data, so reduce "head effect".
 %  'v'      Be verbose, with 'cmd' will also run and show cmd.
+%  'h'      Show help for the command line generator.
 %
 % return value pm is a "normalized" input parameter set
 
@@ -75,7 +76,7 @@ X=[];
 ISI=[];
 ras=[];
 
-% mV Conversion
+% Convert "mV" to internal unit.
 field_v = {'scee', 'scie', 'scei', 'scii', 'ps', 'psi'};
 % if contains field that needs conversion
 if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
@@ -93,9 +94,14 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
     end
 end
 
-pm0 = pm;  % do a backup
+if ~ischar(pm.net)
+  b_clean_net_file = true;
+else
+  b_clean_net_file = false;
+end
 
 if ~isfield(pm, 'prog_path')
+    % Search gen_neu in "../bin" then "./"
     pathdir = fileparts(mfilename('fullpath'));
     exepath = sprintf('%s%s..%sbin%sgen_neu', pathdir, filesep, filesep, filesep);
     if ~exist(exepath, 'file')
@@ -113,13 +119,13 @@ mode_show_cmd  = false;
 mode_read_only = false;
 mode_extra_data = false;
 mode_run_in_background = false;
-pm.extra_cmd = [' ' pm.extra_cmd ' '];
-b_verbose = isfield(pm, 'extra_cmd') && (~isempty([strfind(pm.extra_cmd,' -v ') strfind(pm.extra_cmd,' --verbose ')]));  % show time cost
-ext_T = 0;
 
 if ~isfield(pm, 'extra_cmd')
     pm.extra_cmd = '';
 end
+pm.extra_cmd = [' ' strtrim(pm.extra_cmd) ' '];
+b_verbose = ~isempty([strfind(pm.extra_cmd,' -v ') strfind(pm.extra_cmd,' --verbose ')]);  % show time cost
+ext_T = 0;
 
 % Read generator parameters
 if ~exist('gen_cmd','var') || isempty(gen_cmd)
@@ -171,7 +177,7 @@ if ischar(pm.net)
             [mat_path, pm.net] = save_network(pm.net_adj, data_dir_prefix);
             fprintf('Using pm.net_adj as the network\n');
         else
-            error('Set pm.net the file name of net or adjacency matrix');
+            error('Set pm.net to the file name of net or adjacency matrix');
         end
     end
     [~, pm.net] = fileparts(pm.net);          % Use the name without extension
@@ -380,8 +386,7 @@ if (~have_data || new_run)...
     end
     fflush(stdout);
     t_start = tic();
-    % generate data
-    rt = system(cmdst);
+    rt = system(cmdst);           % Run simulation !
     if mode_run_in_background
         ISI=rt;
         return
@@ -491,7 +496,7 @@ if mode_rm_only
     system([rmcmd, output_RAS_name]);
     system([rmcmd, output_G_name]);
     system([rmcmd, output_gating_name]);
-    if ~ischar(pm0.net)  % so pm0.net is adjacency matrix
+    if b_clean_net_file  % so pm.net was adjacency matrix
       % Remove the saved network file.
       system([rmcmd, pm.net_path]);
     end
@@ -509,7 +514,8 @@ end
 
 end  % end of function
 
-% item = 'pr' 'ps' etc.
+% Convert array to command line option
+% item = 'pr' 'ps' 'pri' or 'psi'.
 function [str name] = get_prps_str(pm, item)
     if isfield(pm, item) && ~isempty(pm.(item))
         str = ['--' item];
@@ -529,6 +535,8 @@ end
 %{
   clear('pm');
   pm.net  = 'net_2_2';
+  pm.neuron_model = 'LIF-GH';
+  pm.simu_method = 'auto';
   pm.scee = 0.05;
   pm.ps   = 0.04;
   pm.pr   = 1.6;
@@ -563,6 +571,24 @@ end
   X=gen_neu(pm,'nameX,rm');
 
   X=gen_neu(pm,'cmd');
+  
+  pm.net = [0 1; 0 0];
+  pm.nE = 1;
+  pm.nI = 1;
+  pm.pr = [1.6 1.5];
+  pm.extra_cmd = '--output-poisson-path poi.txt';
+  X=gen_neu(pm, 'new,rm');
+  poi = load('poi.txt');
+  1/mean(diff(poi(poi(:,1)==1, 2)))
+  1/mean(diff(poi(poi(:,1)==2, 2)))
+  
+  pm.ps = [0.04 0.05];
+  X=gen_neu(pm, 'new,rm');  % no error
+  poi = load('poi.txt');
+  1/mean(diff(poi(poi(:,1)==1, 2)))
+  1/mean(diff(poi(poi(:,1)==2, 2)))
+  all(poi(poi(:,1)==1, 3) == pm.ps(1))
+  all(poi(poi(:,1)==2, 3) == pm.ps(2))
 %}
 
 % vim: et sw=4 sts=4

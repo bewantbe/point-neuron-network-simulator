@@ -31,7 +31,7 @@ for id_nm = 1 %:length(s_neuron_model)
     
     % Test new version, reproduce, output of poisson events
     pm.prog_path = path_tag_executable;
-    pm.extra_cmd = '-v --output-poisson-events-path poi.txt';
+    pm.extra_cmd = '-v --output-poisson-path poi.txt';
     [X, ISI, ras, pm] = gen_neu(pm, 'new,rm');
     fprintf('  ISI = %g\n', mean(ISI));
     fprintf('--> Result: Max diff = %g\n', maxabs(X - X_ref));
