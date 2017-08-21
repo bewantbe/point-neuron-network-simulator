@@ -138,43 +138,31 @@ int MainLoop(const po::variables_map &vm)
 
   // Set neural parameters
   TyNeuronalParams pm(vm["nE"].as<unsigned int>(), vm["nI"].as<unsigned int>());
-  int n_neu = vm["nE"].as<unsigned int>() + vm["nI"].as<unsigned int>();
 
-  // set poisson input
-  if (! vm.count("ps")) {
-    cerr << "Must specify poisson input strength (--ps arg)." << endl;
-    return 1;
-  }
-  for (int i = 0; i < n_neu; i++) {
-    pm.arr_pr[i] = vm["pr"].as<double>();
-    pm.arr_ps[i] = vm["ps"].as<double>();
-    pm.arr_pri[i] = vm["pri"].as<double>();
-    pm.arr_psi[i] = vm["psi"].as<double>();
-  }
+  // Set poisson input rate and strength
+  auto f_parse_array = [&vm](const char *opt_name, std::vector<double> &to_arr)
+  {
+    if (vm.count(opt_name)) {
+      const auto &v = vm[opt_name].as< std::vector<double> >();
+      if (v.size() == 1) {
+        std::fill(to_arr.begin(), to_arr.end(), v[0]);
+      } else {
+        size_t upbd = std::min(v.size(), to_arr.size());
+        for (size_t i = 0; i < upbd; i++) {
+          to_arr[i] = v[i];
+        }
+      }
+    }
+    //printf("Arr %s\n", opt_name);
+    //for (size_t i = 0; i < to_arr.size(); i++) {
+      //printf("  arr[%lu] = %.17g\n", i, to_arr[i]);
+    //}
+  };
 
-  if (vm.count("pr-mul")) {
-    const auto &v = vm["pr-mul"].as< std::vector<double> >();
-    if (v.size() != (size_t)n_neu) {
-      cerr << "parameter --pr-mul should have the same number of terms as neuron number.\n";
-      return -1;
-    }
-    for (int i = 0; i < n_neu; i++) {
-      pm.arr_pr [i] *= v[i];
-      pm.arr_pri[i] *= v[i];
-    }
-  }
-
-  if (vm.count("ps-mul")) {
-    const auto &v = vm["ps-mul"].as< std::vector<double> >();
-    if (v.size() != (size_t)n_neu) {
-      cerr << "parameter --ps-mul should have the same number of terms as neuron number.\n";
-      return -1;
-    }
-    for (int i = 0; i < n_neu; i++) {
-      pm.arr_ps [i] *= v[i];
-      pm.arr_psi[i] *= v[i];
-    }
-  }
+  f_parse_array("pr", pm.arr_pr);
+  f_parse_array("ps", pm.arr_ps);
+  f_parse_array("pri", pm.arr_pri);
+  f_parse_array("psi", pm.arr_psi);
 
   pm.scee = vm["scee"].as<double>();
   pm.scie = vm["scie"].as<double>();
@@ -667,7 +655,7 @@ int main(int argc, char *argv[])
       ("nI",   po::value<unsigned int>()->default_value(0),
        "Number of inhibitory neurons.")
       ("net",  po::value<std::string>(),
-       "Network file path.")
+       "Network file path. Use - for full net.")
       ("scee", po::value<double>()->default_value(0.0),
        "Cortical strength E->E (unscaled).")
       ("scie", po::value<double>()->default_value(0.0),
@@ -676,18 +664,14 @@ int main(int argc, char *argv[])
        "Cortical strength I->E (unscaled).")
       ("scii", po::value<double>()->default_value(0.0),
        "Cortical strength I->I (unscaled).")
-      ("pr",   po::value<double>()->default_value(0.0),
+      ("pr",   po::value< std::vector<double> >()->multitoken(),
        "Poisson input rate for Excitatory type, in 1/ms.")
-      ("ps",   po::value<double>(),
+      ("ps",   po::value< std::vector<double> >()->multitoken(),
        "Poisson input strength for Excitatory type (unscaled).")
-      ("pri",   po::value<double>()->default_value(0.0),
+      ("pri",  po::value< std::vector<double> >()->multitoken(),
        "Poisson input rate for inhibitory type, in 1/ms.")
-      ("psi",  po::value<double>()->default_value(0.0),
+      ("psi",  po::value< std::vector<double> >()->multitoken(),
        "Poisson input strength, inhibitory type (unscaled).")
-      ("pr-mul", po::value< std::vector<double> >()->multitoken(),
-       "Poisson input rate multiper, affect both E and I type.")
-      ("ps-mul", po::value< std::vector<double> >()->multitoken(),
-       "Poisson input strength multiper, affect both E and I type.")
       ("seed",   po::value< VecUInt >()->multitoken()->default_value(VecUInt{1}, "1"),
        "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
       ("seed-auto",
@@ -729,10 +713,7 @@ int main(int argc, char *argv[])
       ("force-spike-list", po::value<std::string>(),
        "Read force spike list.")
   ;
-  // ps-mul
-  // verbose : for progress percentage
-  // filter
-  // vector input
+  // filter?
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);

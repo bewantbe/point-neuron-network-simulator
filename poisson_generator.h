@@ -3,6 +3,10 @@
 
 #include "common_header.h"
 
+/* For generating and store poisson events.
+ * No idea why this simple task got so complex.
+ */
+
 // Used to generate poisson events
 class TyPoissonSource
 {
@@ -19,12 +23,7 @@ public:
   { return strength; }
 
   double NextEventTime()
-    /*{ return t += exp_dis(rand_eng); }*/
-  {
-    if (rate == 0)
-      cerr << "WTF, rate == 0\n";
-    return t += exp_dis(rand_eng);
-  }
+  { return t += exp_dis(rand_eng); }
 
   void Set(double _rate, double _strength, double t0)
   {
@@ -95,7 +94,7 @@ public:
 
   void Shrink()
   {
-    assert(id_seq < size());
+    assert(id_seq <= size());
     erase(begin(), begin()+id_seq);
     id_seq = 0;
   }
@@ -126,11 +125,18 @@ public:
     }
   }
 
-  // Use for E type Poisson input.
+  // Used for E type Poisson input only.
   void Init(double rate, double strength, double t0)
   {
     InitEventVec(*this, rate, strength, t0);
     id_seq = 0;
+  }
+
+  void PrintEvents()
+  {
+    for (size_t i = 0; i < size(); i++) {
+      printf("event[%lu] = %.17g\n", i, (*this)[i].time);
+    }
   }
 
   // For E type poisson input.
@@ -175,7 +181,7 @@ public:
     double sp[2] = {poisson_src1.Strength(), poisson_src2.Strength()};
     while (tp[id_smaller] < t_until || --n_least_fill >= 0) {
       event_vec.emplace_back(tp[id_smaller], sp[id_smaller]);
-      tp[id_smaller] = (psrc[id_smaller])->NextEventTime();
+      tp[id_smaller] = psrc[id_smaller]->NextEventTime();
       id_smaller = 1*(tp[1] <= tp[0]);
     }
   }
@@ -183,15 +189,16 @@ public:
   // Use for E and I type Poisson input.
   void Init(double rate1, double strength1, double rate2, double strength2, double t0)
   {
+    /* // Old behaviour
     Init(rate1, strength1, t0);
     poisson_src1.Set(rate1, strength1, 0);
-    /*
+    */
+
     poisson_src1.Init(rate1, strength1, t0);
     poisson_src2.Init(rate2, strength2, t0);
     clear();
     id_seq = 0;
     FillEvents(*this, t0, 1);  // t_until is not important here
-    */
   }
 
   // Use for E and I type Poisson input.
@@ -200,12 +207,12 @@ public:
     id_seq++;
     if (id_seq == size()) {
       if (std::isfinite(back().time)) {
-        double t_end = back().time + EVENT_GEN_CHUNK / poisson_src1.Rate();
+        //double t_end = back().time + EVENT_GEN_CHUNK / poisson_src1.Rate();
+        //FillEvents(*this, t_end, 0);
         if (auto_shrink && size() > EVENT_VEC_SIZE_LIMIT) {
           Shrink();
         }
-        /*FillEvents(*this, t_until, EVENT_GEN_CHUNK);*/
-        FillEvents(*this, t_end, 0);
+        FillEvents(*this, t_until, EVENT_GEN_CHUNK);
       } else {
         id_seq--;
       }
@@ -214,8 +221,8 @@ public:
 
   void PopAndFill()
   {
-    /*PopAndFill(-Inf);*/
-    PopAndFillOld(poisson_src1.Rate(), poisson_src1.Strength());
+    PopAndFill(-Inf);
+    //PopAndFillOld(poisson_src1.Rate(), poisson_src1.Strength());  // Old behaviour
   }
 };
 
@@ -224,19 +231,6 @@ class TyPoissonTimeVec: public std::vector<TyPoissonTimeSeq>
 {
   std::vector<TyPoissonTimeSeq::TyIdx> id_seq_vec;  // point to current event
 public:
-  /*
-  void Init(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0)
-  {
-    // each TyPoissonTimeSeq should have at least one event
-    resize(rate_vec.size());
-    for (size_t j = 0; j < rate_vec.size(); j++) {
-      operator[](j).Init(rate_vec[j], arr_ps[j], t0);
-    }
-    id_seq_vec.reserve(rate_vec.size());
-    std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
-  }
-  */
-
   void Init(const TyArrVals &arr_pr,  const TyArrVals &arr_ps,
             const TyArrVals &arr_pri, const TyArrVals &arr_psi, double t0)
   {
@@ -248,13 +242,6 @@ public:
     id_seq_vec.reserve(arr_pr.size());
     std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
   }
-
-  /*
-  TyPoissonTimeVec(const TyArrVals &rate_vec, const TyArrVals &arr_ps, double t0 = 0)
-  {
-    Init(rate_vec, arr_ps, t0);
-  }
-  */
 
   TyPoissonTimeVec() = default;  // enable all other default constructors
 

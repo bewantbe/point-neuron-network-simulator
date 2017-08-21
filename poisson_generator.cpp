@@ -45,7 +45,7 @@ void SavePoissonInput(std::ofstream &fout, TyPoissonTimeVec &poisson_time_vec, d
     while (poisson_time_seq.Front().time < t_step_end) {
       fout << j + 1 << "\t" << poisson_time_seq.Front().time
         << "\t" << poisson_time_seq.Front().strength << "\n";
-      poisson_time_seq.PopAndFill(t_step_end);  // Next event
+      poisson_time_seq.PopAndFill();  // Next event
     }
   }
   poisson_time_vec.RestoreIdx();

@@ -50,6 +50,10 @@ X = volt_unit * (X - V_rest);
 [v_psp, pos_psp] = max(X);
 t_psp = pos_psp*pm.stv;
 
+if v_psp == 0
+  error('Fail to get EPSP (EPSP=0).');
+end
+
 mV_EPSP_ps = pm.ps / v_psp;
 
 PSP.mV_ps = mV_EPSP_ps;

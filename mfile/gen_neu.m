@@ -79,7 +79,7 @@ ras=[];
 field_v = {'scee', 'scie', 'scei', 'scii', 'ps'};
 % if contains field that needs conversion
 if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
-    PSP = get_neu_psp(pm);
+    PSP = get_neu_psp(pm);  % TODO: add psi
     PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps];
     for id_fv = 1:length(field_v)
         fv = field_v{id_fv};
@@ -234,22 +234,25 @@ if ~isfield(pm, 'st_extra_inf_post')
     pm.st_extra_inf_post = '';
 end
 
-[pm, st_pr_mul_hash] = get_pm_mul_array(pm, 'pr');
-[pm, st_ps_mul_hash] = get_pm_mul_array(pm, 'ps');
-[pm, st_psi_mul_hash] = get_pm_mul_array(pm, 'psi');
+if xor(isfield(pm,'pr'), isfield(pm,'ps'))
+    warning('pr and ps not privided together.');
+end
+if xor(isfield(pm,'pri'), isfield(pm,'psi'))
+    warning('pri and psi not privided together.');
+end
+
+[pr_str pr_name] = get_prps_str(pm, 'pr');
+[ps_str ps_name] = get_prps_str(pm, 'ps');
+[pri_str pri_name] = get_prps_str(pm, 'pri');
+[psi_str psi_name] = get_prps_str(pm, 'psi');
 
 % construct file paths
 st_sc = strrep(mat2str([pm.scee, pm.scie, pm.scei, pm.scii]),' ',',');
 st_p  = strrep(mat2str([pm.nE, pm.nI]),' ',',');
-if isfield(pm,'psi')
-    st_psi = sprintf('_psi=%g%s', pm.psi, st_psi_mul_hash);
-else
-    st_psi = '';
-end
 file_inf_st =...
-    sprintf('%s_p=%s_sc=%s_pr=%g%s_ps=%g%s%s_stv=%g_t=%.2e',...
-            pm.net, st_p(2:end-1), st_sc(2:end-1), pm.pr, st_pr_mul_hash,...
-            pm.ps, st_ps_mul_hash, st_psi, pm.stv, pm.t + ext_T);
+    sprintf('%s_p=%s_sc=%s_%s_%s_%s_%s_stv=%g_t=%.2e',...
+            pm.net, st_p(2:end-1), st_sc(2:end-1), pr_name,...
+            ps_name, pri_name, psi_name, pm.stv, pm.t + ext_T);
 file_prefix = [data_dir_prefix, neuron_model_name, '_'];
 output_name     = [file_prefix, 'volt_',file_inf_st,'.dat'];
 output_ISI_name = [file_prefix, 'ISI_', file_inf_st,'.txt'];
@@ -264,11 +267,8 @@ st_neu_s =...
     sprintf('--scee %.16e --scie %.16e --scei %.16e --scii %.16e',...
             pm.scee, pm.scie, pm.scei, pm.scii);
 st_neu_param =...
-    sprintf('--nE %d --nI %d --net "%s" --pr %.16e --ps %.16e %s',...
-            pm.nE, pm.nI, mat_path, pm.pr, pm.ps, st_neu_s);
-st_neu_param = [st_neu_param, get_mul_st(pm, 'pr_mul')];
-st_neu_param = [st_neu_param, get_mul_st(pm, 'ps_mul')];
-st_neu_param = [st_neu_param, get_mul_st(pm, 'psi_mul')];
+    sprintf('--nE %d --nI %d --net "%s" %s %s %s %s %s',...
+            pm.nE, pm.nI, mat_path, pr_str, ps_str, pri_str, psi_str, st_neu_s);
 if isfield(pm, 'sine_amp')
     st_neu_param = [st_neu_param,...
       sprintf(' --current-sine-amp %.16e', pm.sine_amp)];
@@ -290,32 +290,6 @@ end
 if isfield(pm, 'extI')
     st_neu_param = [st_neu_param,...
       sprintf(' --extI %.16e', pm.extI)];
-end
-pm.pr = pm0.pr;
-if isfield(pm, 'pr_mul')
-    if ~isfield(pm0, 'pr_mul')
-        pm = rmfield(pm, 'pr_mul');
-    else
-        pm.pr_mul = pm0.pr_mul;
-    end
-end
-pm.ps = pm0.ps;
-if isfield(pm, 'ps_mul')
-    if ~isfield(pm0, 'ps_mul')
-        pm = rmfield(pm, 'ps_mul');
-    else
-        pm.ps_mul = pm0.ps_mul;
-    end
-end
-if isfield(pm, 'psi')
-    pm.psi = pm0.psi;
-    if isfield(pm, 'psi_mul')
-        if ~isfield(pm0, 'psi_mul')
-            pm = rmfield(pm, 'psi_mul');
-        else
-            pm.psi_mul = pm0.psi_mul;
-        end
-    end
 end
 
 if isfield(pm, 'input_event')
@@ -535,62 +509,19 @@ end
 
 end  % end of function
 
-% Construct string for '--pr-mul', '--ps-mul', '--psi-mul'
-function st = get_mul_st(pm, field_name)
-    if isfield(pm, field_name)
-        f = getfield(pm, field_name);
-        if isnumeric(f)
-            st = mat2str(f(:)');
-            st = strrep(st,']','');
-            st = strrep(st,'[','');
-        elseif ischar(f)
-            st = f;
+% item = 'pr' 'ps' etc.
+function [str name] = get_prps_str(pm, item)
+    if isfield(pm, item) && ~isempty(pm.(item))
+        str = ['--' item];
+        str = [str, sprintf(' %.17g', pm.(item))];
+        if numel(pm.(item)) == 1
+            name = [item '=' sprintf('%g', pm.(item))];
+        else
+            name = [item '=' BKDRHash(pm.(item))];
         end
     else
-        st = '';
-    end
-    st = strtrim(st);
-    if ~isempty(st)
-        st = [' --', strrep(field_name,'_','-'), ' ', st];
-    end
-end
-
-% transform pr/ps/psi array to pr_mul/ps_mul/psi_mul array
-% field name should be pr/ps/psi
-function [pm, st_mul_hash] = get_pm_mul_array(pm, field_name)
-    st_mul_hash = '';
-    if isfield(pm, field_name)
-        f = getfield(pm, field_name);
-
-        field_name_mul = [field_name, '_mul'];
-        if numel(f) > 1.0
-            nn = pm.nI + pm.nE;   % number of neurons
-            if (numel(f) ~= nn)
-                error('number of neurons inconsist with vector pr.');
-            end
-            % set f=1, represent different rates in f_mul.
-            if isfield(pm, field_name_mul)
-                f_mul = getfield(pm, field_name_mul);
-                f_mul = [f_mul(:); ones(nn - numel(f_mul), 1)];
-                f_mul = (f_mul .* f(:))';
-            else
-                f_mul = f;
-            end
-            f = mean(f_mul);      % so f is more informative
-            f_mul = f_mul / f;
-            pm = setfield(pm, field_name, f);
-            pm = setfield(pm, field_name_mul, f_mul);
-        end
-        
-        if isfield(pm, field_name_mul)
-            f_mul = getfield(pm, field_name_mul);
-            st_mul_hash = ['0X', BKDRHash(mat2str(f_mul))];
-            pm = setfield(pm, [field_name_mul, '_hash'], st_mul_hash);
-            st_mul_hash = ['-', st_mul_hash];
-        end
-
-    else
-%        error('what?');
+        str = '';
+        name = '';
     end
 end
 

@@ -28,10 +28,10 @@ struct TyNeuronalParams
   {
     n_E = _n_E;
     n_I = _n_I;
-    arr_pr.resize(n_total());
-    arr_ps.resize(n_total());
-    arr_pri.resize(n_total());
-    arr_psi.resize(n_total());
+    arr_pr.resize(n_total());  std::fill(arr_pr.begin(), arr_pr.end(), 0);
+    arr_ps.resize(n_total());  std::fill(arr_ps.begin(), arr_ps.end(), 0);
+    arr_pri.resize(n_total()); std::fill(arr_pri.begin(), arr_pri.end(), 0);
+    arr_psi.resize(n_total()); std::fill(arr_psi.begin(), arr_psi.end(), 0);
     net.resize(n_total(), n_total());
   }
 
