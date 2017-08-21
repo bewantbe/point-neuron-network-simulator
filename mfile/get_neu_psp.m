@@ -10,7 +10,11 @@ function PSP = get_neu_psp(pm0)
 events_file_path = ['./data/._tmp_neu_psp_poisson_' tmp_f_name '.txt'];
 
 pm = [];
-pm.neuron_model = pm0.neuron_model;
+if ischar(pm0)
+  pm.neuron_model = pm0;
+else
+  pm.neuron_model = pm0.neuron_model;
+end
 pm.simu_method  = 'auto';
 pm.extra_cmd = sprintf('--input-event-path "%s"', events_file_path);
 
@@ -58,6 +62,17 @@ mV_EPSP_ps = pm.ps / v_psp;
 
 PSP.mV_ps = mV_EPSP_ps;
 PSP.t_ps = t_psp;
+
+% test psi, TODO: put psi into ps calculation
+pm.ps = -1e-6;
+X = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
+X(:, 1:floor(t_e/pm.stv)) = [];
+X = volt_unit * (X - V_rest);
+[v_psp, pos_psp] = min(X);
+t_psp = pos_psp*pm.stv;
+mV_IPSP_ps = pm.ps / v_psp;
+PSP.mV_psi = mV_IPSP_ps;
+PSP.t_psi = t_psp;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the PSP for spike interaction

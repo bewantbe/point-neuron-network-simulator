@@ -76,11 +76,11 @@ ISI=[];
 ras=[];
 
 % mV Conversion
-field_v = {'scee', 'scie', 'scei', 'scii', 'ps'};
+field_v = {'scee', 'scie', 'scei', 'scii', 'ps', 'psi'};
 % if contains field that needs conversion
 if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
-    PSP = get_neu_psp(pm);  % TODO: add psi
-    PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps];
+    PSP = get_neu_psp(pm);
+    PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps, PSP.mV_psi];
     for id_fv = 1:length(field_v)
         fv = field_v{id_fv};
         if isfield(pm, [fv '_mV'])
