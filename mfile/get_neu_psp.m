@@ -51,7 +51,7 @@ V_rest = X(1, floor(t_e/pm.stv) - 1);
 X(:, 1:floor(t_e/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
 
-[v_psp, pos_psp] = max(X);
+[v_psp, pos_psp] = max(X);  % TODO: add interpolation to increase accuracy
 t_psp = pos_psp*pm.stv;
 
 if v_psp == 0
@@ -63,7 +63,7 @@ mV_EPSP_ps = pm.ps / v_psp;
 PSP.mV_ps = mV_EPSP_ps;
 PSP.t_ps = t_psp;
 
-% test psi, TODO: put psi into ps calculation
+% test psi, TODO: combine psi and ps calculation
 pm.ps = -1e-6;
 X = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
 X(:, 1:floor(t_e/pm.stv)) = [];
@@ -73,6 +73,16 @@ t_psp = pos_psp*pm.stv;
 mV_IPSP_ps = pm.ps / v_psp;
 PSP.mV_psi = mV_IPSP_ps;
 PSP.t_psi = t_psp;
+
+switch pm.neuron_model
+  case {'LIF-G', 'LIF-GH', 'HH-G', 'HH-GH'}
+    PSP.mV_scee = PSP.mV_ps;
+    PSP.t_scee  = PSP.t_ps;
+    PSP.mV_scei = PSP.mV_psi;
+    PSP.t_scei  = PSP.t_psi;
+    delete(events_file_path);
+    return;
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the PSP for spike interaction
@@ -128,7 +138,7 @@ X(:, 1:floor(ras(1, 2)/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
 [v_psp, pos_psp] = min(X(1, :));
 t_psp = pos_psp*pm.stv;
-
+ 
 mV_IPSP_scei = -pm.scei / v_psp;
 PSP.mV_scei = mV_IPSP_scei;
 PSP.t_scei = t_psp;
