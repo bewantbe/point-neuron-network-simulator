@@ -1,11 +1,16 @@
 #include "poisson_generator.h"
 #include <fstream>
 #include <sstream>
+#include <stdlib.h>  // for strtod()
 
 // The event's times for each neuron should be ascending.
 void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path, const TyArrVals &arr_ps)
 {
   std::ifstream fin(path);
+  if (!fin.good()) {
+    cerr << "Fail to open input file: \"" << path << "\"\n";
+    return;
+  }
   size_t id;
   double time;
   double strength;
@@ -13,23 +18,33 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
   char buf_str[buf_size];
   poisson_time_vec.RemoveEvents();
   while (fin.getline(buf_str, buf_size)) {
-    std::istringstream stin(buf_str);
-    if (!(stin >> id >> time)) {
-      cerr << "Bad input file:\"" << path << "\"\n";
+    char *pstr = buf_str;
+    char *endstr;
+    bool bad_convert = false;
+    id = strtol(pstr, &endstr, 10);
+    bad_convert |= endstr == pstr;
+    pstr = endstr;
+    // strtod has to be slow:
+    // http://www.exploringbinary.com/how-strtod-works-and-sometimes-doesnt/
+    time = strtod(pstr, &endstr);
+    bad_convert |= endstr == pstr;
+    if (bad_convert) {
+      cerr << "Bad input file: \"" << path << "\"\n";
       exit(-1);
     }
+    pstr = endstr;
+    strength = strtod(pstr, &endstr);
+    if (endstr == pstr) {
+      // no strength
+      strength = arr_ps[id];
+    }
     if (id > poisson_time_vec.size() || id == 0) {
-      cerr << "FillPoissonEventsFromFile(): number of neuron does not match!"
-        << "read id = " << id << "  number of neuron = "
+      cerr << "FillPoissonEventsFromFile(): number of neurons does not match!\n"
+        << " Read id = " << id << "  number of neurons = "
         << poisson_time_vec.size() << endl;
       exit(-8);
     }
     id -= 1;  // convert to 0-based index
-    strength = arr_ps[id];
-    if (!stin.eof() && !(stin >> strength)) {
-      cerr << "Bad input file:\"" << path << "\"\n";
-      exit(-1);
-    }
     poisson_time_vec[id].emplace_back(time, strength);
   }
   for (auto &i : poisson_time_vec) {  // seal the queue

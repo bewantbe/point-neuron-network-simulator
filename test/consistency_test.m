@@ -3,7 +3,7 @@ addpath('../mfile');
 maxabs = @(x) max(abs(x(:)));
 
 s_neuron_model = {'LIF-G', 'LIF-GH', 'HH-G', 'HH-GH', 'HH-GH-cont-syn'};
-path_ref_executable = '../bin/gen_neu_ref';
+path_ref_executable = '../bin/gen_neu_c5dfc0be';
 path_tag_executable = '../bin/gen_neu';
 
 for id_nm = 1 %:length(s_neuron_model)
@@ -14,27 +14,32 @@ for id_nm = 1 %:length(s_neuron_model)
     pm.simu_method  = 'auto';
 %    pm.synaptic_delay = 0.5;
 %    pm.simu_method  = 'SSC';
-    pm.net     = ones(2);
-    pm.nI      = 0;
+    pm.net     = ones(15);
+    pm.nI      = 5;
     pm.scee_mV = 1.0;
-    pm.pr      = 4.0;
-    pm.ps_mV   = 1.0;
+    pm.scie_mV = 1.2;
+    pm.scei_mV = 1.0;
+    pm.scii_mV = 0.8;
+    pm.pr      = 4.0 * (1+rand(1,length(pm.net))/10);
+    pm.ps_mV   = 1.0 * (1+rand(1,length(pm.net))/10);
+    pm.pri     = 2.0 * (1+rand(1,length(pm.net))/10);
+    pm.psi_mV  = 0.7 * (1+rand(1,length(pm.net))/10);
     pm.t    = 1e4;
     pm.dt   = 1.0/32;
     pm.stv  = 0.5;
     pm.seed = 5866;
     pm.extra_cmd = '-v';
-
+    
     % Standard data
-    [X_ref, ISI_ref, ~] = gen_neu(pm, 'new,rm');
-    fprintf('  ISI = %g\n', mean(ISI_ref));
+%    [X_ref, ISI_ref, ~, pm] = gen_neu(pm, 'new,rm');
+%    fprintf('  ISI = %g\n', mean(ISI_ref));
     
     % Test new version, reproduce, output of poisson events
     pm.prog_path = path_tag_executable;
     pm.extra_cmd = '-v --output-poisson-path poi.txt';
     [X, ISI, ras, pm] = gen_neu(pm, 'new,rm');
     fprintf('  ISI = %g\n', mean(ISI));
-    fprintf('--> Result: Max diff = %g\n', maxabs(X - X_ref));
+%    fprintf('--> Result: Max diff = %g\n', maxabs(X - X_ref));
 
     % Test reading of poisson events
     pm.extra_cmd = '-v --input-event-path poi.txt';
@@ -43,25 +48,25 @@ for id_nm = 1 %:length(s_neuron_model)
     fprintf('--> Result: Max diff poi = %g\n', maxabs(X_poi - X));
 
     % Test exporting spike events to a neuron
-    if isempty(strfind(pm.neuron_model, 'cont')) && false
+    if isempty(strfind(pm.neuron_model, 'cont'))
         % construct input events to neuron "id_test".
         id_test = 1;
         % input from poisson
         poi = load('poi.txt');
         poi = poi(poi(:,1)==id_test, :);  % keep only id_test related spikes
         poi(:,1) = 1;
-        % input from other neurons
+        % input from other neurons in network
         ras = ras(ras(:,1)~=id_test, :);
-        sc_strength = [pm.scee, pm.scie, pm.scei, pm.scii];
+        sc_strength = [pm.scee, pm.scie, -pm.scei, -pm.scii];
         ras_strength = pm.net_adj(id_test, ras(:, 1)) .* sc_strength((id_test>pm.nE) + 2*(ras(:, 1)>pm.nE) + 1);    
         ras = [ras ras_strength'];
         ras(ras(:, 3)==0, :) = [];
         ras(:, 1) = 1;
         
-%        if isfield(pm, 'synaptic_delay')
-%            ras(:, 2) += pm.synaptic_delay;
-%        end
-%        
+        if isfield(pm, 'synaptic_delay')
+            ras(:, 2) += pm.synaptic_delay;
+        end
+        
         poi = [poi; ras];
         [~, id_sort] = sort(poi(:,2));
         poi = poi(id_sort, :);
@@ -76,7 +81,6 @@ for id_nm = 1 %:length(s_neuron_model)
         pm.nE      = 1;
         pm.nI      = 0;
         [X_single, ~, ~, pm] = gen_neu(pm, 'new,rm');
-        pm.cmd_str
 
         % The error is generally not zero, but will converge to zero when
         % dt -> 0. The problem is that the Spike-Correction algorithm (SSC)

@@ -1,6 +1,7 @@
 # Project: point-neuron-network-simulator
 
 # variables for implicit rules
+C = gcc
 CXX = g++
 CPPFLAGS = -std=c++11 -Wall --pedantic -Wextra -Wno-unused-parameter
 CXXFLAGS = -g -O2
@@ -13,11 +14,15 @@ LDLIBS = -lboost_program_options
 BIN = bin/gen_neu
 BIN_DBG = bin/gen_neu_dbg
 SRCS = main.cpp math_helper.cpp legacy_lib.cpp neuron_system_utils.cpp poisson_generator.cpp
-OBJS = $(SRCS:.cpp=.o)
+OBJS = $(SRCS:.cpp=.o) dtoa.o
 
-$(BIN): $(OBJS)
+$(BIN): $(OBJS) dtoa.o
 	mkdir -p `dirname $(BIN)`
 	$(CXX) $(LDFLAGS) -o $(BIN) $(OBJS) $(LDLIBS)
+
+# For strtod() function
+dtoa.o: external_code/dtoa.c
+	$(C) -Wall -O2 -c -o dtoa.o external_code/dtoa.c
 
 .PHONY : static-link
 static-link: LDFLAGS = -static -pthread
