@@ -52,7 +52,9 @@ for id_nm = 1 %:length(s_neuron_model)
         % construct input events to neuron "id_test".
         id_test = 1;
         % input from poisson
+        tic;
         poi = load('poi.txt');
+        fprintf('load poi.txt: t = %.3f\n', toc);
         poi = poi(poi(:,1)==id_test, :);  % keep only id_test related spikes
         poi(:,1) = 1;
         % input from other neurons in network

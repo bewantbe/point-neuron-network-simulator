@@ -302,7 +302,7 @@ if isfield(pm, 'input_event')
     [~, tmp_f_name] = fileparts(tempname('./'));
     poisson_path = [data_dir_prefix 'external_event_' tmp_f_name '.txt'];
     pm.extra_cmd = [pm.extra_cmd ' --input-event-path ' poisson_path];
-    if (size(pm.input_event,2) != 2 && size(pm.input_event,2) != 3)
+    if (size(pm.input_event,2) ~= 2 && size(pm.input_event,2) ~= 3)
         error('pm.input_event must be 2 or 3 column, the order is "id time [strength]"');
     end
     func_fraction = @(x) x - floor(x);

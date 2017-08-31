@@ -54,12 +54,19 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
 
 void SavePoissonInput(std::ofstream &fout, TyPoissonTimeVec &poisson_time_vec, double t_step_end)
 {
+  const int buf_size = 1024;
+  char str_buf[buf_size];
   poisson_time_vec.SaveIdxAndClean();
   for (size_t j = 0; j < poisson_time_vec.size(); j++) {
     TyPoissonTimeSeq &poisson_time_seq = poisson_time_vec[j];
     while (poisson_time_seq.Front().time < t_step_end) {
-      fout << j + 1 << "\t" << poisson_time_seq.Front().time
-        << "\t" << poisson_time_seq.Front().strength << "\n";
+      int str_len = snprintf(str_buf, buf_size, "%lu\t%.17g\t%.17g\n",
+        j + 1, poisson_time_seq.Front().time, poisson_time_seq.Front().strength);
+      fout.write(str_buf, std::min(str_len, buf_size));
+//      fout << j + 1 << "\t" << poisson_time_seq.Front().time
+//        << "\n";
+//      fout << j + 1 << "\t" << poisson_time_seq.Front().time
+//        << "\t" << poisson_time_seq.Front().strength << "\n";
       poisson_time_seq.PopAndFill();  // Next event
     }
   }

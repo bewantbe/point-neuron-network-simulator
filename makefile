@@ -1,7 +1,7 @@
 # Project: point-neuron-network-simulator
 
 # variables for implicit rules
-C = gcc
+CC = gcc
 CXX = g++
 CPPFLAGS = -std=c++11 -Wall --pedantic -Wextra -Wno-unused-parameter
 CXXFLAGS = -g -O2
@@ -22,7 +22,7 @@ $(BIN): $(OBJS) dtoa.o
 
 # For strtod() function
 dtoa.o: external_code/dtoa.c
-	$(C) -Wall -O2 -c -o dtoa.o external_code/dtoa.c
+	$(CC) -Wall -O2 -c -o dtoa.o external_code/dtoa.c
 
 .PHONY : static-link
 static-link: LDFLAGS = -static -pthread
