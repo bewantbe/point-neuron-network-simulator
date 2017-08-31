@@ -10,8 +10,8 @@
 %  PSP = get_neu_psp('HH-GH-cont-syn')
 
 function PSP = get_neu_psp(pm0)
-[~, tmp_f_name] = fileparts(tempname('./'));  % TODO: use a fix name to benefit from cache, while avoid conflict in parallelism?
-events_file_path = ['./data/._tmp_neu_psp_poisson_' tmp_f_name '.txt'];
+[~, tmp_f_name] = fileparts(tempname(['.' filesep]));  % TODO: use a fix name to benefit from cache, while avoid conflict in parallelism?
+events_file_path = ['.' filesep 'data' filesep '._tmp_neu_psp_poisson_' tmp_f_name '.txt'];
 
 pm = [];
 if ischar(pm0)
@@ -52,7 +52,9 @@ fprintf(fd, '1 %.16e %.16e\n', t_e, pm.ps);
 fprintf(fd, '2 %.16e %.16e\n', t_e, -pm.ps);
 fclose(fd);
 
-X = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
+tmp_dir = ['.' filesep 'data' filesep '.get_neu_psp_tmp' tmp_f_name];
+
+X = gen_neu(pm, 'new,rm', tmp_dir);
 V_rest = X(1, floor(t_e/pm.stv) - 1);
 X(:, 1:floor(t_e/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
@@ -107,7 +109,7 @@ fclose(fd);
 %% test scee
 pm.nI = 0;
 pm.scee = 1e-6;   % some small value
-[X, ~, ras] = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
+[X, ~, ras] = gen_neu(pm, 'new,rm', tmp_dir);
 if isempty(ras)
   error('Fail to generate spike');
 end
@@ -124,7 +126,7 @@ PSP.t_scee = pos_psp*pm.stv;
 %% test scei
 pm.nI = 1;
 pm.scei = 1e-6;
-[X, ~, ras] = gen_neu(pm, 'new,rm', ['./data/.get_neu_psp_tmp' tmp_f_name]);
+[X, ~, ras] = gen_neu(pm, 'new,rm', tmp_dir);
 X(:, 1:floor(ras(1, 2)/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
 
