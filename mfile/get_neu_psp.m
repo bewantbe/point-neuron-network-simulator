@@ -47,6 +47,11 @@ pm.stv = pm.dt;
 pm.pr = 0;
 pm.ps = 1e-6;  % some very small value
 
+events_file_dir = fileparts(events_file_path);
+if ~exist(events_file_dir, 'dir')
+  mkdir(events_file_dir);
+end
+
 fd = fopen(events_file_path, 'w');
 fprintf(fd, '1 %.16e %.16e\n', t_e, pm.ps);
 fprintf(fd, '2 %.16e %.16e\n', t_e, -pm.ps);

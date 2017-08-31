@@ -151,7 +151,8 @@ typedef std::vector< TySpikeEvent > TySpikeEventVec;
 
 int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 
-void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net);
+void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
+                     bool is_sparse);
 SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net);
 int ReadSpikeList(TySpikeEventVec &spike_list, const char *path);
 

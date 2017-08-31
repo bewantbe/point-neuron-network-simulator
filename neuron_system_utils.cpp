@@ -33,7 +33,8 @@ int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
 }
 
 // Read network from text file. The number neurons should be known first.
-void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
+void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
+                     bool is_sparse)
 {
   typedef Eigen::Triplet<double> TyEdgeTriplet;
   std::vector<TyEdgeTriplet> net_coef;
@@ -56,27 +57,49 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net)
       net_coef.push_back(TyEdgeTriplet(i, i-1, 1.0));
     }
   } else {
-    // Read network from text file
-    // Negative strength is possible, but that is unusual
     std::ifstream fin_net(name_net);
-    double ev;
-    for (int i = 0; i < n_neu; i++) {
-      for (int j = 0; j < n_neu; j++) {
-        fin_net >> ev;
-        if (ev != 0 && std::isfinite(ev) && i != j) {
-          net_coef.push_back(TyEdgeTriplet(i, j, ev));
+    if (!fin_net) {
+      cerr << "Fail to open file! \"" << name_net << "\"" << endl;
+      throw "Fail to open file!\n";
+    }
+    if (!is_sparse) {
+      // Read network from text file
+      // Negative strength is possible, but that is unusual
+      double ev;
+      for (int i = 0; i < n_neu; i++) {
+        for (int j = 0; j < n_neu; j++) {
+          fin_net >> ev;
+          if (ev != 0 && std::isfinite(ev) && i != j) {
+            net_coef.push_back(TyEdgeTriplet(i, j, ev));
+          }
         }
       }
-    }
-    if (!fin_net) {
-      cerr << "Bad network file was read!\n";
-      throw "Bad adjacency file was read!\n";
+      if (!fin_net) {
+        cerr << "Bad network file: \"" << name_net << "\"\n";
+        throw "Bad network file!\n";
+      }
+    } else {
+      int i, j;
+      double ev;
+      while (fin_net >> i >> j >> ev) {
+        if (ev != 0 && std::isfinite(ev) && i != j) {
+          if (i > n_neu || j > n_neu) {
+            cout << "i j ev = " << i << " " << j << " " << ev << "\n";
+            cout << "n_neuron = " << n_neu << "\n";
+            throw "Number of neurons inconsistant.";
+          }
+          net_coef.push_back(TyEdgeTriplet(i-1, j-1, ev));
+        }
+      }
+      if (! fin_net.eof() && (fin_net.rdstate() & std::ios_base::failbit)) {
+        cerr << "Bad network file: \"" << name_net << "\"\n";
+        throw "Bad network file!\n";
+      }
     }
   }
-
   pm.net.setFromTriplets(net_coef.begin(), net_coef.end());
   for (int j = 0; j < pm.n_total(); j++) {
-    if (pm.net.coeffRef(j,j)) {
+    if (pm.net.coeff(j,j)) {
       pm.net.coeffRef(j,j) = 0;
     }
   }
@@ -125,13 +148,17 @@ int ReadSpikeList(TySpikeEventVec &spike_list, const char *path)
 {
   std::ifstream fin(path);
   if (fin.fail()) {
-    cerr << "Fail to read file! \"" << path << "\"" << endl;
+    cerr << "Fail to open file! \"" << path << "\"" << endl;
     return -1;
   }
   spike_list.resize(0);
   size_t id;
   double time;
   while (fin >> id >> time) {
+    if (id == 0) {
+      cerr << "ReadSpikeList(): Read id=0, neuron id start from 1.\n";
+      return -1;
+    }
     spike_list.emplace_back(time, id - 1);
   }
   return 0;

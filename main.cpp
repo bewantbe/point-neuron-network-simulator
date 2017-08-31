@@ -96,6 +96,11 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("verbose")) {
     b_verbose = true;
   }
+  
+  bool b_verbose_echo = false;
+  if (vm.count("verbose-echo")) {
+    b_verbose_echo = true;
+  }
 
   // Neuron models.
   enum EnumNeuronModel {
@@ -171,7 +176,8 @@ int MainLoop(const po::variables_map &vm)
 
   if (vm.count("net")) {
     std::string name_net = vm["net"].as<std::string>();
-    FillNetFromPath(pm, name_net);
+    bool is_sparse = vm.count("sparse-net") > 0;
+    FillNetFromPath(pm, name_net, is_sparse);
   } else {
     cout << "You must specify the network. (--net)" << endl;
     return -1;
@@ -567,8 +573,54 @@ int MainLoop(const po::variables_map &vm)
   int n_dt_in_stv = int(e_stv / e_dt + 0.1);
   int count_n_dt_in_stv = n_dt_in_stv;
   size_t n_step = (size_t)(e_t / e_dt);
+  
+  // Show input parameters.
+  if (b_verbose_echo) {
+    printf("Model: \"%s\"\n", str_nm.c_str());
+    const TyNeuronalParams *p_pm = p_neu_pop->GetNeuronalParamsPtr();
+    printf("Number of neurons: %d E + %d I\n", p_pm->n_E, p_pm->n_I);
+    int show_n = std::min(10, p_pm->n_total());
+    printf("Net:\n");
+    for (int i = 0; i < show_n; i++) {
+      for (int j = 0; j < show_n; j++) {
+        printf("% 8.2g", p_pm->net.coeff(i, j));
+      }
+      printf("\n");
+    }
+    printf("pr :\n");
+    for (int i = 0; i < show_n; i++) {
+      printf("% 8.2g", p_pm->arr_pr[i]);
+    }
+    printf("\n");
+    printf("ps :\n");
+    for (int i = 0; i < show_n; i++) {
+      printf("% 8.2g", p_pm->arr_ps[i]);
+    }
+    printf("\n");
+    auto any = [](std::vector<double> v) {
+      return std::any_of(v.cbegin(), v.cend(),
+        [](double i){ return i != 0; }
+      );
+    };
+    if (any(p_pm->arr_psi)) {
+      printf("pri:\n");
+      for (int i = 0; i < show_n; i++) {
+        printf("% 8.2g", p_pm->arr_pri[i]);
+      }
+      printf("\n");
+      printf("psi:\n");
+      for (int i = 0; i < show_n; i++) {
+        printf("% 8.2g", p_pm->arr_psi[i]);
+      }
+      printf("\n");
+    }
+    printf("\nSimulator: \"%s\"\n", str_simu_method.c_str());
+    printf("  t = %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
+           e_t, e_dt, e_stv, n_dt_in_stv);
+    if (b_verbose) printf("\n");
+  }
 
-  // Show progress
+  // Show progress.
   if (b_verbose) {
     printf("  Initialization     : %3.3f s\n", toc(t_begin));
     fflush(stdout);
@@ -616,6 +668,17 @@ int MainLoop(const po::variables_map &vm)
     printf("\n");
     fflush(stdout);
   }
+  
+  if (b_verbose_echo) {
+    if (b_verbose) printf("\n");
+    const TyNeuronalParams *p_pm = p_neu_pop->GetNeuronalParamsPtr();
+    int show_n = std::min(10, p_pm->n_total());
+    printf("Number of spikes:\n");
+    for (int i = 0; i < show_n; i++) {
+      printf(" %7lu", vec_n_spike[i]);
+    }
+    printf("\n");
+  }
 
   if (vm.count("isi-path")) {
     std::ofstream fout_isi( vm["isi-path"].as<std::string>() );
@@ -644,6 +707,8 @@ int main(int argc, char *argv[])
        "Produce help message.")
       ("verbose,v",
        "Show progress.")
+      ("verbose-echo",
+       "Show input parameters.")
       ("t",    po::value<double>()->default_value(1e3),
        "Simulation time, in ms.")
       ("dt",   po::value<double>()->default_value(1.0/32),
@@ -656,6 +721,8 @@ int main(int argc, char *argv[])
        "Number of inhibitory neurons.")
       ("net",  po::value<std::string>(),
        "Network file path. Use - for full net.")
+      ("sparse-net",
+       "The network file is in sparse format, i.e. i j value.")
       ("scee", po::value<double>()->default_value(0.0),
        "Cortical strength E->E (unscaled).")
       ("scie", po::value<double>()->default_value(0.0),
