@@ -581,7 +581,7 @@ int MainLoop(const po::variables_map &vm)
     printf("Number of neurons: %d E + %d I\n", cpm.n_E, cpm.n_I);
     int show_n = std::min(10, cpm.n_total());
     unsigned long n_nz = cpm.net.nonZeros();
-    unsigned long n_nm = (unsigned long)cpm.net.rows() * cpm.net.cols();
+    unsigned long n_nm = (unsigned long)(cpm.net.rows()-1) * cpm.net.cols();
     printf("Network: number of edges = %lu/%lu (%.2g %%)\n", n_nz, n_nm,
            100.0*n_nz/n_nm);
     for (int i = 0; i < show_n; i++) {
@@ -623,6 +623,13 @@ int MainLoop(const po::variables_map &vm)
     printf("\nSimulator: \"%s\"\n", str_simu_method.c_str());
     printf("  t = %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
            e_t, e_dt, e_stv, n_dt_in_stv);
+    if (vm.count("input-event-path")) {
+      TyPoissonTimeVec &pv = p_neu_simu->Get_poisson_time_vec();
+      unsigned long n_events = 0;
+      for (size_t j = 0; j < pv.size(); j++)
+        n_events += pv[j].size() - 1;
+      printf("  Imported events: %lu\n", n_events);
+    }
     if (b_verbose) printf("\n");
   }
 

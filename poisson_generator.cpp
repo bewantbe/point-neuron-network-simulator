@@ -34,10 +34,6 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
     }
     pstr = endstr;
     strength = strtod(pstr, &endstr);
-    if (endstr == pstr) {
-      // no strength
-      strength = arr_ps[id];
-    }
     if (id > poisson_time_vec.size() || id == 0) {
       cerr << "FillPoissonEventsFromFile(): number of neurons does not match!\n"
         << " Read id = " << id << "  number of neurons = "
@@ -45,6 +41,10 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
       exit(-8);
     }
     id -= 1;  // convert to 0-based index
+    if (endstr == pstr) {
+      // no strength
+      strength = arr_ps[id];
+    }
     poisson_time_vec[id].emplace_back(time, strength);
   }
   for (auto &i : poisson_time_vec) {  // seal the queue
