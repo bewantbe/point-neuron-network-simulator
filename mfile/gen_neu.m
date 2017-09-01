@@ -76,8 +76,17 @@ X=[];
 ISI=[];
 ras=[];
 
-% Convert "mV" to internal unit.
+% Fields related to strength.
 field_v = {'scee', 'scie', 'scei', 'scii', 'ps', 'psi'};
+
+% Test mis-spelling.
+for fv = field_v
+  if isfield(pm, [fv{1} '_mv'])
+    error(['mis-spelling: ' fv{1} '_mv should be ' fv{1} '_mV']);
+  end
+end
+
+% Convert "mV" to internal unit.
 % if contains field that needs conversion
 if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
     PSP = get_neu_psp(pm);
