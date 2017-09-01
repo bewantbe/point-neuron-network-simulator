@@ -338,7 +338,8 @@ else
 end
 
 if isfield(pm, 'force_spikes')
-    force_spike_path = [tempname('./') 'force_spike.txt'];
+    [~, tmp_f_name] = fileparts(tempname(['.' filesep]));
+    force_spike_path = [data_dir_prefix tmp_f_name 'force_spike.txt'];
     pm.extra_cmd = [pm.extra_cmd ' --force-spike-list ' force_spike_path];
     fd = fopen(force_spike_path, 'w');
     fprintf(fd, '%d %.6f\n', pm.force_spikes');

@@ -32,11 +32,15 @@ local_ras = local_ras(id_b_neu(local_ras(:,1)), :);
 
 t_len = t_ed - t_bg;
 
-cla;
-hd = ...
-line([local_ras(:, 2)'; local_ras(:, 2)']-t_bg,...
-     [local_ras(:, 1)'; local_ras(:, 1)'-0.7]*y_scale, ...
-     'color', [0 0 0]);
+if length(id_neu) < 100
+  cla;
+  hd = ...
+  line([local_ras(:, 2)'; local_ras(:, 2)']-t_bg,...
+       [local_ras(:, 1)'; local_ras(:, 1)'-0.7]*y_scale, ...
+       'color', [0 0 0]);
+else
+  hd = plot(local_ras(:, 2)-t_bg, local_ras(:, 1)*y_scale, '.');
+end
 
 axis([0, t_len, [min(id_neu)-1, max(id_neu)]*y_scale]);
 
