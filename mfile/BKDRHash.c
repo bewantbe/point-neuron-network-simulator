@@ -1,4 +1,4 @@
-/* mex BKDRHash.c */
+/* mex -largeArrayDims BKDRHash.c */
 #include <mex.h>
 #include <stdio.h>
 #include <stdint.h>

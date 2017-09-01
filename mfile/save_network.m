@@ -42,7 +42,7 @@ while exist(matpath, 'file')
   if issparse(A)
     B = spconvert(B);
   end
-  if isequal(A, B)
+  if ~any(size(A) - size(B)) &&  isempty(find(A-B, 1))
     return
   end
   k = k + 1;

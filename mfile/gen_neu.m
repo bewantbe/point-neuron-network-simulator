@@ -365,12 +365,6 @@ if mode_show_cmd
     end
 end
 
-if ispc()
-    rmcmd = 'del ';    % need to check this
-else
-    rmcmd = 'rm -f ';
-end
-
 % test if there is cached files.
 have_data = exist(output_name, 'file') ...
          && exist(output_ISI_name, 'file') ...
@@ -379,10 +373,10 @@ if (~have_data || new_run)...
    && ~mode_read_only...
    && (~mode_rm_only || mode_rm_only && nargout>0)
     % avoid data inconsistancy
-    system([rmcmd, output_ISI_name]);
-    system([rmcmd, output_RAS_name]);
-    system([rmcmd, output_G_name]);
-    system([rmcmd, output_gating_name]);
+    QuietDelete(output_ISI_name);
+    QuietDelete(output_RAS_name);
+    QuietDelete(output_G_name);
+    QuietDelete(output_gating_name);
     if b_verbose
         fprintf('Parameter Preparing  : %.3f s\n', toc(t_start));
         fprintf('Command execution\n');
@@ -494,21 +488,21 @@ end
 
 % delete data if asked
 if mode_rm_only
-    system([rmcmd, output_name]);
-    system([rmcmd, output_ISI_name]);
-    system([rmcmd, output_RAS_name]);
-    system([rmcmd, output_G_name]);
-    system([rmcmd, output_gating_name]);
+    QuietDelete(output_name);
+    QuietDelete(output_ISI_name);
+    QuietDelete(output_RAS_name);
+    QuietDelete(output_G_name);
+    QuietDelete(output_gating_name);
     if b_clean_net_file  % so pm.net was adjacency matrix
       % Remove the saved network file.
-      system([rmcmd, pm.net_path]);
+      QuietDelete(pm.net_path);
     end
 end
 if ~isempty(poisson_path)
-    system([rmcmd, poisson_path]);
+    QuietDelete(poisson_path);
 end
 if ~isempty(force_spike_path)
-    system([rmcmd, force_spike_path]);
+    QuietDelete(force_spike_path);
 end
 
 if b_verbose
