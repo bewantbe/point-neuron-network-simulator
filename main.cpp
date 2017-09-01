@@ -577,24 +577,27 @@ int MainLoop(const po::variables_map &vm)
   // Show input parameters.
   if (b_verbose_echo) {
     printf("Model: \"%s\"\n", str_nm.c_str());
-    const TyNeuronalParams *p_pm = p_neu_pop->GetNeuronalParamsPtr();
-    printf("Number of neurons: %d E + %d I\n", p_pm->n_E, p_pm->n_I);
-    int show_n = std::min(10, p_pm->n_total());
-    printf("Net:\n");
+    const TyNeuronalParams &cpm = *p_neu_pop->GetNeuronalParamsPtr();
+    printf("Number of neurons: %d E + %d I\n", cpm.n_E, cpm.n_I);
+    int show_n = std::min(10, cpm.n_total());
+    unsigned long n_nz = cpm.net.nonZeros();
+    unsigned long n_nm = (unsigned long)cpm.net.rows() * cpm.net.cols();
+    printf("Network: number of edges = %lu/%lu (%.2g %%)\n", n_nz, n_nm,
+           100.0*n_nz/n_nm);
     for (int i = 0; i < show_n; i++) {
       for (int j = 0; j < show_n; j++) {
-        printf("% 8.2g", p_pm->net.coeff(i, j));
+        printf("% 8.2g", cpm.net.coeff(i, j));
       }
       printf("\n");
     }
     printf("pr :\n");
     for (int i = 0; i < show_n; i++) {
-      printf("% 8.2g", p_pm->arr_pr[i]);
+      printf("% 8.2g", cpm.arr_pr[i]);
     }
     printf("\n");
     printf("ps :\n");
     for (int i = 0; i < show_n; i++) {
-      printf("% 8.2g", p_pm->arr_ps[i]);
+      printf("% 8.2g", cpm.arr_ps[i]);
     }
     printf("\n");
     auto any = [](std::vector<double> v) {
@@ -602,18 +605,21 @@ int MainLoop(const po::variables_map &vm)
         [](double i){ return i != 0; }
       );
     };
-    if (any(p_pm->arr_psi)) {
+    if (any(cpm.arr_psi)) {
       printf("pri:\n");
       for (int i = 0; i < show_n; i++) {
-        printf("% 8.2g", p_pm->arr_pri[i]);
+        printf("% 8.2g", cpm.arr_pri[i]);
       }
       printf("\n");
       printf("psi:\n");
       for (int i = 0; i < show_n; i++) {
-        printf("% 8.2g", p_pm->arr_psi[i]);
+        printf("% 8.2g", cpm.arr_psi[i]);
       }
       printf("\n");
     }
+    printf("\n     scee     scie     scei     scii\n");
+    printf(" %8.3g %8.3g %8.3g %8.3g\n",
+           cpm.scee, cpm.scie, cpm.scei, cpm.scii);
     printf("\nSimulator: \"%s\"\n", str_simu_method.c_str());
     printf("  t = %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
            e_t, e_dt, e_stv, n_dt_in_stv);
@@ -671,8 +677,8 @@ int MainLoop(const po::variables_map &vm)
   
   if (b_verbose_echo) {
     if (b_verbose) printf("\n");
-    const TyNeuronalParams *p_pm = p_neu_pop->GetNeuronalParamsPtr();
-    int show_n = std::min(10, p_pm->n_total());
+    const TyNeuronalParams &cpm = *p_neu_pop->GetNeuronalParamsPtr();
+    int show_n = std::min(10, cpm.n_total());
     printf("Number of spikes:\n");
     for (int i = 0; i < show_n; i++) {
       printf(" %7lu", vec_n_spike[i]);
