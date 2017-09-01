@@ -32,11 +32,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs,
     mexErrMsgTxt("Usage: BKDRHash(data); data can be numerical, logical or char array.\n");
   }
 
-  size_t sz = mxGetElementSize(prhs[0]) * mxGetNumberOfElements(prhs[0]);
   uint32_t n = 0;
   if (mxIsChar(prhs[0])) {
+    size_t sz = mxGetElementSize(prhs[0]) * mxGetNumberOfElements(prhs[0]);
     n = BKDRHash((char*)mxArrayToString(prhs[0]), sz);
+  } if (mxIsSparse(prhs[0])) {
+    size_t nc = mxGetN(prhs[0]);
+    size_t n_elem = mxGetNzmax(prhs[0]);
+    n = BKDRHash((char*)mxGetJc(prhs[0]), (nc+1)*sizeof(mwIndex));
+    n = BKDRHash((char*)mxGetIr(prhs[0]), n_elem*sizeof(mwIndex))+ n*131;
+    n = BKDRHash((char*)mxGetPr(prhs[0]), n_elem*sizeof(mwIndex))+ n*131;
   } else {
+    size_t sz = mxGetElementSize(prhs[0]) * mxGetNumberOfElements(prhs[0]);
     n = BKDRHash((char*)mxGetData(prhs[0]), sz);
   }
   char hash_st[9];  /* 32bit number in hex form */

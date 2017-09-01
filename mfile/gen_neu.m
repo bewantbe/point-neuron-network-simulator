@@ -5,18 +5,18 @@
 %
 % Usage example 1:       % the items with default value are optional
 %  pm = [];
-%  pm.prog_path = '../bin/gen_neu';  % path to the executable.
+%  %pm.prog_path = '../bin/gen_neu';  % path to the executable.
 %  pm.neuron_model = 'HH-GH';  % LIF-G, LIF-GH, HH-GH etc. See gen_neu --help
-%  pm.simu_method = 'SSC';     % Use Spike-Spike-Correction, or 'auto'
+%  pm.simu_method = 'SSC';     % Spike-Spike-Correction, 'simple' or 'auto'
 %  pm.net  = [0 1; 0 0]; % Connectivity matrix or file to the matrix.
 %  pm.nI   = 0;          % default: 0. Number of Inhibitory neurons.
 %                        %             Indexes are later half.
 %  pm.scee_mV = 0.5;
-%  pm.scie_mV = 0.0;       % default: 0. Strength from Ex. to In.
-%  pm.scei_mV = 0.0;       % default: 0. Strength from In. to Ex.
-%  pm.scii_mV = 0.0;       % default: 0.
-%  pm.pr      = 1.6;       % poisson rate, can be a vector
-%  pm.ps_mV   = 0.4;       % poisson strength, can be a vector
+%  pm.scie_mV = 0.0;     % default: 0. Strength from Ex. to In.
+%  pm.scei_mV = 0.0;     % default: 0. Strength from In. to Ex.
+%  pm.scii_mV = 0.0;     % default: 0.
+%  pm.pr      = 1.6;     % poisson rate, can be a vector
+%  pm.ps_mV   = 0.4;     % poisson strength, can be a vector
 %  pm.t    = 1e4;
 %  pm.dt   = 2^-5;       % default: 1/32
 %  pm.stv  = 0.5;        % default: 0.5
@@ -275,6 +275,9 @@ st_neu_s =...
 st_neu_param =...
     sprintf('--nE %d --nI %d --net "%s" %s %s %s %s %s',...
             pm.nE, pm.nI, mat_path, pr_str, ps_str, pri_str, psi_str, st_neu_s);
+if issparse(pm.net_adj)
+  st_neu_param = [st_neu_param ' --sparse-net'];
+end
 if isfield(pm, 'sine_amp')
     st_neu_param = [st_neu_param,...
       sprintf(' --current-sine-amp %.16e', pm.sine_amp)];

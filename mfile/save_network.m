@@ -29,6 +29,9 @@ end
 % Give this matrix a name
 p = length(A);
 matname = ['net_', num2str(p), '_0X', BKDRHash(A)];
+if issparse(A)
+  matname = [matname '_sp'];
+end
 matpath = [pathdir, matname, '.txt'];
 
 % Solve file name collision by adding extra characters, if any
@@ -36,13 +39,33 @@ matname0 = matname;
 k = 0;
 while exist(matpath, 'file')
   B = load('-ascii', matpath);
-  if norm(A(:)-B(:)) == 0
+  if issparse(A)
+    B = spconvert(B);
+  end
+  if isequal(A, B)
     return
   end
   k = k + 1;
   matname = sprintf('%s_%s', matname0, lower(dec2base(k,16)));
   matpath = [pathdir, matname, '.txt'];
   warning('save_network:hash', 'hash collision occured! File is renamed.');
+end
+
+if issparse(A)
+  [ii, jj, val] = find(A);
+  ijv = [ii jj val];
+  if all(floor(val) == val)
+    % All data are integer
+    fd = fopen(matpath, 'w');
+    if fd == -1
+      error('Unable to open output file `%s''', matpath);
+    end
+    fprintf(fd, '%d %d %.17g\n', ijv');
+    fclose(fd);
+  else
+    save('-ascii', '-double', matpath, 'ijv');
+  end
+  return
 end
 
 % Save the matrix to the file
