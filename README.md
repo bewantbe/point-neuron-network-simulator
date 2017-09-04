@@ -20,11 +20,12 @@ Optional:
 
   * Add an alternating current to these models.
   * Add an constant current to these models.
-  * Add synaptic delay. (Currently the delay must larger than dt)
+  * Add synaptic delay. (The delay must larger than dt)
+  * For HH type neuron, option to use the peak as spike time.
 
 See `doc/neuron_models.pdf` for model details.
 
-You can provide external input events in a file or just let the program generate (Poisson input) for you.
+You can provide external input events in a file or just let the program generate (Poisson input) for you. Input events can be excititory or inhibitory, and the strength can be specified at each timing.
 
 Refer to `bin/gen_neu --help` for the command line option help (after compilation).
 
@@ -74,7 +75,7 @@ In matlab, use `mfile/` as your working directory.
 
   * compile `mfile/BKDRHash.c`
 
-		mex BKDRHash.c
+		mex -largeArrayDims BKDRHash.c
 	
   * compile `mfile/randMT19937.cpp`
 
@@ -103,8 +104,8 @@ In matlab, use `mfile/` as your working directory.
 
 		http://www.boost.org/users/download/
 		点 Prebuilt windows binaries.
-		(https://sourceforge.net/projects/boost/files/boost-binaries/1.60.0/)
-		VS -> Help -> About 查看 VS 的版本。 比如 2015 是 version 14.
+		(例如 https://sourceforge.net/projects/boost/files/boost-binaries/1.60.0/)
+		VS -> Help -> About 查看 VS 的版本。 比如 2015 是 version 14.0
 		下载(32bit 通用性好一些) boost_1_60_0-msvc-14.0-32.exe
 		安装，按默认路径。
 
@@ -112,7 +113,7 @@ In matlab, use `mfile/` as your working directory.
 
 		http://eigen.tuxfamily.org/
 		选择 "latest stable release" 
-		（http://bitbucket.org/eigen/eigen/get/3.2.8.zip）
+		（例如 http://bitbucket.org/eigen/eigen/get/3.2.8.zip）
     
 		解压复制到编译系统文件夹
 			C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include
@@ -127,7 +128,7 @@ In matlab, use `mfile/` as your working directory.
   * 设置 boost
 
 			如非默认路径，需手动在工程中添加 include 目录：
-			在工程属性里设定
+			在工程属性 (菜单项目->属性) 里设定 (C/C++ -> 常规 -> 附加包含目录，链接器 -> 常规 -> 附加库目录)
 				Include Directories 为 C:\local\boost_1_60_0
 				Library Directories 为 C:\local\boost_1_60_0\lib32-msvc-14.0
 			如果是 64bit 工程，则
@@ -141,7 +142,9 @@ In matlab, use `mfile/` as your working directory.
 
 		--neuron-model HH-GH --net - --dt 0.03125 --t 1e3 --pr 1 --ps 0.05  --seed 1
 
-	没报错就是编译正常了。
+	没报错就是编译正常了。注意要用 Release 模式编译以保证性能，以及选择 x86 ()。
+	
+	把生成的可执行程序(通常在 Release/ 目录下) 重命名成 gen_neu.exe 并放到 mfile/ 目录下。
 
 Usage
 -----
@@ -185,12 +188,12 @@ The interface `gen_neu.m` is a wrapper for `bin/gen_neu`.
 	pm.net  = [0 1; 0 0];  % Can also be a text file path.
 	pm.nI   = 0;           % default: 0. Number of Inhibitory neurons.
 			               %             Indexes are later half
-	pm.scee = 0.05;
-	pm.scie = 0.00;       % default: 0. Strength from Ex. to In.
-	pm.scei = 0.00;       % default: 0. Strength from In. to Ex.
-	pm.scii = 0.00;       % default: 0.
-	pm.pr   = 1.6;        % Poisson input rate.
-	pm.ps   = 0.04;       % Poisson input strength.
+	pm.scee_mV = 0.05;
+	pm.scie_mV = 0.00;       % default: 0. Strength from Ex. to In.
+	pm.scei_mV = 0.00;       % default: 0. Strength from In. to Ex.
+	pm.scii_mV = 0.00;       % default: 0.
+	pm.pr      = 1.6;        % Poisson input rate.
+	pm.ps_mV   = 0.04;       % Poisson input strength.
 	pm.t    = 1e4;        % Simulation time.
 	pm.dt   = 1.0/32;     % Simulation time step. Default: 1/32.
 	pm.stv  = 0.5;        % Output time step, must be multiples of dt.
