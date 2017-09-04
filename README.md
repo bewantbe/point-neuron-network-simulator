@@ -117,6 +117,7 @@ In matlab, use `mfile/` as your working directory.
     
 		解压复制到编译系统文件夹
 			C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include
+		(如果找不到 VC 的 inclulde 目录，那么可以打开 common_header.h, 右键查看 #include <vector>, 找到所在的路径。)
 		重命名文件夹为 eigen3
 		(也就是应该有文件 C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include\eigen3\Eigen\Dense)
 	
@@ -127,7 +128,7 @@ In matlab, use `mfile/` as your working directory.
   
   * 设置 boost
 
-			如非默认路径，需手动在工程中添加 include 目录：
+			手动在工程中添加 include 目录（若用默认路径安装，可能不需要设定）：
 			在工程属性 (菜单项目->属性) 里设定 (C/C++ -> 常规 -> 附加包含目录，链接器 -> 常规 -> 附加库目录)
 				Include Directories 为 C:\local\boost_1_60_0
 				Library Directories 为 C:\local\boost_1_60_0\lib32-msvc-14.0
