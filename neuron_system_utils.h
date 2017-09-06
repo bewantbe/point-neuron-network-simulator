@@ -148,6 +148,7 @@ typedef std::priority_queue<
     std::greater<TySpikeEvent> > TySpikeEventQueue;
 
 typedef std::vector< TySpikeEvent > TySpikeEventVec;
+typedef std::vector< TySpikeEventStrength > TySpikeEventStrengthVec;
 
 int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
 

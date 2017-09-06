@@ -186,19 +186,24 @@ public:
     }
   }
 
+  void FillEvents(double t_until, int n_least_fill)
+  {
+    FillEvents(*this, t_until, n_least_fill);
+  }
+
   // Use for E and I type Poisson input.
-  void Init(double rate1, double strength1, double rate2, double strength2, double t0)
+  void Init(double rate1, double strength1, double rate2, double strength2, double t1, double t2)
   {
     /* // Old behaviour
     Init(rate1, strength1, t0);
     poisson_src1.Set(rate1, strength1, 0);
     */
 
-    poisson_src1.Init(rate1, strength1, t0);
-    poisson_src2.Init(rate2, strength2, t0);
+    poisson_src1.Init(rate1, strength1, t1);
+    poisson_src2.Init(rate2, strength2, t2);
     clear();
     id_seq = 0;
-    FillEvents(*this, t0, 1);  // t_until is not important here
+    FillEvents(-Inf, 1);  // Only one event is filled.
   }
 
   // Use for E and I type Poisson input.
@@ -208,11 +213,11 @@ public:
     if (id_seq == size()) {
       if (std::isfinite(back().time)) {
         //double t_end = back().time + EVENT_GEN_CHUNK / poisson_src1.Rate();
-        //FillEvents(*this, t_end, 0);
+        //FillEvents(t_end, 0);
         if (auto_shrink && size() > EVENT_VEC_SIZE_LIMIT) {
           Shrink();
         }
-        FillEvents(*this, t_until, EVENT_GEN_CHUNK);
+        FillEvents(t_until, EVENT_GEN_CHUNK);
       } else {
         id_seq--;
       }
@@ -237,7 +242,7 @@ public:
     // each TyPoissonTimeSeq should have at least one event
     resize(arr_pr.size());
     for (size_t j = 0; j < arr_pr.size(); j++) {
-      operator[](j).Init(arr_pr[j], arr_ps[j], arr_pri[j], arr_psi[j], t0);
+      operator[](j).Init(arr_pr[j], arr_ps[j], arr_pri[j], arr_psi[j], t0, t0);
     }
     id_seq_vec.reserve(arr_pr.size());
     std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
@@ -253,6 +258,35 @@ public:
       i.id_seq = 0;
     }
     std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
+  }
+
+  // require: call Init first.
+  void FillEvents(double t_until, int n_least_fill)
+  {
+    for (size_t j = 0; j < size(); j++) {
+      operator[](j).FillEvents(t_until, n_least_fill);
+    }
+  }
+  
+  void ClearAndContinueFill(double t_until, int n_least_fill)
+  {
+//    std::vector<TyPoissonSource> poisson_src1_vec(size());
+//    std::vector<TyPoissonSource> poisson_src2_vec(size());
+//    for (size_t j = 0; j < size(); j++) {
+//      poisson_src1_vec[j] = operator[](j).poisson_src1;
+//      poisson_src2_vec[j] = operator[](j).poisson_src2;
+//    }
+    RemoveEvents();
+    FillEvents(t_until, n_least_fill);
+  }
+
+  size_t EventCount() const
+  {
+    size_t cnt = 0;
+    for (size_t j = 0; j < size(); j++) {
+      cnt += operator[](j).size();
+    }
+    return cnt;
   }
 
   void RestoreIdx()
