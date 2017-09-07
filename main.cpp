@@ -28,6 +28,7 @@ TODO:
 
 #include "neuron_population_cont_synaptic.h"
 #include "simulator_cont_synaptic.h"
+#include "simulator_if_jump.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -107,7 +108,7 @@ int MainLoop(const po::variables_map &vm)
     LIF_G, LIF_GH, HH_G, HH_GH, HH_PT_GH, HH_FT_GH,
     HH_G_sine, HH_GH_sine, HH_PT_GH_sine, HH_FT_GH_sine,
     HH_G_extI, HH_GH_extI,
-    HH_GH_cont_syn
+    HH_GH_cont_syn, IF_jump
   };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
@@ -134,8 +135,10 @@ int MainLoop(const po::variables_map &vm)
     enum_neuron_model =     HH_G_extI;
   } else if (str_nm ==     "HH-GH-extI") {
     enum_neuron_model =     HH_GH_extI;
-  }  else if (str_nm ==    "HH-GH-cont-syn") {
+  } else if (str_nm ==     "HH-GH-cont-syn") {
     enum_neuron_model =     HH_GH_cont_syn;
+  } else if (str_nm ==     "IF-jump") {
+    enum_neuron_model =     IF_jump;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -212,7 +215,7 @@ int MainLoop(const po::variables_map &vm)
           NeuronPopulationDeltaInteractNetDelay<Ty_HH_FT_GH>(pm);
         break;
       default:
-        cerr << "This delay net type is not supported yet.\n";
+        cerr << "The neuron type with delay net is not supported yet.\n";
         return -1;
     };
     std::string path = vm["synaptic-net-delay"].as<std::string>();
@@ -279,6 +282,9 @@ int MainLoop(const po::variables_map &vm)
       case HH_GH_cont_syn:
         cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
         return -1;
+      case IF_jump:
+        cerr << "Delay for IF-jump is not supported yet.\n";
+        return -1;
     }
     p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
   } else {
@@ -321,6 +327,9 @@ int MainLoop(const po::variables_map &vm)
         break;
       case HH_GH_cont_syn:
         p_neu_pop = new NeuronPopulationContSyn(pm);
+        break;
+      case IF_jump:
+        p_neu_pop = new IFJumpPopulation(pm);
         break;
     }
   }
@@ -399,6 +408,8 @@ int MainLoop(const po::variables_map &vm)
       p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
     } else if (str_simu_method == "cont-syn") {
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
+    } else if (str_simu_method == "IF-jump") {
+      p_neu_simu = new IFJumpSimulator(pm, e_dt);
     } else {
       cerr << "No this simulation method:\"" << str_simu_method << "\"\n";
       return -2;
@@ -408,6 +419,9 @@ int MainLoop(const po::variables_map &vm)
     if (HH_GH_cont_syn == enum_neuron_model) {
       str_simu_method = "cont-syn";
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
+    } else if (IF_jump == enum_neuron_model) {
+      str_simu_method = "IF-jump";
+      p_neu_simu = new IFJumpSimulator(pm, e_dt);
     } else if (vm.count("synaptic-net-delay")) {
       str_simu_method = "big-net-delay";
       p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt);
@@ -431,11 +445,16 @@ int MainLoop(const po::variables_map &vm)
     cerr << "Error: Neuron Model \"HH_GH_cont_syn\" must pair with simulator \"cont-syn\".\n";
     return -1;
   }
+  if ((enum_neuron_model == IF_jump)
+      ^ (str_simu_method == "IF-jump")) {
+    cerr << "Error: Neuron Model \"IF-jump\" must pair with simulator \"IF-jump\".\n";
+    return -1;
+  }
   
   if (vm.count("no-threshold")) {
     p_neu_pop->DisableThreshold();
   }
-  
+
   bool b_init_loaded = false;
   if (vm.count("initial-state-path")) {
     int rt = FillNeuStateFromFile(p_neu_pop->GetDymState(),
@@ -473,7 +492,6 @@ int MainLoop(const po::variables_map &vm)
     FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),
                               vm["input-event-path"].as<std::string>().c_str(),
                               p_neu_pop->GetNeuronalParamsPtr()->arr_ps);
-    //cout << "input event loaded!" << endl;  // Debug info
   }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
@@ -713,9 +731,9 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn.")
+       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump.")
       ("simulation-method",  po::value<std::string>(),
-       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
+       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",
