@@ -29,11 +29,12 @@ static-link: LDFLAGS = -static -pthread
 static-link: $(BIN)
 
 .PHONY : debug
-debug: CXXFLAGS = -g
+debug: CXXFLAGS = -O0 -g
 debug: $(BIN)
 
-.PHONY : debug-O2
-debug-O2: CXXFLAGS = -g -O2 -fno-omit-frame-pointer
+.PHONY : debug-sanitize
+debug-O2: CXXFLAGS = -g -Og -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined
+debug: LDLIBS += -lasan -lubsan
 debug-O2: $(BIN)
 
 .PHONY : debug-log

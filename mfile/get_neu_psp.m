@@ -29,12 +29,25 @@ volt_unit = 1.0;
 switch pm.neuron_model
   case 'HH-GH-cont-syn'
     volt_unit = 10.0;
-  case {'LIF-G' 'LIF-GH'}
+  case {'LIF-G' 'LIF-GH', 'IF-jump'}
     volt_unit = 15.0;
 end
 
 PSP.neuron_model = pm.neuron_model;
 PSP.volt_unit = volt_unit;
+
+% The case where exact answer is well known.
+if strcmp(pm.neuron_model, 'IF-jump')
+  PSP.mV_scee = 1/volt_unit;
+  PSP.t_scee  = 0;
+  PSP.mV_scei = 1/volt_unit;
+  PSP.t_scei  = 0;
+  PSP.mV_ps   = 1/volt_unit;
+  PSP.t_ps    = 0;
+  PSP.mV_psi  = 1/volt_unit;
+  PSP.t_psi   = 0;
+  return
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the PSP for external input
@@ -115,11 +128,13 @@ fclose(fd);
 pm.nI = 0;
 pm.scee = 1e-6;   % some small value
 [X, ~, ras] = gen_neu(pm, 'new,rm', tmp_dir);
+%figure(1); plot((1:length(X))*pm.stv, X(1,:)');
+%figure(2); plot((1:length(X))*pm.stv, X(2,:)');
 if isempty(ras)
-  error('Fail to generate spike');
+  error('Fail to generate spike.');
 end
 if size(ras,1) > 1
-  warning('Too many spikes');
+  warning('Too many spikes.');
 end
 X(:, 1:floor(ras(1, 2)/pm.stv)) = [];
 X = volt_unit * (X - V_rest);
