@@ -9,7 +9,7 @@ struct Ty_IF_jump :public Ty_Neuron_Dym_Base
   double V_threshold  = 1.0;
   double V_reset      = 0.0;
   double G_L          = 0.05;  // ms^-1
-  double T_refractory = 2.0;
+  double T_refractory = 0.0;
   static const int n_var = 4;
   static const int id_V = 0;  // The state is V[t]
   static const int id_t = 1;
@@ -205,6 +205,7 @@ public:
       }
     }
     std::sort(input_events.begin() + id_tail, input_events.end());
+    poisson_time_vec.SaveIdxAndClean();
   }
   
   std::vector<bool> affected;
@@ -222,7 +223,7 @@ public:
     }
 
     if (input_events.size() == 0 || input_events.back().time <= t_end) {
-      RefillPoissonEvent(t_end + 100, 1);  // TODO: +100 ?
+      RefillPoissonEvent(t_end, 1);  // TODO: +100 ?
     }
 
     // Loop over poisson events.
