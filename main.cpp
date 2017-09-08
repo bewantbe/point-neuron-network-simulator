@@ -28,6 +28,7 @@ TODO:
 
 #include "neuron_population_cont_synaptic.h"
 #include "simulator_cont_synaptic.h"
+//FILE *fdbg;
 #include "simulator_if_jump.h"
 
 #include <boost/program_options.hpp>
@@ -644,8 +645,9 @@ int MainLoop(const po::variables_map &vm)
     if (vm.count("input-event-path")) {
       TyPoissonTimeVec &pv = p_neu_simu->Get_poisson_time_vec();
       unsigned long n_events = 0;
-      for (size_t j = 0; j < pv.size(); j++)
+      for (size_t j = 0; j < pv.size(); j++) {
         n_events += pv[j].size() - 1;
+      }
       printf("  Imported events: %lu\n", n_events);
     }
     if (b_verbose) printf("\n");
@@ -726,6 +728,7 @@ int MainLoop(const po::variables_map &vm)
 
 int main(int argc, char *argv[])
 {
+//  fdbg = fopen("dbg.txt", "w");
   // Declare the supported options.
   po::options_description desc("Options");
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
@@ -861,6 +864,6 @@ int main(int argc, char *argv[])
   } catch (const char *st) {
     cerr << "Error: " << st << "\n";
   }
-
+//  fclose(fdbg);
   return rt;
 }

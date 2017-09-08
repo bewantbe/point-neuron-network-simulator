@@ -35,8 +35,8 @@ struct Ty_IF_jump :public Ty_Neuron_Dym_Base
 
   void EvolveTo(double *dym, double t) const
   {
-    dym[id_t] = t;
     dym[id_V] *= exp(-(t - dym[id_t])*G_L);
+    dym[id_t] = t;
     // Maybe check if in Refractory ?
   }
 
@@ -221,7 +221,7 @@ public:
       affected.resize(pm.n_total());
       volt_inc.resize(pm.n_total());
     }
-
+    
     if (input_events.size() == 0 || input_events.back().time <= t_end) {
       RefillPoissonEvent(t_end, 1);  // TODO: +100 ?
     }
@@ -231,6 +231,11 @@ public:
         input_events[id_input_events].time <= t_end) {
       const TySpikeEventStrength &e = input_events[id_input_events++];
       double *dym_val = state.StatePtr(e.id);
+
+//      if (6 < e.time && e.time < 200) {
+//        fprintf(fdbg, "e.id = %d, %f, %f\n", e.id, e.time, e.strength);
+//        fprintf(fdbg, "  dym1= %f\t%f\n", dym_val[0], dym_val[1]);
+//      }
 
       TyN.EvolveToKick(dym_val, e.time, e.strength);
 
@@ -242,7 +247,14 @@ public:
         cospike_list.push_back(e.id);
         ras.emplace_back(e.time, e.id);
         vec_n_spike[e.id]++;
+//        if (6 < e.time && e.time < 200) {
+//          fprintf(fdbg, "~~~~ spike id = %d\n", e.id);
+//        }
       }
+
+//      if (6 < e.time && e.time < 200) {
+//        fprintf(fdbg, "  dym2= %f\t%f\n", dym_val[0], dym_val[1]);
+//      }
 
       // Loop over possible cascaded spikes.
       while (! cospike_list.empty()) {
@@ -268,6 +280,9 @@ public:
             cospike_list.push_back(j);
             ras.emplace_back(e.time, j);
             vec_n_spike[j]++;
+//            if (6 < e.time && e.time < 200) {
+//              fprintf(fdbg, "~~~~ spike id = %lu\n", j);
+//            }
           }
         }
       }
