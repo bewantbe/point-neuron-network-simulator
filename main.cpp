@@ -356,8 +356,8 @@ int MainLoop(const po::variables_map &vm)
     return 2;
   }
   if (e_stv / e_dt > INT_MAX) {
-	  cerr << "stv / dt > INT_MAX ! (dt too small or stv too large)" << endl;
-	  return 2;
+    cerr << "stv / dt > INT_MAX ! (dt too small or stv too large)" << endl;
+    return 2;
   }
 
   // Parameters about sine current input
@@ -452,6 +452,9 @@ int MainLoop(const po::variables_map &vm)
     return -1;
   }
   
+  if (vm.count("set-threshold")) {
+    p_neu_pop->SetThreshold(vm["set-threshold"].as<double>());
+  }
   if (vm.count("no-threshold")) {
     p_neu_pop->DisableThreshold();
   }
@@ -777,9 +780,11 @@ int main(int argc, char *argv[])
        "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
       ("seed-auto",
        "Auto set random seed. This option overrides --seed.")
+      ("set-threshold", po::value<double>(),
+       "Set the threshold to non-standard value.")
       ("no-threshold",
        "Disable the threshold detection and voltage reset. Note that HH based neurons will still fire.")
-      ("current-sine-amp",         po::value<double>(),
+      ("current-sine-amp", po::value<double>(),
        "Set the current input sine amplitude.")
       ("current-sine-freq", po::value<double>(),
        "Set the current input sine frequency, in kHz.")

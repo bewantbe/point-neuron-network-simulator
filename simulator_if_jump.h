@@ -101,8 +101,9 @@ struct Ty_IF_jump :public Ty_Neuron_Dym_Base
 
 class IFJumpPopulation :public NeuronPopulationBaseCommon
 {
-  Ty_IF_jump TyN;
 public:
+  Ty_IF_jump TyN;
+
   // This class is for store data only.
   IFJumpPopulation(const TyNeuronalParams &_pm)
     :NeuronPopulationBaseCommon(_pm, Ty_IF_jump::n_var)
@@ -126,11 +127,20 @@ public:
   void ForceReset(int neuron_id) override
   {}
 
+  void SetThreshold(double V_thres) override
+  {
+    TyN.V_threshold = V_thres;
+  }
+
   void DisableThreshold() override
-  {}
+  {
+    TyN.V_threshold = std::numeric_limits<double>::infinity();
+  }
 
   void SetRefractoryTime(double t_ref) override
-  {}
+  {
+    TyN.T_refractory = t_ref;
+  }
 
   const Ty_Neuron_Dym_Base * GetNeuronModel() const override
   { return &TyN; }
@@ -296,6 +306,9 @@ public:
   void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
   {
+    if (t == 0) {
+      TyN = dynamic_cast<IFJumpPopulation*>(p_neu_pop) -> TyN;
+    }
     t += dt;
     poisson_time_vec.SaveIdxAndClean();
     

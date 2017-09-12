@@ -28,6 +28,7 @@ public:
   virtual void InjectDeltaInput(int neuron_id, double strength) = 0;
   virtual void ForceReset(int neuron_id) = 0;
   virtual void DisableThreshold() = 0;
+  virtual void SetThreshold(double V_thres) = 0;
   virtual void SetRefractoryTime(double t_ref) = 0;
 
   virtual int n_neurons() const = 0;
@@ -190,10 +191,15 @@ public:
   {
     neuron_model.Set_Time_Refractory(t_ref);
   }
+
+  void SetThreshold(double V_thres) override
+  {
+    neuron_model.V_threshold = V_thres;
+  }
   
   void DisableThreshold() override
   {
-    neuron_model.V_threshold = std::numeric_limits<double>::infinity();
+    SetThreshold(std::numeric_limits<double>::infinity());
   }
 
   void InjectPoissonE(int neuron_id) override

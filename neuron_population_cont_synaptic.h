@@ -273,6 +273,11 @@ public:
   {
   }
 
+  void SetThreshold(double V_thres) override
+  {
+    V_threshold = V_thres;
+  }
+
   void DisableThreshold() override
   {
     V_threshold = std::numeric_limits<double>::infinity();
