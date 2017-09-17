@@ -48,19 +48,19 @@ while exist(matpath, 'file')
 end
 
 if issparse(A)
+  fd = fopen(matpath, 'w');
+  if fd == -1
+    error('Unable to open output file `%s''', matpath);
+  end
   [ii, jj, val] = find(A);
   ijv = [ii jj val];
   if all(floor(val) == val)
     % All data are integer
-    fd = fopen(matpath, 'w');
-    if fd == -1
-      error('Unable to open output file `%s''', matpath);
-    end
-    fprintf(fd, '%d %d %.17g\n', ijv');
-    fclose(fd);
+    fprintf(fd, '%d %d %d\n', ijv');
   else
-    save('-ascii', '-double', matpath, 'ijv');
+    fprintf(fd, '%d %d %.17g\n', ijv');
   end
+  fclose(fd);
   return
 end
 
@@ -92,7 +92,21 @@ end
 %[matpath matname] = save_network(A, 'ab');
 %B = get_network(matpath);
 %assert(~any(A(:)-B(:)))
+
 %[matpath matname] = save_network(A, 'ab/');
 %B = get_network(matpath);
+%assert(~any(A(:)-B(:)))
+
+%A = sparse(A);
+%[matpath matname] = save_network(A, './');
+%B = get_network(matpath);
+%assert(~any(A(:)-B(:)))
+
+%tic; A=sparse(rand(1000)<0.5); toc; tic; fn = save_network(A, 'ab/'); toc
+%B = get_network(fn);
+%assert(~any(A(:)-B(:)))
+
+%tic; A=sparse((rand(1000)<0.5).*rand(1000)); toc; tic; fn = save_network(A, 'ab/'); toc
+%B = get_network(fn);
 %assert(~any(A(:)-B(:)))
 
