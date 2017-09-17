@@ -107,6 +107,6 @@ end
 %assert(~any(A(:)-B(:)))
 
 %tic; A=sparse((rand(1000)<0.5).*rand(1000)); toc; tic; fn = save_network(A, 'ab/'); toc
-%B = get_network(fn);
+%tic; B = get_network(fn); toc;
 %assert(~any(A(:)-B(:)))
 

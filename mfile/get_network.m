@@ -48,7 +48,7 @@ if ~exist('network','var')
   matname = [];
 end
 
-if size(network, 2) == 3 && size(network, 1) != 3
+if size(network, 2) == 3 && size(network, 1) ~= 3
   % This is a sparse matrix
   network = spconvert(network);
 end
