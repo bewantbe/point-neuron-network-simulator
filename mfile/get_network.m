@@ -1,25 +1,25 @@
 % Get the adjacency matrix from its (file) name.
 % Assume the matrix is stored in plain text file. Which essentially can be
 %   loaded  by `network = load('-ascii', [netstr, '.txt'])'
-% It will search current working dir (or pathdir if specified) and
+% It will search current working dir (or path_prefix if specified) and
 %   dir of this function.
 % It also possible to specifies the full path in `netstr'.
 
-function [network, matname] = get_network(netstr, pathdir)
+function [network, matname] = get_network(netstr, path_prefix)
+if ~exist('netstr','var')
+  error('Usage: [network, matname] = get_network(netstr [, path_prefix])');
+end
 
 if ~ischar(netstr)
   error('Input should be the name of the matrix');
 end
 
-if ~exist('pathdir','var')
+if ~exist('path_prefix','var')
   % Use default dir (usually working dir)
-  pathdir = '';
+  path_prefix = '';
 end
-% always consider pathdir as dir name
+% always consider path_prefix as dir name
 e = filesep;
-if ~isempty(pathdir) && pathdir(end) ~= '/' && pathdir(end) ~= e
-  pathdir = [pathdir e];
-end
 if isempty(netstr)
   matname = '-';
   network = [1];
@@ -29,8 +29,8 @@ end
 pathdir0 = fileparts(mfilename('fullpath'));
 % path candidates, priority from high to low
 s_matname = {...
-  [pathdir, netstr, '.txt'],...
-  [pathdir, netstr],...
+  [path_prefix, netstr, '.txt'],...
+  [path_prefix, netstr],...
   [pathdir0, e, 'network', e, netstr, '.txt'],...
   [pathdir0, e, 'network', e, netstr]...
 };

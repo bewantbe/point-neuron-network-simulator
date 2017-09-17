@@ -96,7 +96,7 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
         if isfield(pm, [fv '_mV'])
             s = pm.([fv '_mV']) * PSP_v(id_fv);
             if isfield(pm, fv) && s ~= pm.(fv)
-                error(['imcompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
+                error(['incompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
             end
             pm.(fv) = s;
         end

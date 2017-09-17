@@ -1,9 +1,9 @@
-% Save the adjacency matrix `A' in path `pathdir' with a hashed file name:
-%   matpath = save_network(A, pathdir);
+% Save the adjacency matrix `A' in path `path_prefix' with a hashed file name:
+%   matpath = save_network(A, path_prefix);
 % To read the matrix from the file:
 %   A = load('-ascii', matpath);
 
-function [matpath, matname] = save_network(A, pathdir)
+function [matpath, matname] = save_network(A, path_prefix)
 
 % sane test of the matrix A
 if ~exist('A','var') || isempty(A) || (~isnumeric(A) && ~islogical(A))
@@ -14,15 +14,11 @@ if ~ismatrix(A) || size(A,1) ~= size(A,2)
 end
 A = double(A);  % int32,logical to double, so get consistent hash result
 
-e = filesep;
-if ~exist('pathdir','var')
-  pathdir = '';    % save to default dir (usually working dir)
+if ~exist('path_prefix','var')
+  path_prefix = '';    % save to default dir (usually working dir)
 end
-% Always consider `pathdir' as dir name
-if ~isempty(pathdir) && pathdir(end) ~= '/' && pathdir(end) ~= e
-  pathdir = [pathdir e];
-end
-if ~exist(fileparts(pathdir), 'dir')
+pathdir = fileparts(path_prefix);
+if ~isempty(pathdir) && ~exist(pathdir, 'dir')
   mkdir(pathdir);
 end
 
@@ -32,7 +28,7 @@ matname = ['net_', num2str(p), '_0X', BKDRHash(A)];
 if issparse(A)
   matname = [matname '_sp'];
 end
-matpath = [pathdir, matname, '.txt'];
+matpath = [path_prefix, matname, '.txt'];
 
 % Solve file name collision by adding extra characters, if any
 matname0 = matname;
@@ -47,7 +43,7 @@ while exist(matpath, 'file')
   end
   k = k + 1;
   matname = sprintf('%s_%s', matname0, lower(dec2base(k,16)));
-  matpath = [pathdir, matname, '.txt'];
+  matpath = [path_prefix, matname, '.txt'];
   warning('save_network:hash', 'hash collision occured! File is renamed.');
 end
 
@@ -90,3 +86,13 @@ else
   % Save the matrix in full precision ascii format
   save('-ascii', '-double', matpath, 'A');
 end
+
+%% test
+%A = rand(10)<0.5;
+%[matpath matname] = save_network(A, 'ab');
+%B = get_network(matpath);
+%assert(~any(A(:)-B(:)))
+%[matpath matname] = save_network(A, 'ab/');
+%B = get_network(matpath);
+%assert(~any(A(:)-B(:)))
+
