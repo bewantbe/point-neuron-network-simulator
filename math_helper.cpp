@@ -186,8 +186,14 @@ double cubic_hermit_real_root(double x2,
   c[1] = dfx1;
   c[2] = -2*dfx1 - dfx2 - 3*(fx1 - fx2);
   c[3] = dfx1 + dfx2 + 2*(fx1 - fx2);
-  // TODO: check c[3] == 0
-  gsl_poly_solve_cubic(c[2]/c[3], c[1]/c[3], c[0]/c[3], &s0, &s1, &s2);
+  if (c[3] != 0) {
+    gsl_poly_solve_cubic(c[2]/c[3], c[1]/c[3], c[0]/c[3], &s0, &s1, &s2);
+  } else {
+    gsl_poly_solve_quadratic(c[2], c[1], c[0], &s0, &s1);
+    if (c[2] == 0 && c[1] == 0 && c[0] == 0) {
+      s0 = 0;
+    }
+  }
   if (0 <= s0 && s0 <= 1) {
     return s0 * x2;
   }

@@ -109,7 +109,7 @@ int MainLoop(const po::variables_map &vm)
     LIF_G, LIF_GH, HH_G, HH_GH, HH_PT_GH, HH_FT_GH,
     HH_G_sine, HH_GH_sine, HH_PT_GH_sine, HH_FT_GH_sine,
     HH_G_extI, HH_GH_extI,
-    HH_GH_cont_syn, IF_jump
+    HH_GH_cont_syn, IF_jump, Hawkes_GH
   };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
@@ -140,6 +140,8 @@ int MainLoop(const po::variables_map &vm)
     enum_neuron_model =     HH_GH_cont_syn;
   } else if (str_nm ==     "IF-jump") {
     enum_neuron_model =     IF_jump;
+  } else if (str_nm ==     "Hawkes-GH") {
+    enum_neuron_model =     Hawkes_GH;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -286,6 +288,9 @@ int MainLoop(const po::variables_map &vm)
       case IF_jump:
         cerr << "Delay for IF-jump is not supported yet.\n";
         return -1;
+      case Hawkes_GH:
+        cerr << "Delay for Hawkes-GH is not supported yet.\n";
+        return -1;
     }
     p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
   } else {
@@ -331,6 +336,9 @@ int MainLoop(const po::variables_map &vm)
         break;
       case IF_jump:
         p_neu_pop = new IFJumpPopulation(pm);
+        break;
+      case Hawkes_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_Hawkes_GH>(pm);
         break;
     }
   }
@@ -451,6 +459,10 @@ int MainLoop(const po::variables_map &vm)
     cerr << "Error: Neuron Model \"IF-jump\" must pair with simulator \"IF-jump\".\n";
     return -1;
   }
+  if (enum_neuron_model == Hawkes_GH && str_simu_method != "simple") {
+    cerr << "Currently Hawkes-GH model only support \"simple\" simulator.\n";
+    return -1;
+  }
   
   if (vm.count("set-threshold")) {
     p_neu_pop->SetThreshold(vm["set-threshold"].as<double>());
@@ -471,10 +483,10 @@ int MainLoop(const po::variables_map &vm)
   }
   if (!b_init_loaded) {
     // Fill with default values
-    const double *v = p_neuron_model->Get_dym_default_val();
     auto &ds = p_neu_pop->GetDymState().dym_vals;
     int n_var = p_neuron_model->Get_n_dym_vars();
     for (int i = 0; i < p_neu_pop->n_neurons(); i++) {
+      const double *v = p_neuron_model->Get_dym_default_val();
       memcpy(ds.data()+i*n_var, v, n_var*sizeof(double));
     }
     b_init_loaded = true;
@@ -737,7 +749,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump.")
+       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH.")
       ("simulation-method",  po::value<std::string>(),
        "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",

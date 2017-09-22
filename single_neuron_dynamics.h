@@ -1016,4 +1016,156 @@ struct Ty_HH_GH_cont_syn
   {}
 };
 
+/**
+  Hawkes process "neuron". i.e. vary rate poisson process.
+  The V (id_V) is cumulating "time", once the "time" reaches time threshold (id_thres),
+  the neuron fires and V reset.
+*/
+struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
+{
+  double V_threshold     = 1.0;   // seems useless
+  double Time_ExCon      = 2.0;   // ms, same as "Ty_LIF_GH_core"
+  double Time_ExConR     = 0.5;   // ms
+  double Time_InCon      = 5.0;   // ms
+  double Time_InConR     = 0.8;   // ms
+
+  static const int n_var    = 6;
+  static const int id_V     = 0;
+  static const int id_thres = 1;
+  static const int id_gE    = 2;
+  static const int id_gI    = 3;
+  static const int id_gE_s1 = 4;
+  static const int id_gI_s1 = 5;
+  static const int id_gEInject = id_gE_s1;
+  static const int id_gIInject = id_gI_s1;
+  
+  double Get_V_threshold() const override
+  { return V_threshold; }
+
+  int Get_id_V() const override
+  { return id_V; }
+  
+  int Get_id_gE() const override
+  { return id_gE; }
+
+  int Get_id_gI() const override
+  { return id_gI; }
+
+  int Get_id_gEInject() const override
+  { return id_gEInject; }
+
+  int Get_id_gIInject() const override
+  { return id_gIInject; }
+
+  int Get_n_dym_vars() const override
+  { return n_var; }
+
+  void Set_Time_Refractory(double t_ref) override
+  {
+    /* No refractory period in this model */
+  }
+
+  inline double GetDv(const double *dym_val) const
+  {
+    return dym_val[id_gE] - dym_val[id_gI] + 0.2;
+  }
+
+  MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
+  {
+    /** The ODE is:
+      V'(t) = GE(t) - GI(t)
+      GE'(t) = -1/tCE  * GE(t) + HE(t)
+      HE'(t) = -1/tCRE * HE(t)
+      GI'(t) = -1/tCI  * GI(t) + HI(t)
+      HI'(t) = -1/tCRI * HI(t)
+    */
+
+    double v_n = dym_val[id_V];
+    double k1, k2, k3, k4;
+    double expEC  = exp(-0.5 * dt / Time_ExCon);
+    double expECR = exp(-0.5 * dt / Time_ExConR);
+    double expIC  = exp(-0.5 * dt / Time_InCon);
+    double expICR = exp(-0.5 * dt / Time_InConR);
+    double gE_s_coef = (expEC - expECR) * Time_ExCon * Time_ExConR / (Time_ExCon - Time_ExConR);
+    double gI_s_coef = (expIC - expICR) * Time_InCon * Time_InConR / (Time_InCon - Time_InConR);
+
+    // k1 = f(t_n, y_n)
+    k1 = GetDv(dym_val);
+
+    // y_n + 0.5*k1*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k1;
+    dym_val[id_gE] = expEC * dym_val[id_gE] + gE_s_coef * dym_val[id_gE_s1];
+    dym_val[id_gI] = expIC * dym_val[id_gI] + gI_s_coef * dym_val[id_gI_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI_s1] *= expICR;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k2 = GetDv(dym_val);
+
+    // y_n + 0.5*k2*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k2;
+    // k3 = f(t+dt/2, y_n + 0.5*k2*dt)
+    k3 = GetDv(dym_val);
+
+    // y_n + k3*dt
+    dym_val[id_V ] = v_n + dt * k3;
+    dym_val[id_gE] = expEC * dym_val[id_gE] + gE_s_coef * dym_val[id_gE_s1];
+    dym_val[id_gI] = expIC * dym_val[id_gI] + gI_s_coef * dym_val[id_gI_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI_s1] *= expICR;
+    // k4 = f(t+dt, y_n + k3*dt)
+    k4 = GetDv(dym_val);
+
+    dym_val[id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
+
+    return k1;
+  }
+
+  void NextStepSingleNeuronQuiet(
+    double *dym_val,
+    double &t_in_refractory,
+    double &spike_time_local,
+    double dt_local) const override
+  {
+    double dym_t[n_var];
+    std::copy(dym_val, dym_val+n_var, dym_t);
+    double v_n = dym_val[id_V];
+
+    double k1 = DymInplaceRK4(dym_val, dt_local);
+    
+//    printf("dl=%.3g, \n", dt_local);
+    
+    if (v_n <= dym_val[id_thres]
+        && dym_val[id_V] > dym_val[id_thres]) {
+      // spiked in interval [0 dt_local], different from [0 dt_local).
+      spike_time_local = cubic_hermit_real_root(dt_local,
+        v_n, dym_val[id_V],
+        k1, GetDv(dym_val), dym_val[id_thres]);
+//      printf("  spike: stl=%.3g, vn=%.3g, vn+1=%.3g, thres=%.3g\n", spike_time_local, v_n, dym_val[id_V], dym_val[id_thres]);
+      // evolve to spike_time_local
+      std::copy(dym_t, dym_t+n_var, dym_val);
+      DymInplaceRK4(dym_val, spike_time_local);
+      dym_val[id_V    ] = 0;
+      static std::exponential_distribution<double> exp_dis;
+      dym_val[id_thres] = V_threshold * exp_dis(rand_eng);
+      // evolve to dt_local
+      NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
+        spike_time_local, dt_local - spike_time_local);
+//      printf("  -- spike: stl=%.3g, vn+1=%.3g, thres=%.3g\n", spike_time_local, dym_val[id_V], dym_val[id_thres]);
+    }
+  }
+  
+  void VoltHandReset(double *dym_val) const override
+  {
+    dym_val[id_V] = 0;
+  }
+
+  const double * Get_dym_default_val() const override
+  {
+    static double dym[n_var] = {0};
+    static std::exponential_distribution<double> exp_dis;
+    dym[id_thres] = V_threshold * exp_dis(rand_eng);
+    return dym;
+  }
+};
+
 #endif
