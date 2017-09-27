@@ -244,7 +244,7 @@ public:
     for (size_t j = 0; j < arr_pr.size(); j++) {
       operator[](j).Init(arr_pr[j], arr_ps[j], arr_pri[j], arr_psi[j], t0, t0);
     }
-    id_seq_vec.reserve(arr_pr.size());
+    id_seq_vec.resize(arr_pr.size());
     std::fill(id_seq_vec.begin(), id_seq_vec.end(), 0);
   }
 
@@ -252,7 +252,7 @@ public:
 
   void RemoveEvents()
   {
-    assert(size() == id_seq.size());
+    assert(size() == id_seq_vec.size());
     for (auto &i : *this) {
       i.clear();
       i.id_seq = 0;

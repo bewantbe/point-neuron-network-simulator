@@ -1,6 +1,7 @@
 #include <cstdio>
 #define _USE_MATH_DEFINES  // For MSVC, so M_PI is defined
 #include <cmath>
+#include "math_helper.h"
 
 /* GNU Scientific Library  poly/solve_cubic.c
  *
@@ -186,8 +187,30 @@ double cubic_hermit_real_root(double x2,
   c[1] = dfx1;
   c[2] = -2*dfx1 - dfx2 - 3*(fx1 - fx2);
   c[3] = dfx1 + dfx2 + 2*(fx1 - fx2);
+
   if (c[3] != 0) {
-    gsl_poly_solve_cubic(c[2]/c[3], c[1]/c[3], c[0]/c[3], &s0, &s1, &s2);
+//    gsl_poly_solve_cubic(c[2]/c[3], c[1]/c[3], c[0]/c[3], &s0, &s1, &s2);
+
+    if (c[0] != 0) {
+      // x = 1 / t
+      // c[3] + c[2] t + c[1] t^2 + c[0] t^3 = 0
+      // We need the smallest solution within interval [0, 1].
+      // But the cubic formula gives the larger solution a smaller relative
+      // error. Therefore we solve t instead of x.
+      gsl_poly_solve_cubic(c[1]/c[0], c[2]/c[0], c[3]/c[0], &s0, &s1, &s2);
+      s0 = 1 / s0;
+      s1 = 1 / s1;
+      s2 = 1 / s2;
+      if (s0 > s1)
+        SWAP(s0, s1);
+      if (s1 > s2) {
+        SWAP(s1, s2);
+        if (s0 > s1)
+          SWAP(s0, s1);
+      }
+    } else {
+      s0 = 0;
+    }
   } else {
     gsl_poly_solve_quadratic(c[2], c[1], c[0], &s0, &s1);
     if (c[2] == 0 && c[1] == 0 && c[0] == 0) {
@@ -203,13 +226,18 @@ double cubic_hermit_real_root(double x2,
   if (0 <= s2 && s2 <= 1) {
     return s2 * x2;
   }
-  //fprintf(stderr, "No root in this interval\n");
+  
+  if (fx1 * fx2 < 0) {
+    return root_search(1, fx1, fx2, dfx1, dfx2, 0);
+  }
+
   return NAN;
 }
 
-/** Find the maximum point (abscissa) of the hermit interpolation.
+/**
+*   Find the maximum point (abscissa) of the hermit interpolation.
 *   The interpolation uses f(0), f(x2), f'(0), f'(x2).
-*   If no found, return NaN.
+*   If not found, return NaN.
 */
 double cubic_hermit_real_peak(double x2,
                    double fx1, double fx2,
@@ -249,16 +277,13 @@ double cubic_hermit_real_peak(double x2,
 // Search the root of hermit interpolated function that
 // passes zero from below to above.
 // Return NAN if no root found.
-// usuall, set xmid_guess to x2
 double root_search(double x2,
                    double fx1, double fx2,
-                   double dfx1, double dfx2, double rhs,
-                   double xmid_guess)
+                   double dfx1, double dfx2, double rhs)
 {
   // normalize to x=[0,1]
   dfx1 *= x2;
   dfx2 *= x2;
-  xmid_guess /= x2;
 
   // normalize to find root
   fx1 -= rhs;
@@ -282,7 +307,7 @@ double root_search(double x2,
     };
 
   // only find root in the case of monotonically increasing
-  if (!(hermit(0) <= 0 && hermit(xmid_guess) >= 0)) {
+  if (!(hermit(0) <= 0 && hermit(x2) >= 0)) {
     return NAN;
   }
 
@@ -291,7 +316,7 @@ double root_search(double x2,
   // Accuracy: 2^-6 ^2 ^2 ^2 = 3.5527e-15
   const int n_iter_binary = 6;
   double tempx1 = 0;
-  double tempx2 = xmid_guess;
+  double tempx2 = x2;
   double fmid,xmid;
   for (int j = 0; j < n_iter_binary; j++) {
     xmid = (tempx2 + tempx1)*0.5;   // no need to take care of overflow

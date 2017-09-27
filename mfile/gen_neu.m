@@ -352,7 +352,12 @@ st_sim_param =...
     sprintf('--t %.16e --dt %.17e --stv %.17e',...
             pm.t + ext_T, pm.dt, pm.stv);
 if isfield(pm, 'seed') && ~isempty(pm.seed) && strcmpi(pm.seed, 'auto')==0
-    st_sim_param = [st_sim_param, sprintf(' --seed %d', pm.seed)];
+    if isnumeric(pm.seed)
+        str = sprintf(' %lu', pm.seed);
+    else
+        str = pm.seed;
+    end
+    st_sim_param = [st_sim_param, sprintf(' --seed %s', str)];
 else
     st_sim_param = [st_sim_param, ' --seed-auto'];
 end
@@ -370,9 +375,7 @@ extra_data.cmdst = cmdst;
 pm.cmd_str = cmdst;
 if mode_show_cmd
     disp(cmdst);
-    if ~b_verbose
-        return
-    end
+    return
 end
 
 % test if there is cached files.
