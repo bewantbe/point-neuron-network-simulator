@@ -871,8 +871,14 @@ int main(int argc, char *argv[])
   }
   if (vm.count("seed-auto")) {
     std::random_device rd;
-    std::seed_seq sseq{rd(), rd()};
+    std::vector<std::random_device::result_type> v{rd(), rd()};
+    std::seed_seq sseq(v.begin(), v.end());
     rand_eng.seed( sseq );
+    if (vm.count("verbose-echo")) {
+      cout << "Random seed:";
+      for (auto val : v) cout << " " << val;
+      cout << "\n";
+    }
   }
 
   int rt = -1;

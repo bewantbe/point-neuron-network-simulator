@@ -1023,7 +1023,7 @@ struct Ty_HH_GH_cont_syn
 */
 struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
 {
-  double V_threshold     = 1.0;   // seems useless
+  double V_threshold     = 0.2;   // Currently used as input current.
   double Time_ExCon      = 2.0;   // ms, same as "Ty_LIF_GH_core"
   double Time_ExConR     = 0.5;   // ms
   double Time_InCon      = 5.0;   // ms
@@ -1067,13 +1067,13 @@ struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
 
   inline double GetDv(const double *dym_val) const
   {
-    return dym_val[id_gE] - dym_val[id_gI] + 0.2;
+    return dym_val[id_gE] - dym_val[id_gI] + V_threshold;
   }
 
   MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
   {
     /** The ODE is:
-      V'(t) = GE(t) - GI(t)
+      V'(t) = GE(t) - GI(t) + I
       GE'(t) = -1/tCE  * GE(t) + HE(t)
       HE'(t) = -1/tCRE * HE(t)
       GI'(t) = -1/tCI  * GI(t) + HI(t)
@@ -1132,25 +1132,21 @@ struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
 
     double k1 = DymInplaceRK4(dym_val, dt_local);
     
-//    printf("dl=%.3g, \n", dt_local);
-    
     if (v_n <= dym_val[id_thres]
         && dym_val[id_V] > dym_val[id_thres]) {
       // spiked in interval [0 dt_local], different from [0 dt_local).
       spike_time_local = cubic_hermit_real_root(dt_local,
         v_n, dym_val[id_V],
         k1, GetDv(dym_val), dym_val[id_thres]);
-//      printf("  spike: stl=%.3g, vn=%.3g, vn+1=%.3g, thres=%.3g\n", spike_time_local, v_n, dym_val[id_V], dym_val[id_thres]);
       // evolve to spike_time_local
       std::copy(dym_t, dym_t+n_var, dym_val);
       DymInplaceRK4(dym_val, spike_time_local);
       dym_val[id_V    ] = 0;
       static std::exponential_distribution<double> exp_dis;
-      dym_val[id_thres] = V_threshold * exp_dis(rand_eng);
+      dym_val[id_thres] = 1.0 * exp_dis(rand_eng);  // TODO: use a standalone rng.
       // evolve to dt_local
       NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
         spike_time_local, dt_local - spike_time_local);
-//      printf("  -- spike: stl=%.3g, vn+1=%.3g, thres=%.3g\n", spike_time_local, dym_val[id_V], dym_val[id_thres]);
     }
   }
   
