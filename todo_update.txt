@@ -1,0 +1,38 @@
+Make it possible to input negative poisson input.
+
+By extend ?? class to include strength item.
+Add override annotation.
+
+Add output of all poisson events.
+
+Test:
+Same old result. same execution time.  
+   done.
+   good.
+   
+Same old result by give strength by hand.
+
+
+Same single neuron behaviour by inject all events.
+
+
+Finish: test/test_cubic_solver
+
+Fix sine current input. See also HH_usage_ex2.m
+
+Write example: delay network: difference of delay and non-delay.
+	title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
+	ras_plot(ras, 0, pm.t, 1:100);
+
+Write test for 'HH-PT-GH'
+	figure(1);
+	t = (1:size(X,2))*pm.dt;
+	cla
+	ras_plot(ras, 0, pm.t, [], 100);
+	hold on
+	plot(t, X);
+	hold off
+
+Test and optimize IF-jump
+
+

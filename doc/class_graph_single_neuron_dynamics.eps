@@ -1,0 +1,1062 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%Creator: graphviz version 2.38.0 (20140413.2041)
+%%Title: g
+%%Pages: 1
+%%BoundingBox: 36 36 1449 458
+%%EndComments
+save
+%%BeginProlog
+/DotDict 200 dict def
+DotDict begin
+
+/setupLatin1 {
+mark
+/EncodingVector 256 array def
+ EncodingVector 0
+
+ISOLatin1Encoding 0 255 getinterval putinterval
+EncodingVector 45 /hyphen put
+
+% Set up ISO Latin 1 character encoding
+/starnetISO {
+        dup dup findfont dup length dict begin
+        { 1 index /FID ne { def }{ pop pop } ifelse
+        } forall
+        /Encoding EncodingVector def
+        currentdict end definefont
+} def
+/Times-Roman starnetISO def
+/Times-Italic starnetISO def
+/Times-Bold starnetISO def
+/Times-BoldItalic starnetISO def
+/Helvetica starnetISO def
+/Helvetica-Oblique starnetISO def
+/Helvetica-Bold starnetISO def
+/Helvetica-BoldOblique starnetISO def
+/Courier starnetISO def
+/Courier-Oblique starnetISO def
+/Courier-Bold starnetISO def
+/Courier-BoldOblique starnetISO def
+cleartomark
+} bind def
+
+%%BeginResource: procset graphviz 0 0
+/coord-font-family /Times-Roman def
+/default-font-family /Times-Roman def
+/coordfont coord-font-family findfont 8 scalefont def
+
+/InvScaleFactor 1.0 def
+/set_scale {
+       dup 1 exch div /InvScaleFactor exch def
+       scale
+} bind def
+
+% styles
+/solid { [] 0 setdash } bind def
+/dashed { [9 InvScaleFactor mul dup ] 0 setdash } bind def
+/dotted { [1 InvScaleFactor mul 6 InvScaleFactor mul] 0 setdash } bind def
+/invis {/fill {newpath} def /stroke {newpath} def /show {pop newpath} def} bind def
+/bold { 2 setlinewidth } bind def
+/filled { } bind def
+/unfilled { } bind def
+/rounded { } bind def
+/diagonals { } bind def
+/tapered { } bind def
+
+% hooks for setting color 
+/nodecolor { sethsbcolor } bind def
+/edgecolor { sethsbcolor } bind def
+/graphcolor { sethsbcolor } bind def
+/nopcolor {pop pop pop} bind def
+
+/beginpage {	% i j npages
+	/npages exch def
+	/j exch def
+	/i exch def
+	/str 10 string def
+	npages 1 gt {
+		gsave
+			coordfont setfont
+			0 0 moveto
+			(\() show i str cvs show (,) show j str cvs show (\)) show
+		grestore
+	} if
+} bind def
+
+/set_font {
+	findfont exch
+	scalefont setfont
+} def
+
+% draw text fitted to its expected width
+/alignedtext {			% width text
+	/text exch def
+	/width exch def
+	gsave
+		width 0 gt {
+			[] 0 setdash
+			text stringwidth pop width exch sub text length div 0 text ashow
+		} if
+	grestore
+} def
+
+/boxprim {				% xcorner ycorner xsize ysize
+		4 2 roll
+		moveto
+		2 copy
+		exch 0 rlineto
+		0 exch rlineto
+		pop neg 0 rlineto
+		closepath
+} bind def
+
+/ellipse_path {
+	/ry exch def
+	/rx exch def
+	/y exch def
+	/x exch def
+	matrix currentmatrix
+	newpath
+	x y translate
+	rx ry scale
+	0 0 1 0 360 arc
+	setmatrix
+} bind def
+
+/endpage { showpage } bind def
+/showpage { } def
+
+/layercolorseq
+	[	% layer color sequence - darkest to lightest
+		[0 0 0]
+		[.2 .8 .8]
+		[.4 .8 .8]
+		[.6 .8 .8]
+		[.8 .8 .8]
+	]
+def
+
+/layerlen layercolorseq length def
+
+/setlayer {/maxlayer exch def /curlayer exch def
+	layercolorseq curlayer 1 sub layerlen mod get
+	aload pop sethsbcolor
+	/nodecolor {nopcolor} def
+	/edgecolor {nopcolor} def
+	/graphcolor {nopcolor} def
+} bind def
+
+/onlayer { curlayer ne {invis} if } def
+
+/onlayers {
+	/myupper exch def
+	/mylower exch def
+	curlayer mylower lt
+	curlayer myupper gt
+	or
+	{invis} if
+} def
+
+/curlayer 0 def
+
+%%EndResource
+%%EndProlog
+%%BeginSetup
+14 default-font-family set_font
+1 setmiterlimit
+% /arrowlength 10 def
+% /arrowwidth 5 def
+
+% make sure pdfmark is harmless for PS-interpreters other than Distiller
+/pdfmark where {pop} {userdict /pdfmark /cleartomark load put} ifelse
+% make '<<' and '>>' safe on PS Level 1 devices
+/languagelevel where {pop languagelevel}{1} ifelse
+2 lt {
+    userdict (<<) cvn ([) cvn load put
+    userdict (>>) cvn ([) cvn load put
+} if
+
+%%EndSetup
+setupLatin1
+%%Page: 1 1
+%%PageBoundingBox: 36 36 1449 458
+%%PageOrientation: Portrait
+0 0 1 beginpage
+gsave
+36 36 1413 422 boxprim clip newpath
+1 1 set_scale 0 rotate 40 40 translate
+% Ty_Neuron_Dym_Base
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 146 238 moveto
+0 238 lineto
+0 202 lineto
+146 202 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+8 216.3 moveto 130 (Ty_Neuron_Dym_Base) alignedtext
+grestore
+% Ty_HH_GH_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 418 238 moveto
+182 238 lineto
+182 202 lineto
+418 202 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+190 216.3 moveto 220 (Ty_HH_GH_CUR_core<ExtraCurrent>) alignedtext
+grestore
+% Ty_Neuron_Dym_Base->Ty_HH_GH_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 146.12 220 moveto
+154.34 220 162.9 220 171.57 220 curveto
+stroke
+0 0 0 edgecolor
+newpath 171.8 223.5 moveto
+181.8 220 lineto
+171.8 216.5 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 171.8 223.5 moveto
+181.8 220 lineto
+171.8 216.5 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 712 265 moveto
+454 265 lineto
+454 229 lineto
+712 229 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+462 243.3 moveto 242 (Ty_HH_FT_GH_CUR_core<ExtraCurrent>) alignedtext
+grestore
+% Ty_HH_GH_CUR_core<ExtraCurrent>->Ty_HH_FT_GH_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 418.13 231.25 moveto
+426.58 232.07 435.14 232.89 443.68 233.71 curveto
+stroke
+0 0 0 edgecolor
+newpath 443.42 237.2 moveto
+453.7 234.67 lineto
+444.09 230.23 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 443.42 237.2 moveto
+453.7 234.67 lineto
+444.09 230.23 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 712 211 moveto
+454 211 lineto
+454 175 lineto
+712 175 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+462 189.3 moveto 242 (Ty_HH_PT_GH_CUR_core<ExtraCurrent>) alignedtext
+grestore
+% Ty_HH_GH_CUR_core<ExtraCurrent>->Ty_HH_PT_GH_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 418.13 208.75 moveto
+426.58 207.93 435.14 207.11 443.68 206.29 curveto
+stroke
+0 0 0 edgecolor
+newpath 444.09 209.77 moveto
+453.7 205.33 lineto
+443.42 202.8 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 444.09 209.77 moveto
+453.7 205.33 lineto
+443.42 202.8 lineto
+closepath stroke
+grestore
+% Ty_HH_G_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 696 157 moveto
+470 157 lineto
+470 121 lineto
+696 121 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+478 135.3 moveto 210 (Ty_HH_G_CUR_core<ExtraCurrent>) alignedtext
+grestore
+% Ty_HH_GH_CUR_core<ExtraCurrent>->Ty_HH_G_CUR_core<ExtraCurrent>
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 347.03 201.97 moveto
+377.14 190.62 417.52 176.24 454 166 curveto
+462.26 163.68 470.87 161.46 479.55 159.36 curveto
+stroke
+0 0 0 edgecolor
+newpath 480.44 162.74 moveto
+489.36 157.03 lineto
+478.82 155.93 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 480.44 162.74 moveto
+489.36 157.03 lineto
+478.82 155.93 lineto
+closepath stroke
+grestore
+% Ty_HH_shell
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 838 238 moveto
+748 238 lineto
+748 202 lineto
+838 202 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+756 216.3 moveto 74 (Ty_HH_shell) alignedtext
+grestore
+% Ty_HH_GH_CUR_core<ExtraCurrent>->Ty_HH_shell
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 340.27 238.03 moveto
+370.61 250.92 414.02 267.15 454 274 curveto
+567.02 293.36 602.35 307.54 712 274 curveto
+731.15 268.14 749.86 255.98 764.37 244.68 curveto
+stroke
+0 0 0 edgecolor
+newpath 766.82 247.19 moveto
+772.39 238.18 lineto
+762.42 241.75 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 766.82 247.19 moveto
+772.39 238.18 lineto
+762.42 241.75 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH_CUR_core<ExtraCurrent>->Ty_HH_shell
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 712.18 230.36 moveto
+721.11 229.2 729.79 228.07 737.94 227.02 curveto
+stroke
+0 0 0 edgecolor
+newpath 738.49 230.48 moveto
+747.95 225.72 lineto
+737.58 223.53 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 738.49 230.48 moveto
+747.95 225.72 lineto
+737.58 223.53 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH_CUR_core<ExtraCurrent>->Ty_HH_shell
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 712.18 209.64 moveto
+721.11 210.8 729.79 211.93 737.94 212.98 curveto
+stroke
+0 0 0 edgecolor
+newpath 737.58 216.47 moveto
+747.95 214.28 lineto
+738.49 209.52 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 737.58 216.47 moveto
+747.95 214.28 lineto
+738.49 209.52 lineto
+closepath stroke
+grestore
+% Ty_HH_G_CUR_core<ExtraCurrent>->Ty_HH_shell
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 687.09 157.07 moveto
+695.65 159.67 704.05 162.63 712 166 curveto
+729.8 173.54 747.8 185.25 762.21 195.84 curveto
+stroke
+0 0 0 edgecolor
+newpath 760.16 198.68 moveto
+770.25 201.91 lineto
+764.37 193.09 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 760.16 198.68 moveto
+770.25 201.91 lineto
+764.37 193.09 lineto
+closepath stroke
+grestore
+% Ty_HH_GH_CUR
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1004 319 moveto
+885 319 lineto
+885 283 lineto
+1004 283 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+893 297.3 moveto 103 (Ty_HH_GH_CUR) alignedtext
+grestore
+% Ty_HH_shell->Ty_HH_GH_CUR
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 817.63 238.01 moveto
+833.12 249.28 854.11 263.59 874 274 curveto
+877.23 275.69 880.59 277.33 884.01 278.92 curveto
+stroke
+0 0 0 edgecolor
+newpath 882.61 282.13 moveto
+893.17 282.99 lineto
+885.45 275.73 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 882.61 282.13 moveto
+893.17 282.99 lineto
+885.45 275.73 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH_CUR
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1015 265 moveto
+874 265 lineto
+874 229 lineto
+1015 229 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+882 243.3 moveto 125 (Ty_HH_FT_GH_CUR) alignedtext
+grestore
+% Ty_HH_shell->Ty_HH_FT_GH_CUR
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 838.05 227.95 moveto
+846.24 229.44 855.04 231.02 863.92 232.63 curveto
+stroke
+0 0 0 edgecolor
+newpath 863.5 236.11 moveto
+873.97 234.44 lineto
+864.75 229.22 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 863.5 236.11 moveto
+873.97 234.44 lineto
+864.75 229.22 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH_CUR
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1015 211 moveto
+874 211 lineto
+874 175 lineto
+1015 175 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+882 189.3 moveto 125 (Ty_HH_PT_GH_CUR) alignedtext
+grestore
+% Ty_HH_shell->Ty_HH_PT_GH_CUR
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 838.05 212.05 moveto
+846.24 210.56 855.04 208.98 863.92 207.37 curveto
+stroke
+0 0 0 edgecolor
+newpath 864.75 210.78 moveto
+873.97 205.56 lineto
+863.5 203.89 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 864.75 210.78 moveto
+873.97 205.56 lineto
+863.5 203.89 lineto
+closepath stroke
+grestore
+% Ty_HH_G_CUR
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 999 157 moveto
+890 157 lineto
+890 121 lineto
+999 121 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+898 135.3 moveto 93 (Ty_HH_G_CUR) alignedtext
+grestore
+% Ty_HH_shell->Ty_HH_G_CUR
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 817.63 201.99 moveto
+833.12 190.72 854.11 176.41 874 166 curveto
+877.23 164.31 880.59 162.67 884.01 161.08 curveto
+stroke
+0 0 0 edgecolor
+newpath 885.45 164.27 moveto
+893.17 157.01 lineto
+882.61 157.87 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 885.45 164.27 moveto
+893.17 157.01 lineto
+882.61 157.87 lineto
+closepath stroke
+grestore
+% Neuron_Ext_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1231.5 279 moveto
+1054.5 279 lineto
+1054.5 243 lineto
+1231.5 243 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1062.5 257.3 moveto 161 (Neuron_Ext_Current_Adaper) alignedtext
+grestore
+% Ty_HH_GH_CUR->Neuron_Ext_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1004.19 289.05 moveto
+1016.84 286.48 1030.54 283.69 1044.23 280.9 curveto
+stroke
+0 0 0 edgecolor
+newpath 1045.07 284.3 moveto
+1054.18 278.88 lineto
+1043.68 277.44 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1045.07 284.3 moveto
+1054.18 278.88 lineto
+1043.68 277.44 lineto
+closepath stroke
+grestore
+% Neuron_Zero_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1235 157 moveto
+1051 157 lineto
+1051 121 lineto
+1235 121 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1059 135.3 moveto 168 (Neuron_Zero_Current_Adaper) alignedtext
+grestore
+% Ty_HH_GH_CUR->Neuron_Zero_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 999.54 282.95 moveto
+1004.95 280.29 1010.21 277.31 1015 274 curveto
+1034.68 260.41 1034.73 251.53 1051 234 curveto
+1073.13 210.17 1098.79 183.46 1117.21 164.45 curveto
+stroke
+0 0 0 edgecolor
+newpath 1119.93 166.67 moveto
+1124.39 157.05 lineto
+1114.91 161.79 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1119.93 166.67 moveto
+1124.39 157.05 lineto
+1114.91 161.79 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH_CUR->Neuron_Ext_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1015.06 251.96 moveto
+1024.48 252.63 1034.29 253.33 1044.09 254.02 curveto
+stroke
+0 0 0 edgecolor
+newpath 1044.07 257.53 moveto
+1054.29 254.75 lineto
+1044.57 250.55 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1044.07 257.53 moveto
+1054.29 254.75 lineto
+1044.57 250.55 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH_CUR->Neuron_Zero_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 995.75 228.84 moveto
+1002.32 226.08 1008.88 223.1 1015 220 curveto
+1047.97 203.29 1083.24 180.34 1108.23 163.14 curveto
+stroke
+0 0 0 edgecolor
+newpath 1110.4 165.89 moveto
+1116.62 157.31 lineto
+1106.41 160.14 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1110.4 165.89 moveto
+1116.62 157.31 lineto
+1106.41 160.14 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH_CUR->Neuron_Ext_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 997.64 211.04 moveto
+1023.06 219.84 1053.8 230.48 1080.37 239.67 curveto
+stroke
+0 0 0 edgecolor
+newpath 1079.36 243.03 moveto
+1089.96 242.99 lineto
+1081.65 236.41 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1079.36 243.03 moveto
+1089.96 242.99 lineto
+1081.65 236.41 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH_CUR->Neuron_Zero_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1011.2 174.94 moveto
+1028.98 170.06 1048.37 164.73 1066.63 159.71 curveto
+stroke
+0 0 0 edgecolor
+newpath 1067.64 163.06 moveto
+1076.36 157.04 lineto
+1065.79 156.31 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1067.64 163.06 moveto
+1076.36 157.04 lineto
+1065.79 156.31 lineto
+closepath stroke
+grestore
+% Ty_HH_G_CUR->Neuron_Ext_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 996.72 157.05 moveto
+1003 159.8 1009.23 162.8 1015 166 curveto
+1051.34 186.16 1088.98 215.57 1113.75 236.32 curveto
+stroke
+0 0 0 edgecolor
+newpath 1111.74 239.2 moveto
+1121.64 242.99 lineto
+1116.27 233.86 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1111.74 239.2 moveto
+1121.64 242.99 lineto
+1116.27 233.86 lineto
+closepath stroke
+grestore
+% Ty_HH_G_CUR->Neuron_Zero_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 999.19 139 moveto
+1012.09 139 1026.28 139 1040.56 139 curveto
+stroke
+0 0 0 edgecolor
+newpath 1040.96 142.5 moveto
+1050.96 139 lineto
+1040.96 135.5 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1040.96 142.5 moveto
+1050.96 139 lineto
+1040.96 135.5 lineto
+closepath stroke
+grestore
+% Ty_HH_GH_extI
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1394 414 moveto
+1282 414 lineto
+1282 378 lineto
+1394 378 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1290 392.3 moveto 96 (Ty_HH_GH_extI) alignedtext
+grestore
+% Neuron_Ext_Current_Adaper->Ty_HH_GH_extI
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1161.5 279.09 moveto
+1184.77 302.34 1227.97 342.83 1271 369 curveto
+1273.48 370.51 1276.06 371.97 1278.7 373.37 curveto
+stroke
+0 0 0 edgecolor
+newpath 1277.33 376.6 moveto
+1287.84 377.94 lineto
+1280.46 370.34 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1277.33 376.6 moveto
+1287.84 377.94 lineto
+1280.46 370.34 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH_extI
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1405 360 moveto
+1271 360 lineto
+1271 324 lineto
+1405 324 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1279 338.3 moveto 118 (Ty_HH_FT_GH_extI) alignedtext
+grestore
+% Neuron_Ext_Current_Adaper->Ty_HH_FT_GH_extI
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1185.98 279.02 moveto
+1210.7 289.59 1242.59 303.15 1271 315 curveto
+1274.92 316.64 1278.98 318.32 1283.06 320 curveto
+stroke
+0 0 0 edgecolor
+newpath 1282.01 323.36 moveto
+1292.59 323.93 lineto
+1284.67 316.88 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1282.01 323.36 moveto
+1292.59 323.93 lineto
+1284.67 316.88 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH_extI
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1405 306 moveto
+1271 306 lineto
+1271 270 lineto
+1405 270 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1279 284.3 moveto 118 (Ty_HH_PT_GH_extI) alignedtext
+grestore
+% Neuron_Ext_Current_Adaper->Ty_HH_PT_GH_extI
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1231.75 273.28 moveto
+1241.4 274.63 1251.17 275.99 1260.67 277.32 curveto
+stroke
+0 0 0 edgecolor
+newpath 1260.46 280.83 moveto
+1270.85 278.75 lineto
+1261.43 273.89 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1260.46 280.83 moveto
+1270.85 278.75 lineto
+1261.43 273.89 lineto
+closepath stroke
+grestore
+% Ty_HH_G_extI
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1389 252 moveto
+1287 252 lineto
+1287 216 lineto
+1389 216 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1295 230.3 moveto 86 (Ty_HH_G_extI) alignedtext
+grestore
+% Neuron_Ext_Current_Adaper->Ty_HH_G_extI
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1231.75 248.72 moveto
+1246.97 246.59 1262.49 244.42 1276.77 242.43 curveto
+stroke
+0 0 0 edgecolor
+newpath 1277.5 245.86 moveto
+1286.92 241.01 lineto
+1276.53 238.93 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1277.5 245.86 moveto
+1286.92 241.01 lineto
+1276.53 238.93 lineto
+closepath stroke
+grestore
+% TyZeroCurrent
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 993.5 103 moveto
+895.5 103 lineto
+895.5 67 lineto
+993.5 67 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+903.5 81.3 moveto 82 (TyZeroCurrent) alignedtext
+grestore
+% TyZeroCurrent->Neuron_Zero_Current_Adaper
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 993.57 98.21 moveto
+1015.54 104.25 1042.08 111.54 1066.61 118.28 curveto
+stroke
+0 0 0 edgecolor
+newpath 1065.68 121.66 moveto
+1076.25 120.93 lineto
+1067.54 114.91 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1065.68 121.66 moveto
+1076.25 120.93 lineto
+1067.54 114.91 lineto
+closepath stroke
+grestore
+% Ty_HH_GH
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1380 198 moveto
+1296 198 lineto
+1296 162 lineto
+1380 162 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1304 176.3 moveto 68 (Ty_HH_GH) alignedtext
+grestore
+% Neuron_Zero_Current_Adaper->Ty_HH_GH
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1228.93 157.04 moveto
+1248.38 161.17 1268.46 165.44 1285.95 169.16 curveto
+stroke
+0 0 0 edgecolor
+newpath 1285.42 172.62 moveto
+1295.93 171.28 lineto
+1286.88 165.77 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1285.42 172.62 moveto
+1295.93 171.28 lineto
+1286.88 165.77 lineto
+closepath stroke
+grestore
+% Ty_HH_FT_GH
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1391.5 144 moveto
+1284.5 144 lineto
+1284.5 108 lineto
+1391.5 108 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1292.5 122.3 moveto 91 (Ty_HH_FT_GH) alignedtext
+grestore
+% Neuron_Zero_Current_Adaper->Ty_HH_FT_GH
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1235.13 132.86 moveto
+1248.32 131.97 1261.65 131.08 1274.12 130.24 curveto
+stroke
+0 0 0 edgecolor
+newpath 1274.63 133.71 moveto
+1284.37 129.55 lineto
+1274.16 126.73 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1274.63 133.71 moveto
+1284.37 129.55 lineto
+1274.16 126.73 lineto
+closepath stroke
+grestore
+% Ty_HH_PT_GH
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1391.5 90 moveto
+1284.5 90 lineto
+1284.5 54 lineto
+1391.5 54 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1292.5 68.3 moveto 91 (Ty_HH_PT_GH) alignedtext
+grestore
+% Neuron_Zero_Current_Adaper->Ty_HH_PT_GH
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1195.97 120.96 moveto
+1220.43 112.47 1249.77 102.28 1275.34 93.41 curveto
+stroke
+0 0 0 edgecolor
+newpath 1276.63 96.66 moveto
+1284.93 90.08 lineto
+1274.34 90.05 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1276.63 96.66 moveto
+1284.93 90.08 lineto
+1274.34 90.05 lineto
+closepath stroke
+grestore
+% Ty_HH_G
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+newpath 1375 36 moveto
+1301 36 lineto
+1301 0 lineto
+1375 0 lineto
+closepath stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1309 14.3 moveto 58 (Ty_HH_G) alignedtext
+grestore
+% Neuron_Zero_Current_Adaper->Ty_HH_G
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1164.9 120.96 moveto
+1189.2 100.63 1231.08 67.47 1271 45 curveto
+1277.45 41.37 1284.49 37.96 1291.49 34.87 curveto
+stroke
+0 0 0 edgecolor
+newpath 1293.12 37.98 moveto
+1300.96 30.86 lineto
+1290.38 31.54 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1293.12 37.98 moveto
+1300.96 30.86 lineto
+1290.38 31.54 lineto
+closepath stroke
+grestore
+endpage
+showpage
+grestore
+%%PageTrailer
+%%EndPage: 1
+%%Trailer
+end
+restore
+%%EOF

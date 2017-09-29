@@ -1,0 +1,53 @@
+# dot -Teps class_graph_single_neuron_dynamics.dot > class_graph_single_neuron_dynamics.eps
+
+digraph g {
+graph [
+rankdir = "LR"
+];
+node [shape=box];
+#"c1" [label = "asdfsad"];
+#"c2" [label = "basdfsad"];
+
+#"c1" -> "c2"
+
+"Ty_Neuron_Dym_Base" -> "Ty_HH_GH_CUR_core<ExtraCurrent>"
+
+"Ty_HH_GH_CUR_core<ExtraCurrent>" -> "Ty_HH_FT_GH_CUR_core<ExtraCurrent>"
+"Ty_HH_GH_CUR_core<ExtraCurrent>" -> "Ty_HH_PT_GH_CUR_core<ExtraCurrent>"
+"Ty_HH_GH_CUR_core<ExtraCurrent>" -> "Ty_HH_G_CUR_core<ExtraCurrent>"
+
+{"Ty_HH_GH_CUR_core<ExtraCurrent>"
+ "Ty_HH_FT_GH_CUR_core<ExtraCurrent>"
+ "Ty_HH_PT_GH_CUR_core<ExtraCurrent>"
+ "Ty_HH_G_CUR_core<ExtraCurrent>"} -> "Ty_HH_shell";
+
+"Ty_HH_shell" -> {"Ty_HH_GH_CUR"
+ "Ty_HH_FT_GH_CUR"
+ "Ty_HH_PT_GH_CUR"
+ "Ty_HH_G_CUR"};
+
+{"Ty_HH_GH_CUR"
+ "Ty_HH_FT_GH_CUR"
+ "Ty_HH_PT_GH_CUR"
+ "Ty_HH_G_CUR"} -> "Neuron_Ext_Current_Adaper";
+
+"Neuron_Ext_Current_Adaper" -> {
+  "Ty_HH_GH_extI"
+  "Ty_HH_FT_GH_extI"
+  "Ty_HH_PT_GH_extI"
+  "Ty_HH_G_extI"};
+
+"TyZeroCurrent" -> "Neuron_Zero_Current_Adaper";
+
+{"Ty_HH_GH_CUR"
+ "Ty_HH_FT_GH_CUR"
+ "Ty_HH_PT_GH_CUR"
+ "Ty_HH_G_CUR"} -> "Neuron_Zero_Current_Adaper";
+
+"Neuron_Zero_Current_Adaper" ->
+{"Ty_HH_GH" 
+ "Ty_HH_FT_GH"
+ "Ty_HH_PT_GH"
+ "Ty_HH_G"};
+
+}

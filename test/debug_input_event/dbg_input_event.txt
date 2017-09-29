@@ -1,0 +1,81 @@
+seed = 83, 39, 45
+95 --> Max diff = 8.92014e-11 @19
+
+
+"../bin/gen_neu_dbg" --neuron-model LIF-G --simulation-method auto --nE 2 --nI 0 --net "./data/net_2_0X045C4A7C.txt" --pr 4.0000000000000000e+00 --ps 9.2253629700385469e-03 --scee 9.2253629810867890e-03 --scie 0.0000000000000000e+00 --scei 0.0000000000000000e+00 --scii 0.0000000000000000e+00 --t 1.0000000000000000e+02 --dt 3.12500000000000000e-02 --stv 5.00000000000000000e-01 --seed 95  --volt-path "./data/LIF-G_volt_net_2_0X045C4A7C_p=2,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.dat" --isi-path "./data/LIF-G_ISI_net_2_0X045C4A7C_p=2,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --ras-path "./data/LIF-G_RAS_net_2_0X045C4A7C_p=2,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" > dbg_ref.txt
+
+
+"../bin/gen_neu_dbg" --neuron-model LIF-G --simulation-method auto --nE 1 --nI 0 --net - --pr 4.0000000000000000e+00 --ps 9.2253629700385469e-03 --scee 9.2253629810867890e-03 --scie 0.0000000000000000e+00 --scei 0.0000000000000000e+00 --scii 0.0000000000000000e+00 --t 1.0000000000000000e+02 --dt 3.12500000000000000e-02 --stv 5.00000000000000000e-01 --seed 95  --volt-path "./data/LIF-G_volt_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.dat" --isi-path "./data/LIF-G_ISI_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --ras-path "./data/LIF-G_RAS_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --input-event-path ./external_event.txt > dbg_tag.txt
+
+"../bin/gen_neu" --neuron-model LIF-G --simulation-method auto --nE 1 --nI 0 --net - --pr 4.0000000000000000e+00 --ps 9.2253629700385469e-03 --scee 9.2253629810867890e-03 --scie 0.0000000000000000e+00 --scei 0.0000000000000000e+00 --scii 0.0000000000000000e+00 --t 1.0000000000000000e+02 --dt 3.12500000000000000e-02 --stv 5.00000000000000000e-01 --seed 95  --volt-path "./data/LIF-G_volt_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.dat" --isi-path "./data/LIF-G_ISI_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --ras-path "./data/LIF-G_RAS_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --input-event-path ./external_event.txt > dbg_tag1.txt
+
+cmp dbg_tag.txt dbg_tag1.txt
+
+7.4920551685007188  v.s. 7.4920551686861403  v.s. ?
+
+
+
+
+
+
+
+367 --> Max diff = 1.09307e-12 @461  ISI=5.508175035876711
+1093 --> Max diff = 9.02056e-16 @13  ISI=5.520287475484011
+1436 --> Max diff = 1.34615e-15 @34  ISI=5.503583993263637
+1320 --> Max diff = 3.82645e-13 @3711  ISI=5.502067021382228
+1328 --> Max diff = 5.21527e-14 @3743  ISI=5.494565210828279
+
+
+
+
+
+
+
+
+
+1436 --> Max diff = 1.34615e-15 @34  ISI=5.555555555555555
+2664 --> Max diff = 1.45717e-15 @27  ISI=5.555555555555555
+2868 --> Max diff = 1.66533e-15 @25  ISI=5.555555555555555
+2868 --> Max diff = 1.66533e-15 @25  ISI=5.555555555555555
+4553 --> Max diff = 2.52576e-15 @95  ISI=5.409356725146199
+3156 --> Max diff = 3.39312e-15 @34  ISI=5.555555555555555
+4933 --> Max diff = 3.64986e-15 @61  ISI=5.555555555555555
+5866 --> Max diff = 1.65978e-14 @60  ISI=5.718954248366013
+
+#gcc lm
+1548 --> Max diff = 1.09635e-15 @17  ISI=5.718954248366013
+4885 --> Max diff = 1.44329e-15 @71  ISI=5.718954248366013
+7681 --> Max diff = 1.38778e-15 @25  ISI=5.718954248366013
+7453 --> Max diff = 1.83187e-15 @110  ISI=5.555555555555555
+6322 --> Max diff = 1.22645e-15 @87  ISI=5.718954248366013
+7053 --> Max diff = 3.26128e-15 @19  ISI=5.555555555555555
+3845 --> Max diff = 3.83721e-15 @90  ISI=5.882352941176471
+1735 --> Max diff = 7.12624e-15 @50  ISI=5.718954248366013
+127 --> Max diff = 1.5675e-14 @14  ISI=5.882352941176471
+
+
+
+"../bin/gen_neu_dbg" --neuron-model LIF-G --simulation-method auto --nE 2 --nI 0 --net "./data/net_2_0X045C4A7C.txt" --pr 4.0000000000000000e+00 --ps 9.2253629700385469e-03 --scee 9.2253629810867856e-03 --scie 0.0000000000000000e+00 --scei 0.0000000000000000e+00 --scii 0.0000000000000000e+00 --t 1.0000000000000000e+02 --dt 3.12500000000000000e-02 --stv 5.00000000000000000e-01 --seed 5866  --volt-path "./data/LIF-G_volt_net_2_0X045C4A7C_p=2,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.dat" --isi-path "./data/LIF-G_ISI_net_2_0X045C4A7C_p=2,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --ras-path "./data/LIF-G_RAS_net_2_0X045C4A7C_p=2,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --input-event-path poi.txt > log_ref.txt
+
+
+"../bin/gen_neu_dbg" --neuron-model LIF-G --simulation-method auto --nE 1 --nI 0 --net - --pr 4.0000000000000000e+00 --ps 9.2253629700385469e-03 --scee 9.2253629810867856e-03 --scie 0.0000000000000000e+00 --scei 0.0000000000000000e+00 --scii 0.0000000000000000e+00 --t 1.0000000000000000e+02 --dt 3.12500000000000000e-02 --stv 5.00000000000000000e-01 --seed 5866  --volt-path "./data/LIF-G_volt_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.dat" --isi-path "./data/LIF-G_ISI_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt" --ras-path "./data/LIF-G_RAS_net_1_0X00000000_p=1,0_sc=0.00922536298108679,0,0,0_pr=4_ps=0.00922536_stv=0.5_t=1.00e+02.txt"  --input-event-path external_event.txt > log_tgt.txt
+
+
+whole: 27.977981087018737
+part : 27.977981087018733
+
+
+
+===== NextDt(): t = 27.968750 .. 28.000000
+NoInteractDt(): neuron_id = 0
+NextStepSingleNeuronQuiet(): dt_local = 0.024152122984915536
+NextStepSingleNeuronQuiet(): begin state=9.9832591787715308e-01,6.3216048756478849e-02,0.0000000000000000e+00
+SpikeTimeRefine(): dt = -2.6073514877262814e-10, t_spike = 0.0092310870187350229, Dv = 0.180725
+SpikeTimeRefine(): dt = 0, t_spike = 0.0092310870187350229, Dv = 0.180725
+NextStepSingleNeuronQuiet(): end   state=1.0026815339788022e+00,6.2457238803706065e-02,0.0000000000000000e+00
+NextStepSingleNeuronQuiet(): neuron fired, spike_time_local = 0.0092310870187350229
+
+
+
+
+

@@ -1,0 +1,31 @@
+
+next -- Step program
+nexti -- Step one instruction
+
+step -- Step program until it reaches a different source line
+stepi -- Step one instruction exactly
+
+gdb bin/gen_neu
+
+cd mfile
+
+b simulator_if_jump.h:244
+
+skip file /usr/include/c++/4.9/bits/stl_algobase.h
+skip file /usr/include/c++/4.9/bits/stl_vector.h
+skip file /usr/include/c++/4.9/bits/vector.tcc
+skip file /usr/include/c++/4.9/cmath
+
+run --neuron-model IF-jump --simulation-method IF-jump --nE 3 --nI 2 --net "./data/net_5_0X2867A9F7.txt" --pr 2 --ps 0.125   --scee 1.3000000000000000e-01 --scie 1.2000000000000000e-01 --scei 1.4999999999999999e-01 --scii 1.4000000000000001e-01 --t 1e3 --dt 1.0 --stv 1.0 --seed 24 -v --verbose-echo
+
+p *dym_val@4
+
+b simulator_if_jump.h:217 if t > 2.0
+
+b simulator_if_jump.h:266
+
+p *state.StatePtr(0)@20
+
+info b
+
+d 
