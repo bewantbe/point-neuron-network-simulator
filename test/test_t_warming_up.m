@@ -20,6 +20,10 @@ pm.extra_cmd = '-v --verbose-echo';
 pm.extra_cmd = '-v --verbose-echo --t-warming-up 1e2';
 [X, ISI, ras, ~, extra_data] = gen_neu(pm, 'new,rm,extra_data');
 
+pm.extra_cmd = '-v --verbose-echo';
+pm.t_warming_up = 1e2;
+[X2, ISI2, ras2, ~, extra_data2] = gen_neu(pm, 'new,rm,extra_data');
+
 maxabs = @(x) max(abs(x(:)));
 
 % should output 0
@@ -27,6 +31,11 @@ maxabs(X - o_X)
 maxabs(extra_data.G - o_extra_data.G)
 maxabs(extra_data.gatings - o_extra_data.gatings)
 maxabs(ras - o_ras)
+
+maxabs(X2 - o_X)
+maxabs(extra_data2.G - o_extra_data.G)
+maxabs(extra_data2.gatings - o_extra_data.gatings)
+maxabs(ras2 - o_ras)
 
 % o_ISI and ISI is expected to be different, due to defect of gen_neu.m
 maxabs(o_ISI - ISI)

@@ -168,7 +168,6 @@ while ~isempty(gen_cmd)
         error('no this option: "%s"', tok);
     end
 end
-pm.ext_T = ext_T;
 
 % Default parameter values
 if ~exist('data_dir_prefix', 'var')
@@ -267,7 +266,7 @@ st_p  = strrep(mat2str([pm.nE, pm.nI]),' ',',');
 file_inf_st =...
     sprintf('%s_p=%s_sc=%s_%s_%s_%s_%s_stv=%g_t=%.2e',...
             pm.net, st_p(2:end-1), st_sc(2:end-1), pr_name,...
-            ps_name, pri_name, psi_name, pm.stv, pm.t + ext_T);
+            ps_name, pri_name, psi_name, pm.stv, pm.t);
 file_prefix = [data_dir_prefix, neuron_model_name, '_'];
 output_name     = [file_prefix, 'volt_',file_inf_st,'.dat'];
 output_ISI_name = [file_prefix, 'ISI_', file_inf_st,'.txt'];
@@ -348,9 +347,18 @@ else
     force_spike_path = [];
 end
 
+if isfield(pm, 't_warming_up') && ~isempty(pm.t_warming_up)
+  % use pm.t_warming_up instead of ext_T
+  ext_T = 0;
+  st_t_warming_up = sprintf('--t-warming-up %.16e', pm.t_warming_up);
+else
+  pm.ext_T = ext_T;
+  st_t_warming_up = '';
+end
+
 st_sim_param =...
-    sprintf('--t %.16e --dt %.17e --stv %.17e',...
-            pm.t + ext_T, pm.dt, pm.stv);
+    sprintf('--t %.16e --dt %.17e --stv %.17e %s',...
+            pm.t + ext_T, pm.dt, pm.stv, st_t_warming_up);
 if isfield(pm, 'seed') && ~isempty(pm.seed) && strcmpi(pm.seed, 'auto')==0
     if isnumeric(pm.seed)
         str = sprintf(' %lu', pm.seed);
