@@ -1,5 +1,5 @@
-% Generate HH neuron data by calling gen_neu
-% Will use cached data automatically
+% Neuron network simulator (interface to gen_neu).
+% Can use cached data automatically.
 %
 %  [X, isi, ras, pm, extra_data] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])
 %
@@ -41,12 +41,12 @@
 % Other possible values for "gen_cmd":
 %  'read'   Read data files if exist, otherwise do nothing and return [];
 %  'nameX'  return path to the voltage data file, instead of read it;
-%  'cmd'    Show command call to raster_tuning_HH, then exit. Useful for debug
-%  'ext_T'  Generate a bit more data, so reduce "head effect".
-%  'v'      Be verbose, with 'cmd' will also run and show cmd.
+%  'cmd'    Show command call to raster_tuning_HH, then exit. Useful for debug;
+%  'ext_T'  Generate a bit more data, so reduce "head effect";
+%  'v'      Be verbose;
 %  'h'      Show help for the command line generator.
 %
-% return value pm is a "normalized" input parameter set
+% Return value pm is a "normalized" input parameter set.
 
 % Behaviour (parameter gen_cmd)
 % gen_cmd   no data    have data   background(partial data)
@@ -66,7 +66,7 @@ t_start = tic;
 if nargin()==0
     disp(' [X, ISI, ras] = gen_neu(pm [, gen_cmd [, data_dir_prefix]])');
     disp(' Type "help gen_neu" for more help');
-    error('Lack of input parameters.');
+    error('No input parameter.');
 end
 if ~exist('fflush', 'builtin')
     fflush = @(a) 0;
@@ -144,11 +144,11 @@ end
 
 % Fill-in default values.
 if ~ has_nonempty_field(pm, 'neuron_model')
-    warning('pm.neuron_model not specified! Using "HH-PT-GH"');
+    warning('gen_neu:model', 'pm.neuron_model not specified! Using "HH-PT-GH"');
     pm.neuron_model = 'HH-PT-GH';
 end
 if ~ has_nonempty_field(pm, 'simu_method')
-    warning('pm.simu_method not specified! Using "auto".');
+    warning('gen_neu:model', 'pm.simu_method not specified! Using "auto".');
     pm.simu_method = 'auto';
 end
 if ~ has_nonempty_field(pm, 'stv')
@@ -207,10 +207,10 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
 end
 
 if xor(isfield(pm,'pr'), isfield(pm,'ps'))
-    warning('pr and ps not privided together.');
+    warning('gen_neu:pm', 'pr and ps not privided together.');
 end
 if xor(isfield(pm,'pri'), isfield(pm,'psi'))
-    warning('pri and psi not privided together.');
+    warning('gen_neu:pm', 'pri and psi not privided together.');
 end
 
 if ~ischar(pm.net)
@@ -277,7 +277,7 @@ if has_nonempty_field(pm, 'input_event')
         error('pm.input_event first column must be neuron index(1 based).');
     end
     if ~issorted(pm.input_event(:,2))
-        warning('pm.input_event is not time sorted, sorting for you.');
+        warning('gen_neu:pm', 'pm.input_event is not time sorted, sorting for you.');
         [~, id_sort] = sort(pm.input_event(:,2));
         pm.input_event = pm.input_event(id_sort, :);
     end
@@ -329,9 +329,10 @@ if mode_extra_data
                 output_G_name, output_gating_name)];
 end
 
-% path string escape
+% Path string escape
 f_unescape = @(s) strrep(strrep(s, '%', '%%'), '\', '\\');
 
+% Parameters that will pass to executable gen_neu.
 c_options = {...
 {'prog_path', [], ''}
 {'neuron_model', '%s'}
@@ -362,7 +363,19 @@ c_options = {...
 {'force_spikes', f_unescape(force_spike_path), '--force-spike-list'}
 {'prog_path', f_unescape(st_paths), ''}
 {'extra_cmd', '%s', ''}
+% Recognized parameters that will not pass to gen_neu.
+{'net', '', ''}
+{'cmd_str', '', ''}
 }.';
+
+c_options = cat(2, c_options, cellfun(@(v) {{[v '_mV'], '', ''}}, field_v));
+
+% Identify non-recognized parameters.
+opt_names = cellfun(@(x) x{1}, c_options, 'UniformOutput', false);
+field_names = fieldnames(pm).';
+for id_reg = find(ismember(field_names, opt_names) == false)
+    warning('gen_neu:pm', 'pm.sdf%s not recognized.', field_names{id_reg});
+end
 
 % Construct command line string.
 c_options_str = cell(size(c_options));
@@ -438,6 +451,8 @@ if mode_read_only
 end
 
 if rt ~= 0
+    disp('pm.cmd_str =');
+    disp(pm.cmd_str);
     error('Fail to generate data!');
 end
 % If requested, read and return data.
@@ -458,7 +473,7 @@ if nargout > 0
             fprintf('  size(X,2) = %d (read in file),\n', size(X,2));
             fprintf('  floor((pm.t+ext_T)/pm.stv) = %d (expected)\n',...
                     floor((pm.t+ext_T)/pm.stv));
-            warning('inconsistant data length! Exceed part will be truncated.');
+            warning('gen_neu:out', 'inconsistant data length! Exceed part will be truncated.');
         end
         len_cut = len - floor(pm.t/pm.stv);
         if (len_cut>0)
