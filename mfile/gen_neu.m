@@ -80,15 +80,13 @@ if ~ has_nonempty_field(pm, 'prog_path')
     % Search gen_neu in "../bin" then "./"
     pathdir = fileparts(mfilename('fullpath'));
     exepath = sprintf('%s%s..%sbin%sgen_neu', pathdir, filesep, filesep, filesep);
-    if exist(exepath, 'file')
-        pm.prog_path = exepath;
-    else
+    if ~exist(exepath, 'file') && ~exist([exepath '.exe'], 'file')
         exepath = sprintf('%s%sgen_neu', pathdir, filesep);
-        pm.prog_path = exepath;
-        if ~exist(exepath, 'file')
-            error('executable gen_neu not found!');
-        end
     end
+    if ~exist(exepath, 'file') && ~exist([exepath '.exe'], 'file')
+        error('Executable gen_neu not found!');
+    end
+    pm.prog_path = exepath;
 end
 
 % Default generator settings
@@ -97,14 +95,14 @@ return_X_name  = false;
 mode_rm_only   = false;
 mode_show_cmd  = false;
 mode_read_only = false;
-mode_extra_data = false;
-mode_run_in_background = false;
+mode_extra_data = nargout >= 5;
+mode_run_in_background = ~isempty(find(pm.extra_cmd == '&', 1, 'last'));
 
 if ~isfield(pm, 'extra_cmd')
     pm.extra_cmd = '';
 end
-pm.extra_cmd = [' ' strtrim(pm.extra_cmd) ' '];
-b_verbose = ~isempty([strfind(pm.extra_cmd,' -v ') strfind(pm.extra_cmd,' --verbose ')]);  % show time cost
+ext_tmp = [' ' strtrim(pm.extra_cmd) ' '];
+b_verbose = ~isempty([strfind(ext_tmp,' -v ') strfind(ext_tmp,' --verbose ')]);  % show time cost
 ext_T = 0;
 
 % Read generator parameters
@@ -140,9 +138,45 @@ while ~isempty(gen_cmd)
     end
 end
 
-% Default parameter values
 if ~exist('data_dir_prefix', 'var')
     data_dir_prefix = ['.', filesep, 'data', filesep];
+end
+
+% Fill-in default values.
+if ~ has_nonempty_field(pm, 'neuron_model')
+    warning('pm.neuron_model not specified! Using "HH-PT-GH"');
+    pm.neuron_model = 'HH-PT-GH';
+end
+if ~ has_nonempty_field(pm, 'simu_method')
+    warning('pm.simu_method not specified! Using "auto".');
+    pm.simu_method = 'auto';
+end
+if ~ has_nonempty_field(pm, 'stv')
+    pm.stv = 0.5;
+end
+if ~ has_nonempty_field(pm, 'dt')
+    pm.dt = 1.0/32;
+end
+if ~ has_nonempty_field(pm, 'scee')
+    pm.scee = 0;
+end
+if ~ has_nonempty_field(pm, 'scie')
+    pm.scie = 0;  % Strength from Ex. to In.
+end
+if ~ has_nonempty_field(pm, 'scei')
+    pm.scei = 0;  % Strength from In. to Ex.
+end
+if ~ has_nonempty_field(pm, 'scii')
+    pm.scii = 0;
+end
+if ~ has_nonempty_field(pm, 'seed')
+    pm.seed = randi(2^32-1, 1, 2);
+end
+if has_nonempty_field(pm, 't_warming_up')
+    ext_T = 0;  % use pm.t_warming_up instead of ext_T
+end
+if ext_T > 0
+    pm.ext_T = ext_T;
 end
 
 % Fields related to strength.
@@ -170,6 +204,13 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
             pm.(fv) = s;
         end
     end
+end
+
+if xor(isfield(pm,'pr'), isfield(pm,'ps'))
+    warning('pr and ps not privided together.');
+end
+if xor(isfield(pm,'pri'), isfield(pm,'psi'))
+    warning('pri and psi not privided together.');
 end
 
 if ~ischar(pm.net)
@@ -204,57 +245,18 @@ else
 end
 pm.net_path = mat_path;
 pm.net_adj  = network;
-if issparse(pm.net_adj)
-  pm.extra_cmd = ['--sparse-net ' pm.extra_cmd];
-end
 
 p = size(network,1);
 if ~ has_nonempty_field(pm, 'nI')
     pm.nI = 0;  % number of inhibitory neurons
 end
-if has_nonempty_field(pm, 'nE')
-    if pm.nI + pm.nE ~= p
-        fprintf('  pm.nI + pm.nE = %d, p_net = %d\n', pm.nI + pm.nE, p);
-        error('gen_neu: Number of neurons inconsist with the network!');
-    end
-else
+if ~ has_nonempty_field(pm, 'nE')
     pm.nE = p - pm.nI;
 end
-if ~ has_nonempty_field(pm, 'stv')
-    pm.stv = 0.5;
-end
-if ~ has_nonempty_field(pm, 'dt')
-    pm.dt = 1.0/32;
-end
-if ~ has_nonempty_field(pm, 'scee')
-    pm.scee = 0;
-end
-if ~ has_nonempty_field(pm, 'scie')
-    pm.scie = 0;  % Strength from Ex. to In.
-end
-if ~ has_nonempty_field(pm, 'scei')
-    pm.scei = 0;  % Strength from In. to Ex.
-end
-if ~ has_nonempty_field(pm, 'scii')
-    pm.scii = 0;
-end
-s_tmp = strtrim(pm.extra_cmd);
-if ~isempty(s_tmp) && strcmp(s_tmp(end), '&') == 1
-    % start the data generation in background, then return immediately
-    mode_run_in_background = true;  
-end
-if ~ has_nonempty_field(pm, 'neuron_model')
-    error('neuron_model not specified!');
-end
-if ~ has_nonempty_field(pm, 'simu_method')
-    disp('Warning: .simu_method not set! Using auto mode.');
-    pm.simu_method = 'auto';
-end
-if xor(isfield(pm,'pr'), isfield(pm,'ps'))
-    warning('pr and ps not privided together.');
-end
-if xor(isfield(pm,'pri'), isfield(pm,'psi'))
-    warning('pri and psi not privided together.');
+if pm.nI + pm.nE ~= p || pm.nE < 0 || pm.nI < 0
+    fprintf('  pm.nE(%d) + pm.nI(%d) = %d, p_net = %d\n', ...
+        pm.nE, pm.nI, pm.nE + pm.nI, p);
+    error('gen_neu: Number of neurons inconsist with the network!');
 end
 
 if has_nonempty_field(pm, 'synaptic_net_delay')
@@ -294,22 +296,10 @@ if has_nonempty_field(pm, 'force_spikes')
     [~, tmp_f_name] = fileparts(tempname(['.' filesep]));
     force_spike_path = [data_dir_prefix tmp_f_name 'force_spike.txt'];
     fd = fopen(force_spike_path, 'w');
-    fprintf(fd, '%d %.6f\n', pm.force_spikes');
+    fprintf(fd, '%d %.17g\n', pm.force_spikes');
     fclose(fd);
 else
     force_spike_path = '';
-end
-
-if has_nonempty_field(pm, 't_warming_up')
-    % use pm.t_warming_up instead of ext_T
-    ext_T = 0;
-end
-if ext_T > 0
-    pm.ext_T = ext_T;
-end
-
-if ~has_nonempty_field(pm, 'seed')
-    pm.seed = randi(2^32-1, 1, 2);
 end
 
 % construct file paths
@@ -331,7 +321,7 @@ output_G_name   = [file_prefix, 'G_',file_inf_st,'.dat'];
 output_gating_name = [file_prefix, 'gating_',file_inf_st,'.dat'];
 
 st_paths =...
-    sprintf(' --volt-path "%s" --isi-path "%s" --ras-path "%s"',...
+    sprintf('--volt-path "%s" --isi-path "%s" --ras-path "%s"',...
             output_name, output_ISI_name, output_RAS_name);
 if mode_extra_data
     st_paths = [st_paths ...
@@ -339,38 +329,42 @@ if mode_extra_data
                 output_G_name, output_gating_name)];
 end
 
-% escape the path
+% path string escape
 f_unescape = @(s) strrep(strrep(s, '%', '%%'), '\', '\\');
 
 c_options = {...
+{'prog_path', [], ''}
 {'neuron_model', '%s'}
 {'simu_method', '%s', '--simulation-method'}
 {'nE'}
 {'nI'}
 {'net_path', [], '--net'}
+{'net_adj', inlineif(issparse(pm.net_adj), '--sparse-net', ''), ''}
 {'pr'}
 {'ps'}
 {'pri'}
 {'psi'}
-{'scee', '%.16e'}
-{'scie', '%.16e'}
-{'scei', '%.16e'}
-{'scii', '%.16e'}
+{'scee'}
+{'scie'}
+{'scei'}
+{'scii'}
 {'extI'}
 {'sine_amp', [], '--current-sine-amp'}
 {'sine_freq', [], '--current-sine-freq'}
-{'t', sprintf('%.16e', pm.t + ext_T)}
-{'dt', '%.17e'}
-{'stv', '%.17e'}
+{'t', sprintf('%.17g', pm.t + ext_T)}
+{'dt'}
+{'stv'}
 {'t_warming_up'}
-{'seed', ' %lu'}
+{'seed'}
 {'synaptic_delay'}
 {'synaptic_net_delay', f_unescape(net_delay_path), '--synaptic-net-delay'}
 {'input_event', f_unescape(poisson_path), '--input-event-path'}
 {'force_spikes', f_unescape(force_spike_path), '--force-spike-list'}
-};
+{'prog_path', f_unescape(st_paths), ''}
+{'extra_cmd', '%s', ''}
+}.';
 
-% construct command line string
+% Construct command line string.
 c_options_str = cell(size(c_options));
 cnt_options = 1;
 for id_c = 1:length(c_options)
@@ -381,12 +375,10 @@ for id_c = 1:length(c_options)
     end
 end
 
-cmdst = ['"' pm.prog_path '" ' strjoin(c_options_str(1:cnt_options-1))...
-         st_paths ' ' pm.extra_cmd];
-extra_data.cmdst = cmdst;
-pm.cmd_str = cmdst;
+pm.cmd_str = strjoin(c_options_str(1:cnt_options-1));
+extra_data.cmdst = pm.cmd_str;
 if mode_show_cmd
-    disp(cmdst);
+    disp(pm.cmd_str);
     return
 end
 
@@ -394,6 +386,10 @@ end
 have_data = exist(output_name, 'file') ...
          && exist(output_ISI_name, 'file') ...
          && exist(output_RAS_name, 'file');
+if mode_extra_data
+    have_data = have_data && exist(output_G_name, 'file') ...
+         && exist(output_gating_name, 'file');
+end
 if (~have_data || new_run)...
    && ~mode_read_only...
    && (~mode_rm_only || mode_rm_only && nargout>0)
@@ -408,7 +404,7 @@ if (~have_data || new_run)...
     end
     fflush(stdout);
     t_start = tic();
-    rt = system(cmdst);           % Run simulation !
+    rt = system(pm.cmd_str);           % Run simulation !
     if mode_run_in_background
         ISI=rt;
         return
@@ -444,7 +440,7 @@ end
 if rt ~= 0
     error('Fail to generate data!');
 end
-% If required, read and return data
+% If requested, read and return data.
 % At this point, the files should be generated, and ready for read.
 if nargout > 0
     % Fixme: The Octave function isargout() is not in Matlab.
@@ -534,7 +530,7 @@ end
 
 end  % end of function gen_neu
 
-% Convert array to command line option
+% Give array a name.
 % item = 'pr' 'ps' 'pri' or 'psi'.
 function name = get_prps_str(pm, item)
     if has_nonempty_field(pm, item)
@@ -552,35 +548,44 @@ function b = has_nonempty_field(stru, field_name)
     b = isfield(stru, field_name) && ~isempty(stru.(field_name));
 end
 
+% Give arguement name and value in string.
 function str = get_option_str(s, field_name, formatting, option_name)
     if ~isfield(s, field_name)
-%        warning(sprintf('No this field: "%s"', field_name));
         str = '';
         return
     end
     % Auto determine the data formatting.
-    if ~exist('formatting', 'var') || isempty(formatting)
+    if ~exist('formatting', 'var') || ~ischar(formatting) && isempty(formatting)
         f = s.(field_name);
-        if isnumeric(f) && length(f) == 1
-            formatting = '%.17g';
-        elseif isnumeric(f) && isvector(f)
+        if isnumeric(f) && isvector(f)
             formatting = ' %.17g';
         elseif ischar(f)
             formatting = '"%s"';
         elseif isempty(f)
             formatting = '';
         else
-            error('unhandled data type');
+            disp(f);
+            error('Unhandled data type.');
         end
     end
-    if exist('option_name', 'var') && ~isempty(option_name)
-        str0 = [option_name ' '];
-    else
-        str0 = ['--' strrep(field_name , '_', '-') ' '];
+    if ~exist('option_name', 'var') || ~ischar(option_name) && isempty(option_name)
+        option_name = ['--' strrep(field_name , '_', '-')];
     end
     str1 = sprintf(formatting, s.(field_name));
-    bg = 1 + (length(str1) > 0 && str1(1) == ' ');
-    str = [str0 str1(bg:end)];
+    white_space = char(' '*ones(1, 1-(length(option_name)==0 || length(str1)==0 || str1(1)==' ')));
+    str = [option_name white_space str1];
+end
+
+function z = inlineif(c, a, b)
+    if c
+      z = a;
+    else
+        if exist('b', 'var')
+            z = b;
+        else
+            z = [];
+        end
+    end
 end
 
 %test
