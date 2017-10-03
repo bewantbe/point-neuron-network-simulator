@@ -89,6 +89,10 @@ if ~ has_nonempty_field(pm, 'prog_path')
     pm.prog_path = exepath;
 end
 
+if ~isfield(pm, 'extra_cmd')
+    pm.extra_cmd = '';
+end
+
 % Default generator settings
 new_run        = false;
 return_X_name  = false;
@@ -98,9 +102,6 @@ mode_read_only = false;
 mode_extra_data = nargout >= 5;
 mode_run_in_background = ~isempty(find(pm.extra_cmd == '&', 1, 'last'));
 
-if ~isfield(pm, 'extra_cmd')
-    pm.extra_cmd = '';
-end
 ext_tmp = [' ' strtrim(pm.extra_cmd) ' '];
 b_verbose = ~isempty([strfind(ext_tmp,' -v ') strfind(ext_tmp,' --verbose ')]);  % show time cost
 ext_T = 0;
@@ -184,9 +185,9 @@ field_v = {'scee', 'scie', 'scei', 'scii', 'ps', 'psi'};
 
 % Test mis-spelling.
 for fv = field_v
-  if isfield(pm, [fv{1} '_mv'])
-    error(['mis-spelling: ' fv{1} '_mv should be ' fv{1} '_mV']);
-  end
+    if isfield(pm, [fv{1} '_mv'])
+        error(['mis-spelling: ' fv{1} '_mv should be ' fv{1} '_mV']);
+    end
 end
 
 % Convert "mV" to internal unit.
@@ -374,7 +375,7 @@ c_options = cat(2, c_options, cellfun(@(v) {{[v '_mV'], '', ''}}, field_v));
 opt_names = cellfun(@(x) x{1}, c_options, 'UniformOutput', false);
 field_names = fieldnames(pm).';
 for id_reg = find(ismember(field_names, opt_names) == false)
-    warning('gen_neu:pm', 'pm.sdf%s not recognized.', field_names{id_reg});
+    warning('gen_neu:pm', 'pm.%s not recognized.', field_names{id_reg});
 end
 
 % Construct command line string.
@@ -532,8 +533,8 @@ if mode_rm_only
     QuietDelete(output_G_name);
     QuietDelete(output_gating_name);
     if b_clean_net_file  % so pm.net was adjacency matrix
-      % Remove the saved network file.
-      QuietDelete(pm.net_path);
+        % Remove the saved network file.
+        QuietDelete(pm.net_path);
     end
 end
 QuietDelete(poisson_path);
@@ -593,7 +594,7 @@ end
 
 function z = inlineif(c, a, b)
     if c
-      z = a;
+        z = a;
     else
         if exist('b', 'var')
             z = b;
