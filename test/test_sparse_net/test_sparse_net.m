@@ -1,4 +1,4 @@
-addpath('../mfile');
+addpath('../../mfile');
 
 adj = rand(10) < 0.2;
 

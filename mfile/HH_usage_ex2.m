@@ -64,13 +64,13 @@ hold off
 cla
 clf
 hold on
+for k = 1:6
+  plot(1000 * s_freq, k ./ s_freq, 'color', [0.9 0.9 0.9]);
+end
 for k=1:length(c_ISI)
   if ~isempty(c_ISI{k})
     scatter(1000*s_freq(k)*ones(size(c_ISI{k})), c_ISI{k}, 10);
   end
-end
-for k = 1:6
-  plot(1000 * s_freq, k ./ s_freq, 'color', [0.9 0.9 0.9]);
 end
 ylim([0 100]);
 ylabel('ISI (ms)');

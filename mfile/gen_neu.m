@@ -143,6 +143,33 @@ if ~exist('data_dir_prefix', 'var')
     data_dir_prefix = ['.', filesep, 'data', filesep];
 end
 
+% Fields related to strength.
+field_v = {'scee', 'scie', 'scei', 'scii', 'ps', 'psi'};
+
+% Test mis-spelling.
+for fv = field_v
+    if isfield(pm, [fv{1} '_mv'])
+        error(['mis-spelling: ' fv{1} '_mv should be ' fv{1} '_mV']);
+    end
+end
+
+% Convert "mV" to internal unit.
+% if contains field that needs conversion
+if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
+    PSP = get_neu_psp(pm);
+    PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps, PSP.mV_psi];
+    for id_fv = 1:length(field_v)
+        fv = field_v{id_fv};
+        if has_nonempty_field(pm, [fv '_mV'])
+            s = pm.([fv '_mV']) * PSP_v(id_fv);
+            if isfield(pm, fv) && s ~= pm.(fv)
+                error(['incompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
+            end
+            pm.(fv) = s;
+        end
+    end
+end
+
 % Fill-in default values.
 if ~ has_nonempty_field(pm, 'neuron_model')
     warning('gen_neu:model', 'pm.neuron_model not specified! Using "HH-PT-GH"');
@@ -178,33 +205,6 @@ if has_nonempty_field(pm, 't_warming_up')
 end
 if ext_T > 0
     pm.ext_T = ext_T;
-end
-
-% Fields related to strength.
-field_v = {'scee', 'scie', 'scei', 'scii', 'ps', 'psi'};
-
-% Test mis-spelling.
-for fv = field_v
-    if isfield(pm, [fv{1} '_mv'])
-        error(['mis-spelling: ' fv{1} '_mv should be ' fv{1} '_mV']);
-    end
-end
-
-% Convert "mV" to internal unit.
-% if contains field that needs conversion
-if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
-    PSP = get_neu_psp(pm);
-    PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps, PSP.mV_psi];
-    for id_fv = 1:length(field_v)
-        fv = field_v{id_fv};
-        if has_nonempty_field(pm, [fv '_mV'])
-            s = pm.([fv '_mV']) * PSP_v(id_fv);
-            if isfield(pm, fv) && s ~= pm.(fv)
-                error(['incompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
-            end
-            pm.(fv) = s;
-        end
-    end
 end
 
 if xor(isfield(pm,'pr'), isfield(pm,'ps'))
@@ -367,11 +367,17 @@ c_options = {...
 % Recognized parameters that will not pass to gen_neu.
 {'net', '', ''}
 {'cmd_str', '', ''}
+{'ext_T', '', ''}
+{'scee_mV', '', ''}
+{'scie_mV', '', ''}
+{'scei_mV', '', ''}
+{'scii_mV', '', ''}
+{'ps_mV', '', ''}
+{'psi_mV', '', ''}
 }.';
 
-c_options = cat(2, c_options, cellfun(@(v) {{[v '_mV'], '', ''}}, field_v));
-
 % Identify non-recognized parameters.
+% Here slow. About 1.9ms in Octave, 0.8ms in Matlab 2014a.
 opt_names = cellfun(@(x) x{1}, c_options, 'UniformOutput', false);
 field_names = fieldnames(pm).';
 for id_reg = find(ismember(field_names, opt_names) == false)
