@@ -487,10 +487,12 @@ if nargout > 0
         % read conductance and gating varialbes (if any)
         fid = fopen(output_G_name, 'r');
         extra_data.G = fread(fid, [2*p, Inf], 'double');
+        extra_data.G(:, 1:end-floor(pm.t/pm.stv)) = [];
         fclose(fid);
         fid = fopen(output_gating_name, 'r');
         if fid >=0
           extra_data.gatings = fread(fid, [3*p, Inf], 'double');
+          extra_data.gatings(:, 1:end-floor(pm.t/pm.stv)) = [];
           fclose(fid);
           % The order of gating variables is defined in
           %   single_neuron_dynamics.h

@@ -14,13 +14,13 @@ public:
   TyPoissonTimeVec poisson_time_vec;
   double t, dt;
 
-  NeuronSimulatorSimple(const TyNeuronalParams &pm, double _dt)
+  NeuronSimulatorSimple(const TyNeuronalParams &pm, double _dt, double t0)
   {
     dt = _dt;
-    t = 0;
+    t = t0;
     poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, pm.arr_pri, pm.arr_psi, t);
   }
-
+  
   double GetT() const override
   {
     return t;
@@ -93,8 +93,8 @@ public:
 class NeuronSimulatorExactSpikeOrder :public NeuronSimulatorSimple
 {
 public:
-  NeuronSimulatorExactSpikeOrder(const TyNeuronalParams &pm, double _dt)
-    :NeuronSimulatorSimple(pm, _dt)
+  NeuronSimulatorExactSpikeOrder(const TyNeuronalParams &pm, double _dt, double t0)
+    :NeuronSimulatorSimple(pm, _dt, t0)
   {}
 
 public:
@@ -178,8 +178,8 @@ class NeuronSimulatorExactSpikeOrderSparse
 {
 public:
 
-  NeuronSimulatorExactSpikeOrderSparse(const TyNeuronalParams &_pm, double _dt)
-    :NeuronSimulatorSimple(_pm, _dt)
+  NeuronSimulatorExactSpikeOrderSparse(const TyNeuronalParams &_pm, double _dt, double t0)
+    :NeuronSimulatorSimple(_pm, _dt, t0)
   {
   }
 
@@ -340,8 +340,8 @@ class NeuronSimulatorExactSpikeOrderSparse2
 {
 public:
 
-  NeuronSimulatorExactSpikeOrderSparse2(const TyNeuronalParams &_pm, double _dt)
-    :NeuronSimulatorExactSpikeOrderSparse(_pm, _dt)
+  NeuronSimulatorExactSpikeOrderSparse2(const TyNeuronalParams &_pm, double _dt, double t0)
+    :NeuronSimulatorExactSpikeOrderSparse(_pm, _dt, t0)
   {
   }
 
@@ -504,8 +504,8 @@ protected:
   }
 
 public:
-  NeuronSimulatorBigDelay(const TyNeuronalParams &_pm, double _dt)
-    :NeuronSimulatorSimple(_pm, _dt)
+  NeuronSimulatorBigDelay(const TyNeuronalParams &_pm, double _dt, double t0)
+    :NeuronSimulatorSimple(_pm, _dt, t0)
   {
     se_que_vec.resize(_pm.n_total());
   }
@@ -552,8 +552,8 @@ public:
 class NeuronSimulatorBigNetDelay: public NeuronSimulatorBigDelay
 {
 public:
-  NeuronSimulatorBigNetDelay(const TyNeuronalParams &_pm, double _dt)
-    : NeuronSimulatorBigDelay(_pm, _dt)
+  NeuronSimulatorBigNetDelay(const TyNeuronalParams &_pm, double _dt, double t0)
+    : NeuronSimulatorBigDelay(_pm, _dt, t0)
   {}
 
   void NextDt(NeuronPopulationBase * p_neu_pop,

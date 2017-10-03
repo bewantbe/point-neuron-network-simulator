@@ -401,24 +401,29 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("simulation-method")) {
     str_simu_method = vm["simulation-method"].as<std::string>();
   }
+  double t_warming_up = vm["t-warming-up"].as<double>();
+  // Align t_warming_up to dt, so that t_warming_up is easier reachable and
+  // also time points for volt are multiples of dt.
+  t_warming_up = floor(t_warming_up / e_dt) * e_dt;
+  double t0 = 0; // TODO: t0 may used to account for non-aligned t_warming_up
   if (str_simu_method.size() > 0 && str_simu_method != "auto") {
     str_simu_method = vm["simulation-method"].as<std::string>();
     if (str_simu_method == "simple") {
-      p_neu_simu = new NeuronSimulatorSimple(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorSimple(pm, e_dt, t0);
     } else if (str_simu_method == "SSC") {  // Spike-Spike-Correction
-      p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt, t0);
     } else if (str_simu_method == "SSC-Sparse") {
-      p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse(pm, e_dt, t0);
     } else if (str_simu_method == "SSC-Sparse2") {
-      p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorExactSpikeOrderSparse2(pm, e_dt, t0);
     } else if (str_simu_method == "big-net-delay") {
-      p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt, t0);
     } else if (str_simu_method == "big-delay") {
-      p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt, t0);
     } else if (str_simu_method == "cont-syn") {
-      p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorCont(pm, e_dt, t0);
     } else if (str_simu_method == "IF-jump") {
-      p_neu_simu = new IFJumpSimulator(pm, e_dt);
+      p_neu_simu = new IFJumpSimulator(pm, e_dt, t0);
     } else {
       cerr << "No this simulation method:\"" << str_simu_method << "\"\n";
       return -2;
@@ -427,19 +432,19 @@ int MainLoop(const po::variables_map &vm)
     // Default simulator
     if (HH_GH_cont_syn == enum_neuron_model) {
       str_simu_method = "cont-syn";
-      p_neu_simu = new NeuronSimulatorCont(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorCont(pm, e_dt, t0);
     } else if (IF_jump == enum_neuron_model) {
       str_simu_method = "IF-jump";
-      p_neu_simu = new IFJumpSimulator(pm, e_dt);
+      p_neu_simu = new IFJumpSimulator(pm, e_dt, t0);
     } else if (vm.count("synaptic-net-delay")) {
       str_simu_method = "big-net-delay";
-      p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt, t0);
     } else if (vm.count("synaptic-delay")) {
       str_simu_method = "big-delay";
-      p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorBigDelay(pm, e_dt, t0);
     } else {
       str_simu_method = "SSC";
-      p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt);
+      p_neu_simu = new NeuronSimulatorExactSpikeOrder(pm, e_dt, t0);
     }
     //cout << "Simulator: " << str_simu_method << "\n";  // Debug info
   }
@@ -563,50 +568,11 @@ int MainLoop(const po::variables_map &vm)
     p_neu_pop->SetRefractoryTime(vm["refractory-time"].as<double>());
   }
 
-  // Function for save data to file
-  auto func_save_dym_values = [
-    b_output_volt, &fout_volt,
-    b_output_G, &fout_G,
-    b_output_HH_gate, &fout_HH_gate,
-    p_neuron_model]
-    (const NeuronPopulationBase &neu_pop) {
-    if (b_output_volt) {
-      std::vector<double> v(neu_pop.n_neurons());
-      int id_V = p_neuron_model->Get_id_V();
-      for (int j = 0; j < neu_pop.n_neurons(); j++) {
-        v[j] = neu_pop.GetDymState().dym_vals(j, id_V);
-      }
-      fout_volt.write((char*)v.data(), neu_pop.n_neurons()*sizeof(double));
-    }
-    if (b_output_G) {
-      int id_gE = p_neuron_model->Get_id_gE();
-      int id_gI = p_neuron_model->Get_id_gI();
-      std::vector<double> v(2*neu_pop.n_neurons());
-      for (int j = 0; j < neu_pop.n_neurons(); j++) {
-        v[2*j  ] = neu_pop.GetDymState().dym_vals(j, id_gE);
-        v[2*j+1] = neu_pop.GetDymState().dym_vals(j, id_gI);
-      }
-      fout_G.write((char*)v.data(), 2*neu_pop.n_neurons()*sizeof(double));
-    }
-    if (b_output_HH_gate) {
-      int id_gating = p_neuron_model->Get_id_V() + 1;
-      int n_gating = ((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1;
-      for (int j = 0; j < neu_pop.n_neurons(); j++) {
-        const double *p = & neu_pop.GetDymState().dym_vals(j, id_gating);
-        fout_HH_gate.write((char*)p, sizeof(double)*n_gating);
-      }
-    }
-  };
-
-  if (vm.count("output-first-data-point")) {
-    func_save_dym_values(*p_neu_pop);
-  }
-
   std::vector<size_t> vec_n_spike(p_neu_pop->n_neurons());  // count the number of spikes
   TySpikeEventVec ras;                            // record spike raster
   int n_dt_in_stv = int(e_stv / e_dt + 0.1);
   int count_n_dt_in_stv = n_dt_in_stv;
-  size_t n_step = (size_t)(e_t / e_dt);
+  size_t n_step = (size_t)((e_t + t_warming_up) / e_dt);
   
   // Show input parameters.
   if (b_verbose_echo) {
@@ -655,8 +621,12 @@ int MainLoop(const po::variables_map &vm)
     printf(" %8.3g %8.3g %8.3g %8.3g\n",
            cpm.scee, cpm.scie, cpm.scei, cpm.scii);
     printf("\nSimulator: \"%s\"\n", str_simu_method.c_str());
-    printf("  t = %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
-           e_t, e_dt, e_stv, n_dt_in_stv);
+    if (t_warming_up > 0)
+      printf("  t = %.2g (warming-up) + %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
+             t_warming_up, e_t, e_dt, e_stv, n_dt_in_stv);
+    else
+      printf("  t = %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
+             e_t, e_dt, e_stv, n_dt_in_stv);
     if (vm.count("input-event-path")) {
       TyPoissonTimeVec &pv = p_neu_simu->Get_poisson_time_vec();
       unsigned long n_events = 0;
@@ -675,6 +645,45 @@ int MainLoop(const po::variables_map &vm)
     printf("  Simulation         : ");
   }
 
+  // Function for save data to file
+  auto func_save_dym_values = [
+    b_output_volt, &fout_volt,
+    b_output_G, &fout_G,
+    b_output_HH_gate, &fout_HH_gate,
+    p_neuron_model]
+    (const NeuronPopulationBase &neu_pop) {
+    if (b_output_volt) {
+      std::vector<double> v(neu_pop.n_neurons());
+      int id_V = p_neuron_model->Get_id_V();
+      for (int j = 0; j < neu_pop.n_neurons(); j++) {
+        v[j] = neu_pop.GetDymState().dym_vals(j, id_V);
+      }
+      fout_volt.write((char*)v.data(), neu_pop.n_neurons()*sizeof(double));
+    }
+    if (b_output_G) {
+      int id_gE = p_neuron_model->Get_id_gE();
+      int id_gI = p_neuron_model->Get_id_gI();
+      std::vector<double> v(2*neu_pop.n_neurons());
+      for (int j = 0; j < neu_pop.n_neurons(); j++) {
+        v[2*j  ] = neu_pop.GetDymState().dym_vals(j, id_gE);
+        v[2*j+1] = neu_pop.GetDymState().dym_vals(j, id_gI);
+      }
+      fout_G.write((char*)v.data(), 2*neu_pop.n_neurons()*sizeof(double));
+    }
+    if (b_output_HH_gate) {
+      int id_gating = p_neuron_model->Get_id_V() + 1;
+      int n_gating = ((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1;
+      for (int j = 0; j < neu_pop.n_neurons(); j++) {
+        const double *p = & neu_pop.GetDymState().dym_vals(j, id_gating);
+        fout_HH_gate.write((char*)p, sizeof(double)*n_gating);
+      }
+    }
+  };
+
+  if (vm.count("output-first-data-point")) {
+    func_save_dym_values(*p_neu_pop);
+  }
+
   // Main loop
   t_begin = tic();
   int progress_percent = 0;
@@ -685,22 +694,8 @@ int MainLoop(const po::variables_map &vm)
       SavePoissonInput(fout_poisson, p_neu_simu->Get_poisson_time_vec(),
           p_neu_simu->GetT()+e_dt);
     }
+    // Advance one dt step
     p_neu_simu->NextDt(p_neu_pop, ras, vec_n_spike);
-    
-    //p_neu_simu->SaneTestState();
-    if (output_ras) {
-      for (size_t j = 0; j < ras.size(); j++) {
-        fout_ras << ras[j].id + 1 << '\t' << ras[j].time << '\n';
-      }
-    }
-    ras.clear();
-    // output dynamical variable(s) every n_dt_in_stv
-    count_n_dt_in_stv--;
-    if (count_n_dt_in_stv > 0) {
-      continue;
-    }
-    count_n_dt_in_stv = n_dt_in_stv;
-    func_save_dym_values(*p_neu_pop);
     
     // Show progress
     if (b_verbose && (i+1.0)/n_step >= (progress_percent+1.0)/100) {
@@ -711,6 +706,27 @@ int MainLoop(const po::variables_map &vm)
                        toc(t_begin), progress_percent);
       fflush(stdout);
     }
+
+    // Discard warming-up data
+    // Use (i+1)*e_dt instead of p_neu_simu->GetT() to make "==" possible.
+    if ((i+1)*e_dt <= t_warming_up) {
+      ras.clear();
+      std::fill(vec_n_spike.begin(), vec_n_spike.end(), 0);
+      continue;
+    }
+
+    if (output_ras) {
+      for (size_t j = 0; j < ras.size(); j++) {
+        fout_ras << ras[j].id + 1 << '\t' << ras[j].time - t_warming_up << '\n';
+      }
+    }
+    ras.clear();
+    // output dynamical variable(s) every n_dt_in_stv
+    if (--count_n_dt_in_stv > 0)
+      continue;
+    else
+      count_n_dt_in_stv = n_dt_in_stv;
+    func_save_dym_values(*p_neu_pop);
   }
   if (b_verbose) {
     printf("\n");
@@ -764,6 +780,8 @@ int main(int argc, char *argv[])
        "Simulation delta t (dt, time step), in ms.")
       ("stv",  po::value<double>(),
        "Output sampling interval. Must be multiples of dt. Default set to dt.")
+      ("t-warming-up", po::value<double>()->default_value(0.0),
+       "The initial time period to be discarded, in ms.")
       ("nE",   po::value<unsigned int>()->default_value(1),
        "Number of excitatory neurons.")
       ("nI",   po::value<unsigned int>()->default_value(0),

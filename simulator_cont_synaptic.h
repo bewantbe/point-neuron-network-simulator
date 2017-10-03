@@ -13,10 +13,10 @@ public:
   TyPoissonTimeVec poisson_time_vec;
   double t, dt;
 
-  NeuronSimulatorCont(const TyNeuronalParams &pm, double _dt)
+  NeuronSimulatorCont(const TyNeuronalParams &pm, double _dt, double t0)
   {
     dt = _dt;
-    t = 0;
+    t = t0;
     poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, pm.arr_pri, pm.arr_psi, t);
   }
 

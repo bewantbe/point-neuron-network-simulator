@@ -158,10 +158,10 @@ class IFJumpSimulator :public NeuronSimulatorBase
 
 public:
 
-  IFJumpSimulator(const TyNeuronalParams &_pm, double _dt)
+  IFJumpSimulator(const TyNeuronalParams &_pm, double _dt, double t0)
     :pm(_pm), id_input_events(0)
   {
-    t = 0;
+    t = t0;
     dt = _dt;
     poisson_time_vec.Init(pm.arr_pr, pm.arr_ps, pm.arr_pri, pm.arr_psi, t);
   }
@@ -302,12 +302,15 @@ public:
   // override functions
   double GetT() const override
   { return t; }
+  
+  bool ty_neuron_init = false;
 
   void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
   {
-    if (t == 0) {
+    if (~ty_neuron_init) {
       TyN = dynamic_cast<IFJumpPopulation*>(p_neu_pop) -> TyN;
+      ty_neuron_init = true;
     }
     t += dt;
     poisson_time_vec.SaveIdxAndClean();
