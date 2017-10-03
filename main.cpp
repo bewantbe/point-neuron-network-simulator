@@ -806,10 +806,8 @@ int main(int argc, char *argv[])
        "Poisson input rate for inhibitory type, in 1/ms.")
       ("psi",  po::value< std::vector<double> >()->multitoken(),
        "Poisson input strength, inhibitory type (unscaled).")
-      ("seed",   po::value< VecUInt >()->multitoken()->default_value(VecUInt{1}, "1"),
-       "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1).")
-      ("seed-auto",
-       "Auto set random seed. This option overrides --seed.")
+      ("seed", po::value< std::vector<std::string> >()->multitoken(),
+       "Random seed for Poisson events. One or several unsigned integers (0 ~ 2^32-1), or 'auto'.")
       ("set-threshold", po::value<double>(),
        "Set the threshold to non-standard value.")
       ("no-threshold",
@@ -881,15 +879,23 @@ int main(int argc, char *argv[])
 
   // Set random seed for the global generator, mainly for Poisson event.
   if (vm.count("seed")) {
-    const auto &v = vm["seed"].as< VecUInt >();
-//    for (size_t k = 0; k < v.size(); k++)
-//      cout << "v[" << k <<"] = " << v[k] << endl;
-    std::seed_seq sseq(v.begin(), v.end());
-    rand_eng.seed( sseq );
-  }
-  if (vm.count("seed-auto")) {
-    std::random_device rd;
-    std::vector<std::random_device::result_type> v{rd(), rd()};
+    const auto &v_str = vm["seed"].as< std::vector<std::string> >();
+    std::vector<unsigned int> v;
+    if (v_str[0] == "auto") {
+      std::random_device rd;
+      v.push_back(rd());
+      v.push_back(rd());
+    } else {
+      v.resize(v_str.size());
+      try {
+        for (size_t k = 0; k < v_str.size(); k++) {
+          v[k] = std::stoul(v_str[k]);
+        }
+      } catch (const std::invalid_argument e) {
+        cerr << "Error: seed must be integer(s) or 'auto'.\n";
+        return 1;
+      }
+    }
     std::seed_seq sseq(v.begin(), v.end());
     rand_eng.seed( sseq );
     if (vm.count("verbose-echo")) {

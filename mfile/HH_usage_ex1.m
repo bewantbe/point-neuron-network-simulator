@@ -13,7 +13,7 @@ pm.stv   = 0.5;
 pm.seed  = 235478;
 pm.extra_cmd = '-v --verbose-echo';
 
-[X, ISI, ras, ~, extra_data] = gen_neu(pm, 'rm,extra_data');
+[X, ISI, ras, pm_expand, extra_data] = gen_neu(pm, 'rm,extra_data');
 
 fprintf('Mean firing rate: %.4g Hz.\n', 1000 ./ ISI);
 
@@ -37,4 +37,5 @@ figure(22);  % For single neuron
 title('gatings');
 plot(s_t, extra_data.gatings');
 legend('h', 'm', 'n');
+% See single_neuron_dynamics.h: struct Ty_HH_GH_CUR_core for the order of gating variables (id_h, id_m, id_n)
 
