@@ -18,8 +18,6 @@ Same single neuron behaviour by inject all events.
 
 Finish: test/test_cubic_solver
 
-Fix sine current input. See also HH_usage_ex2.m
-
 Write example: delay network: difference of delay and non-delay.
 	title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 	ras_plot(ras, 0, pm.t, 1:100);

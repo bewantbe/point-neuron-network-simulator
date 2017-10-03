@@ -93,7 +93,7 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
     PSP_v = [PSP.mV_scee, PSP.mV_scee, PSP.mV_scei, PSP.mV_scei, PSP.mV_ps, PSP.mV_psi];
     for id_fv = 1:length(field_v)
         fv = field_v{id_fv};
-        if isfield(pm, [fv '_mV'])
+        if has_nonempty_field(pm, [fv '_mV'])
             s = pm.([fv '_mV']) * PSP_v(id_fv);
             if isfield(pm, fv) && s ~= pm.(fv)
                 error(['incompatible EPSP/IPSP strength specification: ' fv ' ' fv '_mV']);
@@ -109,15 +109,19 @@ else
   b_clean_net_file = false;
 end
 
-if ~isfield(pm, 'prog_path')
+if ~ has_nonempty_field(pm, 'prog_path')
     % Search gen_neu in "../bin" then "./"
     pathdir = fileparts(mfilename('fullpath'));
     exepath = sprintf('%s%s..%sbin%sgen_neu', pathdir, filesep, filesep, filesep);
-    if ~exist(exepath, 'file')
+    if exist(exepath, 'file')
+        pm.prog_path = exepath;
+    else
         exepath = sprintf('%s%sgen_neu', pathdir, filesep);
+        pm.prog_path = exepath;
+        if ~exist(exepath, 'file')
+            error('executable gen_neu not found!');
+        end
     end
-else
-    exepath = pm.prog_path;
 end
 
 % Default generator settings
@@ -162,7 +166,7 @@ while ~isempty(gen_cmd)
     case {'verbose', 'v'}
         b_verbose = true;
     case 'h'
-        system(['"' exepath '" -h']);
+        system(['"' pm.prog_path '" -h']);
         return
     otherwise
         error('no this option: "%s"', tok);
@@ -173,13 +177,13 @@ end
 if ~exist('data_dir_prefix', 'var')
     data_dir_prefix = ['.', filesep, 'data', filesep];
 end
-if ~isfield(pm, 'net') || isempty(pm.net)
+if ~ has_nonempty_field(pm, 'net')
     pm.net = 'net_1_0';
 end
 if ischar(pm.net)
     [network, mat_path] = get_network(pm.net, data_dir_prefix);
     if isempty(network)
-        if isfield(pm, 'net_adj') && isnumeric(pm.net_adj) ...
+        if has_nonempty_field(pm, 'net_adj') && isnumeric(pm.net_adj) ...
            && diff(size(pm.net_adj)) == 0
             network = pm.net_adj;
             [mat_path, pm.net] = save_network(pm.net_adj, data_dir_prefix);
@@ -198,10 +202,10 @@ end
 pm.net_path = mat_path;
 pm.net_adj  = network;
 p = size(network,1);
-if ~isfield(pm, 'nI') || isempty(pm.nI)
+if ~ has_nonempty_field(pm, 'nI')
     pm.nI = 0;  % number of inhibitory neurons
 end
-if isfield(pm, 'nE') && ~isempty(pm.nE)
+if has_nonempty_field(pm, 'nE')
     if pm.nI + pm.nE ~= p
         fprintf('  pm.nI + pm.nE = %d, p_net = %d\n', pm.nI + pm.nE, p);
         error('gen_neu: Number of neurons inconsist with the network!');
@@ -209,22 +213,22 @@ if isfield(pm, 'nE') && ~isempty(pm.nE)
 else
     pm.nE = p - pm.nI;
 end
-if ~isfield(pm, 'stv') || isempty(pm.stv)
+if ~ has_nonempty_field(pm, 'stv')
     pm.stv = 0.5;
 end
-if ~isfield(pm, 'dt') || isempty(pm.dt)
+if ~ has_nonempty_field(pm, 'dt')
     pm.dt = 1.0/32;
 end
-if ~isfield(pm, 'scee') || isempty(pm.scee)
+if ~ has_nonempty_field(pm, 'scee')
     pm.scee = 0;
 end
-if ~isfield(pm, 'scie') || isempty(pm.scie)
+if ~ has_nonempty_field(pm, 'scie')
     pm.scie = 0;  % Strength from Ex. to In.
 end
-if ~isfield(pm, 'scei') || isempty(pm.scei)
+if ~ has_nonempty_field(pm, 'scei')
     pm.scei = 0;  % Strength from In. to Ex.
 end
-if ~isfield(pm, 'scii') || isempty(pm.scii)
+if ~ has_nonempty_field(pm, 'scii')
     pm.scii = 0;
 end
 s_tmp = strtrim(pm.extra_cmd);
@@ -232,21 +236,17 @@ if ~isempty(s_tmp) && strcmp(s_tmp(end), '&') == 1
     % start the data generation in background, then return immediately
     mode_run_in_background = true;  
 end
-if ~isfield(pm, 'neuron_model') || isempty(pm.neuron_model)
+if ~ has_nonempty_field(pm, 'neuron_model')
     error('neuron_model not specified!');
 end
-if ~isfield(pm, 'simu_method') || isempty(pm.simu_method)
+if ~ has_nonempty_field(pm, 'simu_method')
     disp('Warning: .simu_method not set! Using auto mode.');
     pm.simu_method = 'auto';
 end
 neuron_model_name = pm.neuron_model;
 program_name = sprintf(...
     '"%s" --neuron-model %s --simulation-method %s',...
-    exepath, pm.neuron_model, pm.simu_method);
-
-if ~isfield(pm, 'st_extra_inf_post')
-    pm.st_extra_inf_post = '';
-end
+    pm.prog_path, pm.neuron_model, pm.simu_method);
 
 if xor(isfield(pm,'pr'), isfield(pm,'ps'))
     warning('pr and ps not privided together.');
@@ -286,30 +286,30 @@ st_neu_param =...
 if issparse(pm.net_adj)
   st_neu_param = [st_neu_param ' --sparse-net'];
 end
-if isfield(pm, 'sine_amp')
+if has_nonempty_field(pm, 'sine_amp')
     st_neu_param = [st_neu_param,...
       sprintf(' --current-sine-amp %.16e', pm.sine_amp)];
 end
-if isfield(pm, 'sine_freq')
+if has_nonempty_field(pm, 'sine_freq')
     st_neu_param = [st_neu_param,...
       sprintf(' --current-sine-freq %.16e', pm.sine_freq)];
 end
-if isfield(pm, 'synaptic_delay') && ~isempty(pm.synaptic_delay)
+if has_nonempty_field(pm, 'synaptic_delay')
     st_neu_param = [st_neu_param,...
       sprintf(' --synaptic-delay %.16e', pm.synaptic_delay)];
 end
-if isfield(pm, 'synaptic_net_delay') && ~isempty(pm.synaptic_net_delay)
+if has_nonempty_field(pm, 'synaptic_net_delay')
     net_delay_path = save_network(pm.synaptic_net_delay, ...
                      [data_dir_prefix 'net_delay_']);
     st_neu_param = [st_neu_param,...
       sprintf(' --synaptic-net-delay %s', net_delay_path)];
 end
-if isfield(pm, 'extI')
+if has_nonempty_field(pm, 'extI')
     st_neu_param = [st_neu_param,...
       sprintf(' --extI %.16e', pm.extI)];
 end
 
-if isfield(pm, 'input_event')
+if has_nonempty_field(pm, 'input_event')
     [~, tmp_f_name] = fileparts(tempname('./'));
     poisson_path = [data_dir_prefix 'external_event_' tmp_f_name '.txt'];
     pm.extra_cmd = [pm.extra_cmd ' --input-event-path ' poisson_path];
@@ -336,7 +336,7 @@ else
     poisson_path = [];
 end
 
-if isfield(pm, 'force_spikes')
+if has_nonempty_field(pm, 'force_spikes')
     [~, tmp_f_name] = fileparts(tempname(['.' filesep]));
     force_spike_path = [data_dir_prefix tmp_f_name 'force_spike.txt'];
     pm.extra_cmd = [pm.extra_cmd ' --force-spike-list ' force_spike_path];
@@ -347,7 +347,7 @@ else
     force_spike_path = [];
 end
 
-if isfield(pm, 't_warming_up') && ~isempty(pm.t_warming_up)
+if has_nonempty_field(pm, 't_warming_up')
   % use pm.t_warming_up instead of ext_T
   ext_T = 0;
   st_t_warming_up = sprintf('--t-warming-up %.16e', pm.t_warming_up);
@@ -359,7 +359,7 @@ end
 st_sim_param =...
     sprintf('--t %.16e --dt %.17e --stv %.17e %s',...
             pm.t + ext_T, pm.dt, pm.stv, st_t_warming_up);
-if isfield(pm, 'seed') && ~isempty(pm.seed) && strcmpi(pm.seed, 'auto')==0
+if has_nonempty_field(pm, 'seed') && strcmpi(pm.seed, 'auto')==0
     if isnumeric(pm.seed)
         str = sprintf(' %lu', pm.seed);
     else
@@ -537,7 +537,7 @@ end  % end of function
 % Convert array to command line option
 % item = 'pr' 'ps' 'pri' or 'psi'.
 function [str name] = get_prps_str(pm, item)
-    if isfield(pm, item) && ~isempty(pm.(item))
+    if has_nonempty_field(pm, item)
         str = ['--' item];
         str = [str, sprintf(' %.17g', pm.(item))];
         if numel(pm.(item)) == 1
@@ -549,6 +549,10 @@ function [str name] = get_prps_str(pm, item)
         str = '';
         name = '';
     end
+end
+
+function b = has_nonempty_field(stru, field_name)
+  b = isfield(stru, field_name) && ~isempty(stru.(field_name));
 end
 
 %test
