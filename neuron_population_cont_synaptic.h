@@ -1,7 +1,8 @@
 #include "neuron_population.h"
 
 void hermit(double a, double b, double va, double vb,
-            double dva, double dvb, double x, double &fx)
+            double dva, double dvb, double V_threshold,
+            double x, double &fx)
 {
   // use v(a), v(b), dv(a)/dt, dv(b)/dt to construct a cubic polynomial
   // basic function f1 satisfies: f1(a)=1, f1(b)=0, f1'(a)=0, f1'(b)=0
@@ -14,15 +15,15 @@ void hermit(double a, double b, double va, double vb,
   double f4 = dvb*(x-a)*(x-a)*(x-b)/(b-a)/(b-a);
 
   // the polynomial of v(x) - Vot_Threshold
-  double V_threshold = 6.5;
   fx = f1 + f2 + f3 + f4 - V_threshold;
 }
 
 double root_search(void (*func)(double a, double b, double va, double vb,
-                                double dva, double dvb, double x, double &fx),
+                                double dva, double dvb, double V_threshold,
+                                double x, double &fx),
                    double x1, double x2,
                    double fx1, double fx2,
-                   double dfx1, double dfx2, double xacc)
+                   double dfx1, double dfx2, double V_threshold, double xacc)
 {
 //printf("t1, t2 = %.16e, %.16e; v1, v2 = %.16e, %.16e; dv1, dv2 = %.16e, %.16e\n", x1, x2, fx1, fx2, dfx1, dfx2);
   int j;
@@ -32,8 +33,8 @@ double root_search(void (*func)(double a, double b, double va, double vb,
   x1 = 0;
 
   // for firing time case, fx1<0, fmid>0
-  (*func)(x1,x2,fx1,fx2,dfx1,dfx2,x1,f);
-  (*func)(x1,x2,fx1,fx2,dfx1,dfx2,x2,fmid);
+  (*func)(x1,x2,fx1,fx2,dfx1,dfx2,V_threshold,x1,f);
+  (*func)(x1,x2,fx1,fx2,dfx1,dfx2,V_threshold,x2,fmid);
   /**************************************
     if (fabs(x2-x1)<xacc)
     {
@@ -51,7 +52,7 @@ double root_search(void (*func)(double a, double b, double va, double vb,
   for (j=0; j<Maxnum_search; j++) {
     dx = tempx2 - tempx1;
     xmid = tempx1 + dx/2;
-    (*func)(x1,x2,fx1,fx2,dfx1,dfx2,xmid,fmid);
+    (*func)(x1,x2,fx1,fx2,dfx1,dfx2,V_threshold,xmid,fmid);
     if (fmid <= 0.0)
       tempx1 = xmid;
     else
@@ -65,7 +66,6 @@ double root_search(void (*func)(double a, double b, double va, double vb,
   }
   return xmid + x1_0;
 }
-
 
 class NeuronPopulationContSyn
   : public NeuronPopulationBase,
@@ -199,7 +199,7 @@ public:
     double dvb = GetDv(cur_neu, t_evolution+Tb-Ta);
 // the tolerance error for root searching
 #define root_acc  (1.0e-12)
-    firing_time = root_search(hermit, Ta, Tb, va, vb, dva, dvb, root_acc);
+    firing_time = root_search(hermit, Ta, Tb, va, vb, dva, dvb, V_threshold, root_acc);
   }
 
   void runge_kutta4_vec(TyNeuronalDymState::TyDymVals &neu_dym_vals,
@@ -276,11 +276,13 @@ public:
   void SetThreshold(double V_thres) override
   {
     V_threshold = V_thres;
+    neuron_model.V_threshold = V_threshold;
   }
 
   void DisableThreshold() override
   {
     V_threshold = std::numeric_limits<double>::infinity();
+    neuron_model.V_threshold = V_threshold;
   }
 
   void InjectPoissonE(int neuron_id) override

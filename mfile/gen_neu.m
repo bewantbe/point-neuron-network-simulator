@@ -187,7 +187,7 @@ if ~mode_legancy
 else
     if ~ has_nonempty_field(pm, 'neuron_model')
 %        pm.neuron_model = 'HH3_gcc';
-        pm.neuron_model = pm.prog_path;
+        [~, pm.neuron_model] = fileparts(pm.prog_path);
     end
 end
 if ~ has_nonempty_field(pm, 'stv')
@@ -209,7 +209,11 @@ if ~ has_nonempty_field(pm, 'scii')
     pm.scii = 0;
 end
 if ~ has_nonempty_field(pm, 'seed')
-    pm.seed = randi(2^32-1, 1, 2);
+    if ~mode_legancy
+        pm.seed = randi(2^32-1, 1, 2);
+    else
+        pm.seed = randi(2^32-1, 1, 1);
+    end
 end
 if has_nonempty_field(pm, 't_warming_up')
     ext_T = 0;  % use pm.t_warming_up instead of ext_T
@@ -225,14 +229,14 @@ if xor(isfield(pm,'pri'), isfield(pm,'psi'))
     warning('gen_neu:pm', 'pri and psi not privided together.');
 end
 
+if ~ has_nonempty_field(pm, 'net')
+    pm.net = 'net_1_0';
+end
+
 if ~ischar(pm.net)
   b_clean_net_file = true;
 else
   b_clean_net_file = false;
-end
-
-if ~ has_nonempty_field(pm, 'net')
-    pm.net = 'net_1_0';
 end
 
 % Prepare the neuronal network.
@@ -370,11 +374,13 @@ if ~mode_legancy
     {'stv'}
     {'t_warming_up'}
     {'seed'}
+    {'spike_threshold', [], '--set-threshold'}
     {'synaptic_delay'}
-    {'synaptic_net_delay', f_unescape(net_delay_path), '--synaptic-net-delay'}
-    {'input_event', f_unescape(poisson_path), '--input-event-path'}
-    {'force_spikes', f_unescape(force_spike_path), '--force-spike-list'}
-    {'prog_path', f_unescape(st_paths), ''}
+    {'synaptic_net_delay', '', ['--synaptic-net-delay "' net_delay_path '"']}
+    {'input_event', '', ['--input-event-path "' poisson_path '"']}
+    {'force_spikes', '', ['--force-spike-list "' force_spike_path '"']}
+    {'prog_path', '', st_paths}
+    {'output_poisson_path'}
     {'extra_cmd', '%s', ''}
     % Recognized parameters that will not pass to gen_neu.
     {'net', '', ''}
@@ -391,9 +397,21 @@ else
     if mode_extra_data
         pm.save_conductance = output_G_name;
     end
+    if isfield(pm,'pr') && length(pm.pr) > 1
+        pm.pr_mul = pm.pr;
+        pm.pr = 1;
+    end
+    if isfield(pm,'ps') && length(pm.ps) > 1
+        pm.ps_mul = pm.ps;
+        pm.ps = 1;
+    end
+    if isfield(pm,'psi') && length(pm.psi) > 1
+        pm.psi_mul = pm.psi;
+        pm.psi = 1;
+    end
     % Parameters that will pass to executable gen_neu.
     c_options = {...
-    {'prog_path', '"%s" -ng -inf - --RC-filter 0 1 -v -vv', ''}
+    {'prog_path', '"%s" -ng -inf - --RC-filter 0 1', ''}
     {'nE', [], '-n'}
     {'nI', '%d', ''}
     {'net_path', [], '-mat'}
@@ -424,21 +442,12 @@ else
     {'net_adj', '', ''}
     {'cmd_str', '', ''}
     {'ext_T', '', ''}
-    {'t_warming_up', '', ''}
     {'scee_mV', '', ''}
     {'scie_mV', '', ''}
     {'scei_mV', '', ''}
     {'scii_mV', '', ''}
     {'ps_mV', '', ''}
     {'psi_mV', '', ''}
-    {'pri', '', ''}
-    {'synaptic_delay', '', ''}
-    {'synaptic_net_delay', '', ''}
-    {'input_event', '', ''}
-    {'force_spikes', '', ''}
-    {'extI', '', ''}
-    {'sine_amp', '', ''}
-    {'sine_freq', '', ''}
     }.';
 end
 
