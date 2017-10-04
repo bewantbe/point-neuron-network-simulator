@@ -39,6 +39,7 @@
 %  etc.
 %
 % Other possible values for "gen_cmd":
+%  'legancy'  Call the old good raster_tuning.
 %  'read'   Read data files if exist, otherwise do nothing and return [];
 %  'nameX'  return path to the voltage data file, instead of read it;
 %  'cmd'    Show command call to raster_tuning_HH, then exit. Useful for debug;
@@ -99,6 +100,7 @@ return_X_name  = false;
 mode_rm_only   = false;
 mode_show_cmd  = false;
 mode_read_only = false;
+mode_legancy   = ~isempty(strfind(pm.prog_path, 'raster_tuning'));
 mode_extra_data = nargout >= 5;
 mode_run_in_background = ~isempty(find(pm.extra_cmd == '&', 1, 'last'));
 
@@ -122,6 +124,8 @@ while ~isempty(gen_cmd)
         new_run = true;         % Regenerate data and read it
     case 'nameX'
         return_X_name = true;   % Return file path of voltage data file
+    case 'legancy'
+        mode_legancy  = true;   % Show the command to call, then exit
     case 'cmd'
         mode_show_cmd = true;   % Show the command to call, then exit
     case 'ext_T'
@@ -171,13 +175,20 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
 end
 
 % Fill-in default values.
-if ~ has_nonempty_field(pm, 'neuron_model')
-    warning('gen_neu:model', 'pm.neuron_model not specified! Using "HH-PT-GH"');
-    pm.neuron_model = 'HH-PT-GH';
-end
-if ~ has_nonempty_field(pm, 'simu_method')
-    warning('gen_neu:model', 'pm.simu_method not specified! Using "auto".');
-    pm.simu_method = 'auto';
+if ~mode_legancy
+    if ~ has_nonempty_field(pm, 'neuron_model')
+        warning('gen_neu:model', 'pm.neuron_model not specified! Using "HH-PT-GH"');
+        pm.neuron_model = 'HH-PT-GH';
+    end
+    if ~ has_nonempty_field(pm, 'simu_method')
+        warning('gen_neu:model', 'pm.simu_method not specified! Using "auto".');
+        pm.simu_method = 'auto';
+    end
+else
+    if ~ has_nonempty_field(pm, 'neuron_model')
+%        pm.neuron_model = 'HH3_gcc';
+        pm.neuron_model = pm.prog_path;
+    end
 end
 if ~ has_nonempty_field(pm, 'stv')
     pm.stv = 0.5;
@@ -333,48 +344,103 @@ end
 % Path string escape
 f_unescape = @(s) strrep(strrep(s, '%', '%%'), '\', '\\');
 
-% Parameters that will pass to executable gen_neu.
-c_options = {...
-{'prog_path', [], ''}
-{'neuron_model', '%s'}
-{'simu_method', '%s', '--simulation-method'}
-{'nE'}
-{'nI'}
-{'net_path', [], '--net'}
-{'net_adj', inlineif(issparse(pm.net_adj), '--sparse-net', ''), ''}
-{'pr'}
-{'ps'}
-{'pri'}
-{'psi'}
-{'scee'}
-{'scie'}
-{'scei'}
-{'scii'}
-{'extI'}
-{'sine_amp', [], '--current-sine-amp'}
-{'sine_freq', [], '--current-sine-freq'}
-{'t', sprintf('%.17g', pm.t + ext_T)}
-{'dt'}
-{'stv'}
-{'t_warming_up'}
-{'seed'}
-{'synaptic_delay'}
-{'synaptic_net_delay', f_unescape(net_delay_path), '--synaptic-net-delay'}
-{'input_event', f_unescape(poisson_path), '--input-event-path'}
-{'force_spikes', f_unescape(force_spike_path), '--force-spike-list'}
-{'prog_path', f_unescape(st_paths), ''}
-{'extra_cmd', '%s', ''}
-% Recognized parameters that will not pass to gen_neu.
-{'net', '', ''}
-{'cmd_str', '', ''}
-{'ext_T', '', ''}
-{'scee_mV', '', ''}
-{'scie_mV', '', ''}
-{'scei_mV', '', ''}
-{'scii_mV', '', ''}
-{'ps_mV', '', ''}
-{'psi_mV', '', ''}
-}.';
+if ~mode_legancy
+    % Parameters that will pass to executable gen_neu.
+    c_options = {...
+    {'prog_path', [], ''}
+    {'neuron_model', '%s'}
+    {'simu_method', '%s', '--simulation-method'}
+    {'nE'}
+    {'nI'}
+    {'net_path', [], '--net'}
+    {'net_adj', inlineif(issparse(pm.net_adj), '--sparse-net', ''), ''}
+    {'pr'}
+    {'ps'}
+    {'pri'}
+    {'psi'}
+    {'scee'}
+    {'scie'}
+    {'scei'}
+    {'scii'}
+    {'extI'}
+    {'sine_amp', [], '--current-sine-amp'}
+    {'sine_freq', [], '--current-sine-freq'}
+    {'t', sprintf('%.17g', pm.t + ext_T)}
+    {'dt'}
+    {'stv'}
+    {'t_warming_up'}
+    {'seed'}
+    {'synaptic_delay'}
+    {'synaptic_net_delay', f_unescape(net_delay_path), '--synaptic-net-delay'}
+    {'input_event', f_unescape(poisson_path), '--input-event-path'}
+    {'force_spikes', f_unescape(force_spike_path), '--force-spike-list'}
+    {'prog_path', f_unescape(st_paths), ''}
+    {'extra_cmd', '%s', ''}
+    % Recognized parameters that will not pass to gen_neu.
+    {'net', '', ''}
+    {'cmd_str', '', ''}
+    {'ext_T', '', ''}
+    {'scee_mV', '', ''}
+    {'scie_mV', '', ''}
+    {'scei_mV', '', ''}
+    {'scii_mV', '', ''}
+    {'ps_mV', '', ''}
+    {'psi_mV', '', ''}
+    }.';
+else
+    if mode_extra_data
+        pm.save_conductance = output_G_name;
+    end
+    % Parameters that will pass to executable gen_neu.
+    c_options = {...
+    {'prog_path', '"%s" -ng -inf - --RC-filter 0 1 -v -vv', ''}
+    {'nE', [], '-n'}
+    {'nI', '%d', ''}
+    {'net_path', [], '-mat'}
+    {'pr', [], '-pr'}
+    {'ps', [], '-ps'}
+    {'psi', [], '-psi'}
+    {'pr_mul'}
+    {'ps_mul'}
+    {'psi_mul'}
+    {'scee', [], '-scee'}
+    {'scie', [], '-scie'}
+    {'scei', [], '-scei'}
+    {'scii', [], '-scii'}
+    {'t', sprintf('%.17g', pm.t + ext_T), '-t'}
+    {'dt', [], '-dt'}
+    {'stv', [], '-stv'}
+    {'seed', [], '-seed'}
+    {'prog_path', '', ['--bin-save -o "' output_name '"']}
+    {'prog_path', '', ['--save-spike-interval "' output_ISI_name '"']}
+    {'prog_path', '', ['--save-spike "' output_RAS_name '"']}
+    {'save_conductance'}
+    {'save_poisson_events'}
+    {'extra_cmd', '%s', ''}
+    % Recognized parameters that will not pass to the executable.
+    {'neuron_model', '', ''}
+    {'simu_method', '', ''}
+    {'net', '', ''}
+    {'net_adj', '', ''}
+    {'cmd_str', '', ''}
+    {'ext_T', '', ''}
+    {'t_warming_up', '', ''}
+    {'scee_mV', '', ''}
+    {'scie_mV', '', ''}
+    {'scei_mV', '', ''}
+    {'scii_mV', '', ''}
+    {'ps_mV', '', ''}
+    {'psi_mV', '', ''}
+    {'pri', '', ''}
+    {'synaptic_delay', '', ''}
+    {'synaptic_net_delay', '', ''}
+    {'input_event', '', ''}
+    {'force_spikes', '', ''}
+    {'extI', '', ''}
+    {'sine_amp', '', ''}
+    {'sine_freq', '', ''}
+    }.';
+end
 
 % Identify non-recognized parameters.
 % Here slow. About 1.9ms in Octave, 0.8ms in Matlab 2014a.
