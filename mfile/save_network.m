@@ -34,6 +34,10 @@ matpath = [path_prefix, matname, '.txt'];
 matname0 = matname;
 k = 0;
 while exist(matpath, 'file')
+  stat = dir(matpath);
+  if stat.bytes == 0
+    break
+  end
   B = load('-ascii', matpath);
   if issparse(A)
     B = spconvert(B);

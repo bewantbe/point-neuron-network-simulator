@@ -22,6 +22,10 @@ end
 if isfield(pm0, 'prog_path')
   pm.prog_path = pm0.prog_path;
 end
+if strmatch('legancy-', pm.neuron_model)
+  pm.prog_path = [];
+  pm.neuron_model = pm.neuron_model(9:end);
+end
 pm.simu_method  = 'auto';
 pm.extra_cmd = sprintf('--input-event-path "%s"', events_file_path);
 

@@ -186,8 +186,18 @@ if ~mode_legancy
     end
 else
     if ~ has_nonempty_field(pm, 'neuron_model')
-%        pm.neuron_model = 'HH3_gcc';
         [~, pm.neuron_model] = fileparts(pm.prog_path);
+        % Try to convert program name to known model.
+        if strmatch('raster_tuning_HH', pm.neuron_model)
+            pm.neuron_model = 'legancy-HH-GH-cont-syn';
+        elseif strmatch('raster_tuning_LIF_GH', pm.neuron_model)
+            pm.neuron_model = 'legancy-LIF-GH';
+        elseif strmatch('raster_tuning_LIF', pm.neuron_model)
+            pm.neuron_model = 'legancy-LIF-G';
+        end
+    end
+    if ~b_verbose
+        pm.extra_cmd = ['-q' pm.extra_cmd];
     end
 end
 if ~ has_nonempty_field(pm, 'stv')
@@ -323,7 +333,7 @@ pr_name = get_prps_str(pm, 'pr');
 ps_name = get_prps_str(pm, 'ps');
 pri_name = get_prps_str(pm, 'pri');
 psi_name = get_prps_str(pm, 'psi');
-st_sc = strrep(mat2str([pm.scee, pm.scie, pm.scei, pm.scii]),' ',',');
+st_sc = strrep(mat2str([pm.scee, pm.scie, pm.scei, pm.scii], 5),' ',',');
 st_p  = strrep(mat2str([pm.nE, pm.nI]),' ',',');
 file_inf_st =...
     sprintf('%s_p=%s_sc=%s_%s_%s_%s_%s_stv=%g_t=%.2e',...
@@ -632,7 +642,7 @@ end  % end of function gen_neu
 function name = get_prps_str(pm, item)
     if has_nonempty_field(pm, item)
         if numel(pm.(item)) == 1
-            name = [item '=' sprintf('%g', pm.(item))];
+            name = [item '=' sprintf('%.5g', pm.(item))];
         else
             name = [item '=' BKDRHash(pm.(item))];
         end
@@ -668,7 +678,12 @@ function str = get_option_str(s, field_name, formatting, option_name)
     if ~exist('option_name', 'var') || ~ischar(option_name) && isempty(option_name)
         option_name = ['--' strrep(field_name , '_', '-')];
     end
-    str1 = sprintf(formatting, s.(field_name));
+    if issparse(s.(field_name))
+        % issparse is for damn matlab
+        str1 = sprintf(formatting);
+    else
+        str1 = sprintf(formatting, s.(field_name));
+    end
     white_space = char(' '*ones(1, 1-(length(option_name)==0 || length(str1)==0 || str1(1)==' ')));
     str = [option_name white_space str1];
 end
