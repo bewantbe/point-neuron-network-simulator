@@ -1,0 +1,84 @@
+commit 0b9ead6599b244d395decc08c510b3da0f1c25aa
+
+i7-6700HQ (2.60GHz no turbo boost), GCC 4.9, Octave 3.8.2
+
+
+Description: Single neuron test across models and input poisson rates.
+  n = 1+0, t = 100 s, dt = 1/32 ms, stv = 0.5 ms
+model \ sec \ pr        1       8       64      512     
+IF-jump                 0.278   0.331   0.878   5.008       31.2    28.6    28.0    27.9    
+LIF-G + SSC             0.607   0.702   1.389   6.778       31.3    31.3    31.6    31.8    
+LIF-GH + SSC            0.709   0.824   1.675   8.359       31.4    31.5    32.0    32.0    
+HH-G + SSC              1.515   1.790   3.941   20.812      64.5    56.9    48.3    65.9    
+HH-GH + SSC             1.591   1.882   4.189   22.018      64.4    57.6    53.8    66.9    
+HH-PT-GH + SSC          1.693   1.988   4.305   22.115      64.4    57.6    53.8    66.9    
+HH-GH-sine + SSC        1.947   2.249   4.629   23.323      64.4    57.6    53.8    66.9    
+HH-GH-cont-syn          8.224   9.942   23.582  132.012     64.4    57.6    53.8    66.9    
+                        
+LIF-G + simple          0.341   0.440   1.101   6.443       31.3    31.3    31.6    31.8    
+LIF-GH + simple         0.436   0.550   1.395   8.090       31.4    31.5    32.0    32.0    
+HH-G + simple           1.254   1.474   3.627   20.452      64.5    56.9    48.3    65.9    
+HH-GH + simple          1.277   1.563   3.825   21.659      64.4    57.6    53.8    66.9    
+HH-PT-GH + simple       1.377   1.666   3.935   21.746      64.4    57.6    53.8    66.9    
+HH-GH-sine + simple     1.629   1.931   4.296   22.841      64.4    57.6    53.8    66.9    
+                        
+legancy-LIF-G           0.792   0.915   1.779   7.320       30.9    31.1    31.7    31.8    
+legancy-LIF-GH          0.979   1.152   2.319   10.131      31.2    31.4    32.0    32.1    
+legancy-HH-GH-cont-syn  2.235   2.591   5.411   26.434      64.8    58.5    56.2    66.9    
+
+
+Description: Network: sparsity = 0.0998
+  n = 800+200, t = 0.1 s, dt = 1/32 ms, stv = 0.5 ms
+model                   sec     mean freq (Hz)
+IF-jump                   0.341   25.820  
+LIF-G + SSC               0.759   26.600  
+LIF-GH + SSC              1.049   26.580  
+HH-G + SSC                3.679   35.670  
+HH-GH + SSC               3.970   35.970  
+HH-PT-GH + SSC            4.067   35.920  
+HH-GH-sine + SSC          5.315   35.970  
+HH-GH-cont-syn            56.245  36.020  
+                          
+LIF-G + simple            0.460   26.600  
+LIF-GH + simple           0.570   26.580  
+HH-G + simple             1.361   35.670  
+HH-GH + simple            1.447   35.970  
+HH-PT-GH + simple         1.573   35.900  
+HH-GH-sine + simple       2.084   35.970  
+                          
+LIF-G + SSC-Sparse        0.520   26.600  
+LIF-GH + SSC-Sparse       0.643   26.580  
+HH-G + SSC-Sparse         1.623   35.670  
+HH-GH + SSC-Sparse        1.733   35.970  
+HH-PT-GH + SSC-Sparse     1.837   35.970  
+HH-GH-sine + SSC-Sparse   2.448   35.970  
+                          
+LIF-G + SSC-Sparse2       0.523   26.600  
+LIF-GH + SSC-Sparse2      0.653   26.580  
+HH-G + SSC-Sparse2        1.634   35.670  
+HH-GH + SSC-Sparse2       1.742   35.970  
+HH-PT-GH + SSC-Sparse2    1.843   35.900  
+HH-GH-sine + SSC-Sparse2  2.469   35.970  
+                          
+legancy-LIF-G             1.353   32.030  
+legancy-LIF-GH            1.644   30.470  
+legancy-HH-GH-cont-syn    250.881 36.840  
+
+
+Description: Network of changing size
+  t = 0.1 s, dt = 1/32 ms, stv = 0.5 ms
+                        sec     mean freq (Hz)
+model \ nn              100             300             1000            3000            10000           
+IF-jump                 0.029   25.400  0.063   26.600  0.293   26.180  1.840   26.000  17.865  26.012  
+LIF-GH + SSC            0.101   25.900  0.210   27.667  1.043   27.700  6.748   27.233  69.236  27.172  
+HH-GH + SSC             0.226   35.500  0.665   36.300  4.047   36.230  27.718  35.943  284.158 36.039  
+                        
+LIF-GH + simple         0.092   25.900  0.156   27.667  0.515   27.700  2.349   27.233  18.543  27.172  
+HH-GH + simple          0.198   35.500  0.427   36.267  1.391   36.240  4.947   35.933  27.095  36.043  
+                        
+LIF-GH + SSC-Sparse     0.095   25.900  0.168   27.667  0.592   27.700  2.940   27.233  24.801  27.172  
+HH-GH + SSC-Sparse      0.198   35.500  0.462   36.300  1.674   36.230  7.415   35.943  55.261  36.041  
+                        
+LIF-GH + SSC-Sparse2    0.097   25.900  0.173   27.667  0.614   27.700  2.961   27.233  24.725  27.172  
+HH-GH + SSC-Sparse2     0.199   35.500  0.464   36.300  1.691   36.230  7.469   35.943  55.081  36.039  
+
