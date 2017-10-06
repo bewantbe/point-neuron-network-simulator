@@ -214,8 +214,29 @@ The parameter `'rm'` for `gen_neu` means delete the temporary files after the re
 Simualtor Speed
 ---------------
 
-Measured through the interface `gen_neu.m`. See `test/speed_benchmark.m`.
+Measured through the interface `gen_neu.m`. See `test/speed_benchmark*` scripts, and [test/speed_benchmark.txt](test/speed_benchmark.txt).
 (commit c4562786)
+
+Time complexity for the simulators:
+
+Simulator     | # of calls to "Quiet Step"            | # of synaptic interaction
+:------------:|:-------------------------------------:|:-----------------------:
+IF-jump       | T * n * (1/dt + pr + n * sp * fr)     | O(T * n * n * sp * fr)
+simple        | T * n * (1/dt + pr)                   | O(T * n * n * sp * fr)
+SSC           | T * n * (1/dt + pr + 2 * n * fr)      | O(T * n * n * sp * fr)
+SSC-Sparse    | T * n * (1/dt + pr + 2 * n * sp * fr) | O(T * n * n * sp * fr)
+SSC-Sparse2   | same as 'SSC-Sparse'
+big-delay     | T * n * (1/dt + pr + n * sp * fr)     | O(T * n * n * sp * fr)
+big-net-delay | same as 'big-delay'
+
+Notes:
+* "Quiet Step" means a call to neuron_model.NextStepSingleNeuronQuiet(), which may contain zero (when the neuron is fully in refractory period), one or two (spiked and awaked from refractory in one time step (may smaller than dt in SSC)) calls to RK4 procedure.
+* dt: a fixed time step.
+* pr: poisson input rate.
+* sp: network sparsity.
+* fr: neuron mean firing rate.
+* n : number of neurons.
+* T : simulation time.
 
 ### Single neuron time test.
 
@@ -295,4 +316,18 @@ HH-GH + SSC-Sparse     | 1.808 | 35.970
 HH-GH + SSC-Sparse2    | 1.749 | 35.970
 HH-GH + SSC            | 4.019 | 35.970
 
+  Network of different size. Sparsity is 10%.
+  Firing rates are around ~30 Hz, like above.
+
+model \ sec \ n       |  100   |  300  | 1000  | 3000  | 10000
+:--------------------:|:------:|:-----:|:-----:|:-----:|:-----:
+IF-jump               |  0.029 | 0.063 | 0.293 | 1.840 | 17.865
+LIF-GH + SSC          |  0.101 | 0.210 | 1.043 | 6.748 | 69.236
+HH-GH + SSC           |  0.226 | 0.665 | 4.047 | 27.71 | 284.15
+||
+LIF-GH + simple       |  0.092 | 0.156 | 0.515 | 2.349 | 18.543
+HH-GH + simple        |  0.198 | 0.427 | 1.391 | 4.947 | 27.095
+||
+LIF-GH + SSC-Sparse   |  0.095 | 0.168 | 0.592 | 2.940 | 24.801
+HH-GH + SSC-Sparse    |  0.198 | 0.462 | 1.674 | 7.415 | 55.261
 

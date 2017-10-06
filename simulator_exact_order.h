@@ -168,7 +168,7 @@ public:
   network is sparse.
 
   Time cost:
-    # of calls to NextStepSingleNeuronQuiet(): (1/dt + pr + 2*sp*fr)*p*T
+    # of calls to NextStepSingleNeuronQuiet(): (1/dt + pr + 2*p*sp*fr)*p*T
     # of synaptic interaction: (# of edges)*fr*T.
   where `fr' is mean firing rate over all neurons, p=nE+nI,
         `sp' is mean number of out edges for each neuron.

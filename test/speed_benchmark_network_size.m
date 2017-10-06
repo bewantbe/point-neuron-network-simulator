@@ -1,4 +1,5 @@
 % Network change size
+addpath('../mfile');
 
 warning('off', 'gen_neu:model');
 warning('off', 'gen_neu:pm');
@@ -38,8 +39,8 @@ s_nn = [100 300 1000 3000 10000];
 fprintf('Description: %s\n', pm_description);
 fprintf('  t = %.3g s, dt = 1/%.3g ms, stv = %.3g ms\n',...
         pm.t/1000, 1/pm.dt, pm.stv);
-fprintf('model \\ nn                sec     mean freq (Hz)');
-fprintf('\n                        ');
+fprintf('                        sec     mean freq (Hz)');
+fprintf('\nmodel \\ nn              ');
 for id_nn = 1:numel(s_nn)
   fprintf('%-16d', s_nn(id_nn));
 end

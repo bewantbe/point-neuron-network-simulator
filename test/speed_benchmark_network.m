@@ -57,7 +57,7 @@ pm.scie_mV = 0.005;
 pm.scei_mV = 0.006;
 pm.scii_mV = 0.003;
 pm.seed = 123;
-pm_description = sprintf('Network: %s',...
+pm_description = sprintf('Network: sparsity = %.3g',...
   sum(pm.net(:)) / (numel(pm.net) - pm.nE - pm.nI));
 
 fprintf('Description: %s\n', pm_description);
@@ -70,9 +70,9 @@ for id_model = 1:numel(s_model)
   pm.neuron_model = s_model(id_model).model;
   pm.simu_method  = s_model(id_model).simu_method;
   if ~isempty(pm.simu_method)
-    fprintf('%-24s', [pm.neuron_model ' + ' pm.simu_method]);
+    fprintf('%-26s', [pm.neuron_model ' + ' pm.simu_method]);
   else
-    fprintf('%-24s', pm.neuron_model);
+    fprintf('%-26s', pm.neuron_model);
   end
   if length([pm.prog_path pm.neuron_model pm.simu_method])==0
     fprintf('\n');
