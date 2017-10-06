@@ -367,7 +367,7 @@ if ~mode_legancy
     {'nE'}
     {'nI'}
     {'net_path', [], '--net'}
-    {'net_adj', inlineif(issparse(pm.net_adj), '--sparse-net', ''), ''}
+    {'net_adj', '', inlineif(issparse(pm.net_adj), '--sparse-net', '')}
     {'pr'}
     {'ps'}
     {'pri'}
@@ -675,12 +675,15 @@ function str = get_option_str(s, field_name, formatting, option_name)
             error('Unhandled data type.');
         end
     end
+    % Auto determine the command line option name.
     if ~exist('option_name', 'var') || ~ischar(option_name) && isempty(option_name)
         option_name = ['--' strrep(field_name , '_', '-')];
     end
-    if issparse(s.(field_name))
-        % issparse is for damn matlab
-        str1 = sprintf(formatting);
+    if isempty(formatting)
+        % This 'if' is for damn matlab:
+        % Error using sprintf
+        % Function is not defined for sparse inputs.
+        str1 = '';
     else
         str1 = sprintf(formatting, s.(field_name));
     end

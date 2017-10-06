@@ -29,13 +29,13 @@ static-link: LDFLAGS = -static -pthread
 static-link: $(BIN)
 
 .PHONY : debug
-debug: CXXFLAGS = -O0 -g
+debug: CXXFLAGS = -g -Og
 debug: $(BIN)
 
 .PHONY : debug-sanitize
-debug-O2: CXXFLAGS = -g -Og -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined
-debug: LDLIBS += -lasan -lubsan
-debug-O2: $(BIN)
+debug-sanitize: CXXFLAGS = -g -Og -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined
+debug-sanitize: LDLIBS += -lasan -lubsan
+debug-sanitize: $(BIN)
 
 .PHONY : debug-log
 debug-log: CPPFLAGS += -DDEBUG

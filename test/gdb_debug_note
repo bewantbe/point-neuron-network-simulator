@@ -5,6 +5,8 @@ nexti -- Step one instruction
 step -- Step program until it reaches a different source line
 stepi -- Step one instruction exactly
 
+finish
+
 gdb bin/gen_neu
 
 cd mfile
@@ -18,6 +20,10 @@ skip file /usr/include/c++/4.9/cmath
 
 run --neuron-model IF-jump --simulation-method IF-jump --nE 3 --nI 2 --net "./data/net_5_0X2867A9F7.txt" --pr 2 --ps 0.125   --scee 1.3000000000000000e-01 --scie 1.2000000000000000e-01 --scei 1.4999999999999999e-01 --scii 1.4000000000000001e-01 --t 1e3 --dt 1.0 --stv 1.0 --seed 24 -v --verbose-echo
 
+gdb ../bin/gen_neu
+
+run --neuron-model HH-GH --simulation-method SSC --nE 10000 --nI 0 --net "./data/net_10000_0X375E7CA2_sp.txt" --sparse-net --pr 2 --ps 0.029079124233535526 --scee 1.3446993865218741e-05 --scie 1.6808742331523426e-05 --scei 2.5193400109292782e-05 --scii 1.2596700054646391e-05 --t 100 --dt 0.03125 --stv 0.5 --seed 123 --volt-path "./data/HH-GH_volt_net_10000_0X375E7CA2_sp_p=10000,0_sc=1.3447e-05,1.6809e-05,2.5193e-05,1.2597e-05_pr=2_ps=0.029079___stv=0.5_t=1.00e+02.dat" --isi-path "./data/HH-GH_ISI_net_10000_0X375E7CA2_sp_p=10000,0_sc=1.3447e-05,1.6809e-05,2.5193e-05,1.2597e-05_pr=2_ps=0.029079___stv=0.5_t=1.00e+02.txt" --ras-path "./data/HH-GH_RAS_net_10000_0X375E7CA2_sp_p=10000,0_sc=1.3447e-05,1.6809e-05,2.5193e-05,1.2597e-05_pr=2_ps=0.029079___stv=0.5_t=1.00e+02.txt" -v --verbose-echo
+
 p *dym_val@4
 
 b simulator_if_jump.h:217 if t > 2.0
@@ -25,6 +31,9 @@ b simulator_if_jump.h:217 if t > 2.0
 b simulator_if_jump.h:266
 
 p *state.StatePtr(0)@20
+
+p p_neu_pop->GetDymState().dym_vals.m_storage.m_data
+
 
 info b
 

@@ -44,6 +44,20 @@ double g_rand()
   return udis(rand_eng);
 }
 
+#include <stdarg.h>
+
+int tmp_dbg_printf(const char *format, ...)
+{
+  static long cnt = 0;
+  cnt++;
+  if (cnt < (long)(10000l * 25 * 78*32)) return 0;
+  va_list ap;
+  va_start(ap, format);
+  int ret = vfprintf(stdout, format, ap);
+  va_end(ap);
+  return ret;
+}
+
 // Define wall clock
 #ifdef _WINDOWS_
 #include <time.h>

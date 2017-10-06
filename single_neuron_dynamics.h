@@ -547,10 +547,12 @@ struct Ty_HH_GH_CUR_core
     double &v1 = dym_val[id_V];
     // See if neuron is firing. t_in_refractory == 0 means the neuron
     // is not in hand set refractory period, avoids kind of infinite loop.
-    if (v0 <= V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
+    if (v0 < V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
+      // In a rare case which v0, v1 <= V_threshold, it is still possible 
+      // that the 'in-dt' volt exceeds V_threshold. I ignored that case here.
+      // Some redundant calculation of GetDv(). Let's leave it.
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
-      // Some redundant calculation of GetDv(). Let's leave it.
     }
     if (dt_local>0) {
       // not 100% mathematically safe. Use the hard refractory for that.
@@ -594,7 +596,7 @@ struct Ty_HH_FT_GH_CUR_core  // Falling threshold
     double v0 = dym_val[id_V];
     double k1 = DymInplaceRK4(dym_val, dt_local, t, extra_data);
     double &v1 = dym_val[id_V];
-    if (v0 >= V_threshold && v1 <= V_threshold && t_in_refractory == 0) {
+    if (v0 > V_threshold && v1 <= V_threshold && t_in_refractory == 0) {
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
     }
@@ -814,7 +816,7 @@ struct Ty_HH_G_CUR_core
     double &v1 = dym_val[id_V];
     // See if neuron is firing. t_in_refractory == 0 means the neuron
     // is not in hand set refractory period, avoids kind of infinite loop.
-    if (v0 <= V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
+    if (v0 < V_threshold && v1 >= V_threshold && t_in_refractory == 0) {
       spike_time_local = cubic_hermit_real_root(dt_local,
         v0, v1, k1, GetDv(dym_val, t, extra_data), V_threshold);
     }
@@ -1138,10 +1140,11 @@ struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
       spike_time_local = cubic_hermit_real_root(dt_local,
         v_n, dym_val[id_V],
         k1, GetDv(dym_val), dym_val[id_thres]);
-      // evolve to spike_time_local
+      // Evolve to spike_time_local.
       std::copy(dym_t, dym_t+n_var, dym_val);
       DymInplaceRK4(dym_val, spike_time_local);
       dym_val[id_V    ] = 0;
+      // Generate next threshold.
       static std::exponential_distribution<double> exp_dis;
       dym_val[id_thres] = 1.0 * exp_dis(rand_eng);  // TODO: use a standalone rng.
       // evolve to dt_local

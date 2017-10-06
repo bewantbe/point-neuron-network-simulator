@@ -25,7 +25,8 @@ using std::endl;
 #ifdef NDEBUG
 #define dbg_printf(...) ((void)0);
 #else
-#define dbg_printf printf
+int tmp_dbg_printf(const char *format, ...);
+#define dbg_printf tmp_dbg_printf
 #endif
 
 static const double Inf = std::numeric_limits<double>::infinity();

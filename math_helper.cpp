@@ -168,6 +168,12 @@ gsl_poly_solve_quadratic (double a, double b, double c,
     }
 }
 
+/**
+* Find the smallest real root in interval [0 x2] for the cubic polynomial f(x)
+* defined by f(0) = fx1, f(x2)=fx2, f'(0)=dfx1, f'(x2)=dfx2.
+* If fx1 * fx2 <= 0, then a root is guaranteed to return.
+* If no root found, return NAN. 
+*/
 double cubic_hermit_real_root(double x2,
                    double fx1, double fx2,
                    double dfx1, double dfx2, double rhs)
@@ -182,7 +188,7 @@ double cubic_hermit_real_root(double x2,
 
   double c[4], s0=NAN, s1=NAN, s2=NAN;
   // Coefficients for hermit interpolation:
-  // c[3] x^3 + c[2] x^2 + c[1] x + c[0] = 0
+  // f(x) = c[3] x^3 + c[2] x^2 + c[1] x + c[0] = 0
   c[0] = fx1;
   c[1] = dfx1;
   c[2] = -2*dfx1 - dfx2 - 3*(fx1 - fx2);
@@ -227,7 +233,7 @@ double cubic_hermit_real_root(double x2,
     return s2 * x2;
   }
   
-  if (fx1 * fx2 < 0) {
+  if (fx1 * fx2 <= 0) {
     return root_search(1, fx1, fx2, dfx1, dfx2, 0);
   }
 
@@ -238,6 +244,7 @@ double cubic_hermit_real_root(double x2,
 *   Find the maximum point (abscissa) of the hermit interpolation.
 *   The interpolation uses f(0), f(x2), f'(0), f'(x2).
 *   If not found, return NaN.
+*   TODO: Root is NOT guaranteed to be found even when dfx1 * dfx2 <= 0.
 */
 double cubic_hermit_real_peak(double x2,
                    double fx1, double fx2,
@@ -269,6 +276,14 @@ double cubic_hermit_real_peak(double x2,
   }
   if (0 <= s1 && s1 <= 1 && 2*d[2]*s1+d[1] < 0) {
     return s1 * x2;
+  }
+  
+  if (dfx1 >= 0 && dfx2 <= 0) {
+    // Missed a root, try solve it in reverse direction,
+    // since it is more easily missed when abs(dfx2) is smaller.
+    if (dfx1 > -dfx2) {
+      return x2 - cubic_hermit_real_peak(x2, fx2, fx1, -dfx2, -dfx1);
+    }
   }
   //fprintf(stderr, "No root in this interval\n");
   return NAN;

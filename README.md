@@ -211,8 +211,8 @@ Note that there is a transpose for the format of `V` here.
 The parameter `'rm'` for `gen_neu` means delete the temporary files after the result been read (just before function return). Otherwise, in next run, with the same parameters, `gen_neu` will use the cached results.
 
 
-Speed of the simultor
----------------------
+Simualtor Speed
+---------------
 
 Measured through the interface `gen_neu.m`. See `test/speed_benchmark.m`.
 (commit c4562786)
@@ -294,4 +294,5 @@ HH-GH + simple         | 1.473 | 35.970
 HH-GH + SSC-Sparse     | 1.808 | 35.970
 HH-GH + SSC-Sparse2    | 1.749 | 35.970
 HH-GH + SSC            | 4.019 | 35.970
+
 
