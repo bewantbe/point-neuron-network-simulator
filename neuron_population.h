@@ -132,6 +132,7 @@ public:
     dbg_printf("NoInteractDt(): neuron_id = %d\n", neuron_id);
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
+    QUIET_STEP_CALL_INC();
     neuron_model.NextStepSingleNeuronQuiet(
         dym_val, time_in_refractory[neuron_id], spike_time_local, dt);
     if (!std::isnan(spike_time_local)) {
@@ -322,6 +323,7 @@ public:
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
     double *d = &sin_par(neuron_id,0);
+    QUIET_STEP_CALL_INC();
     neuron_model.NextStepSingleNeuronQuiet(
         dym_val, time_in_refractory[neuron_id], spike_time_local, dt,
         t_local, d);
@@ -377,6 +379,7 @@ public:
     double spike_time_local = qNaN;
     double *dym_val = StatePtr(neuron_id);
     double d = cur_param[neuron_id]; // some value
+    QUIET_STEP_CALL_INC();
     neuron_model.NextStepSingleNeuronQuiet(
         dym_val, time_in_refractory[neuron_id], spike_time_local, dt,
         t_local, d);

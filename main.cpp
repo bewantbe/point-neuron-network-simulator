@@ -44,6 +44,8 @@ double g_rand()
   return udis(rand_eng);
 }
 
+size_t quiet_step_call_counter = 0;
+
 #include <stdarg.h>
 
 int tmp_dbg_printf(const char *format, ...)
@@ -756,6 +758,8 @@ int MainLoop(const po::variables_map &vm)
       printf(" %7lu", vec_n_spike[i]);
     }
     printf("\n");
+    
+    printf("# of calls to NoInteractDt(): %lu\n", quiet_step_call_counter);
   }
 
   if (vm.count("isi-path")) {

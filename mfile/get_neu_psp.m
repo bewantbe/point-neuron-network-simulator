@@ -26,7 +26,12 @@ if strmatch('legancy-', pm.neuron_model)
   pm.prog_path = [];
   pm.neuron_model = pm.neuron_model(9:end);
 end
-pm.simu_method  = 'auto';
+switch pm.neuron_model
+  case {'HH-GH-cont-syn', 'IF-jump'}
+    pm.simu_method  = 'auto';
+  otherwise
+    pm.simu_method  = 'simple';
+end
 pm.extra_cmd = sprintf('--input-event-path "%s"', events_file_path);
 
 volt_unit = 1.0;

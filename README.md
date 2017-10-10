@@ -214,24 +214,24 @@ The parameter `'rm'` for `gen_neu` means delete the temporary files after the re
 Simualtor Speed
 ---------------
 
-Measured through the interface `gen_neu.m`. See `test/speed_benchmark*` scripts, and [test/speed_benchmark.txt](test/speed_benchmark.txt).
-(commit c4562786)
-
 Time complexity for the simulators:
 
-Simulator     | # of calls to "Quiet Step"         | # of synaptic interaction
-:-------------|:--------------------------------------|:----------------------
-IF-jump       | T * n * (1/dt + pr + n * sp * fr)     | O(T * n * n * sp * fr)
-simple        | T * n * (1/dt + pr)                   | O(T * n * n * sp * fr)
-SSC           | T * n * (1/dt + pr + 2 * n * fr)      | O(T * n * n * sp * fr)
-SSC-Sparse    | T * n * (1/dt + pr + 2 * n * sp * fr) | O(T * n * n * sp * fr)
+Simulator     | Number of calls to "Quiet Step"
+:-------------|:--------------------------------------
+IF-jump       | T * n * (1/dt + pr + n * sp * fr)
+simple        | T * n * (1/dt + pr)
+SSC           | T * n * (1/dt + pr + (2 + (0~1) * pr*dt) * n * fr)
+SSC-Sparse    | T * n * (1/dt + pr + (2 + (0~1) * pr*dt) * n * sp * fr)
 SSC-Sparse2   | same as 'SSC-Sparse'
-big-delay     | T * n * (1/dt + pr + n * sp * fr)     | O(T * n * n * sp * fr)
+big-delay     | T * n * (1/dt + pr + n * sp * fr)
 big-net-delay | same as 'big-delay'
 
 Notes:
-* "Quiet Step" means a call to neuron_model.NextStepSingleNeuronQuiet(), which may contain zero (when the neuron is fully in refractory period), one or two (spiked and awaked from refractory in one time step (may smaller than dt in SSC)) calls to RK4 procedure.
-* dt: a fixed time step.
+* "Quiet Step": roughly a RK4 step, it means a call to neuron_model.NextStepSingleNeuronQuiet(), which may contain zero (when the neuron is fully in refractory period), one or two (spiked and awaked from refractory in one time step) calls to RK4 procedure.
+* Number of synaptic interaction is: T * n * n * sp * fr. Therefore the time cost can no smaller than this as n goes very large, for all listed simulators.
+* For SSC type simulators, if pr * dt * n * sp * fr * dt >> 1, then smaller dt can make the simulation faster. For the SSC-Sparse variation, replace n to n * sp.
+* The factor (0~1) in front of pr*dt relates to T, dt, fr and dynamics. For a very rough estimation, it is about 1 - n * fr * dt / 4. The more synchronous the network, the smaller the factor.
+* dt: time step, a fixed value.
 * pr: poisson input rate.
 * sp: network sparsity.
 * fr: neuron mean firing rate.
@@ -239,6 +239,9 @@ Notes:
 * T : simulation time.
 
 ### Single neuron time test.
+
+Measured through the interface `gen_neu.m`. See `test/speed_benchmark*` scripts, and [test/speed_benchmark.txt](test/speed_benchmark.txt).
+(commit c4562786)
 
        n = 1+0, t = 100 s, dt = 1/32 ms, stv = 0.5 ms
 

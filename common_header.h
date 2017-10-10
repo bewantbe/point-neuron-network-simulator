@@ -37,6 +37,11 @@ typedef std::vector<double> TyArrVals;
 extern std::mt19937 rand_eng;
 double g_rand();
 
+// counter for calls to NextStepSingleNeuronQuiet() or NoInteractDt().
+extern size_t quiet_step_call_counter;
+#define QUIET_STEP_CALL_INC() quiet_step_call_counter++
+//#define QUIET_STEP_CALL_INC() ((void)0)
+
 // For profiling
 //#define MACRO_NO_INLINE __attribute__((noinline))
 #define MACRO_NO_INLINE
