@@ -34,17 +34,29 @@ pm0.stv  = pm0.dt;
 pm0.seed = 4563;
 
 s_dt = 1 ./ [32 64 128 256 512 1024];
-s_err_V   = zeros(size(s_dt));
-s_err_ras = zeros(size(s_dt));
+s_err_V    = zeros(size(s_dt));
+s_err_Vend = zeros(size(s_dt));
+s_err_ras  = zeros(size(s_dt));
+
+pm = pm0;
 
 % Reference answer
 pm.dt = s_dt(end)/2;
 [X_r, isi_r, ras_r, pm_expand_r] = gen_neu(pm, 'new,rm');
 
+v0 = X_r(:, end);
+t_last = lastRASEvent(ras_r, size(pm.net,1));
+v0(pm.t - t_last < 4 | v0 > 10 | v0 < 0) = nan;
+
 for id_dt = 1:numel(s_dt)
   pm.dt = s_dt(id_dt);
   [X, isi, ras, pm_expand] = gen_neu(pm, 'new,rm');
 
+  v = X(:, end);
+  t_last = lastRASEvent(ras, size(pm.net,1));
+  v(pm.t - t_last < 4 | v > 10 | v < 0) = nan;
+
+  s_err_Vend(id_dt) = maxabs(v - v0);
   s_err_V(id_dt) = maxabs(X - X_r) / maxabs(X_r);
   s_err_ras(id_dt) = maxabs(ras - ras_r);
 end
@@ -75,5 +87,4 @@ plot(rg, X(:, rg),...
 
 figure(21);
 plot(X(rg) - X_l(rg))
-
 

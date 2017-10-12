@@ -31,6 +31,24 @@ Write test for 'HH-PT-GH'
 	plot(t, X);
 	hold off
 
+Test of pm.input_evet=
+Test of pm.extI
+
+Add example using
+  [Y2, T2] = SpikeSlicing(X, ras, pm.stv, id_to, id_from, t_range);
+
+
+Speed test code:
+    if strcmp(pm.simu_method, 'big-delay')
+        pm.synaptic_delay = 1.01*pm.dt;
+    else
+        pm.synaptic_delay = [];
+    end
+
 Test and optimize IF-jump
 
+
+semilogy(sort(diff(ras0(:,2))))
+loglog(sort(diff(ras0(:,2))))
+hist(diff(ras(ras(:,1)==1, 2)), 200);
 
