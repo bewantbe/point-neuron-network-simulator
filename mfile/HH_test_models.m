@@ -58,6 +58,3 @@ pm.ps = pm.ps * 2;
 figure();
 plot(t, V);  title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 
-%ras_plot(ras, 0, pm.t, 1:100);
-%any(any(X==NaN))
-
