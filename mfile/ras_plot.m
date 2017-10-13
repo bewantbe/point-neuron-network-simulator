@@ -11,7 +11,7 @@
 
 function hd = ras_plot(ras, ras_line_mode)
 if ~exist('ras_line_mode', 'var') || isempty(ras_line_mode)
-  ras_line_mode = length(id_neu) <= 100;
+  ras_line_mode = max(ras(:,1)) <= 100;
 end
 
 if ras_line_mode

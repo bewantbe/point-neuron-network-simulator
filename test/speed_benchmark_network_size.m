@@ -17,6 +17,9 @@ c_model = {...
 '','','', 0
 '', 'LIF-GH', 'SSC-Sparse2', 0.9
 '', 'HH-GH', 'SSC-Sparse2', 1.73
+'','','', 0
+'', 'LIF-GH', 'big-delay', 0.9
+'', 'HH-GH', 'big-delay', 1.73
 };
 s_model = cell2struct(c_model, {'exe_path', 'model', 'simu_method', 'prps_mV'}, 2);
 
@@ -49,6 +52,11 @@ for id_model = 1:numel(s_model)
   pm.prog_path    = s_model(id_model).exe_path;
   pm.neuron_model = s_model(id_model).model;
   pm.simu_method  = s_model(id_model).simu_method;
+  if strfind(pm.simu_method, 'delay')
+    pm.synaptic_delay = 1.01*pm.dt;
+  else
+    pm.synaptic_delay = [];
+  end
   if ~isempty(pm.simu_method)
     fprintf('%-24s', [pm.neuron_model ' + ' pm.simu_method]);
   else

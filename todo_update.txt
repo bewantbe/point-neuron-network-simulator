@@ -2,15 +2,6 @@ Write example: delay network: difference of delay and non-delay.
 	title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 	ras_plot(ras, 0, pm.t, 1:100);
 
-Write test for 'HH-PT-GH'
-	figure(1);
-	t = (1:size(X,2))*pm.dt;
-	cla
-	ras_plot(ras, 0, pm.t, [], 100);
-	hold on
-	plot(t, X);
-	hold off
-
 Finish: test/test_cubic_solver
 
 Test of pm.input_evet=
@@ -19,16 +10,7 @@ Test of pm.extI
 Add example using
   [Y2, T2] = SpikeSlicing(X, ras, pm.stv, id_to, id_from, t_range);
 
-
-Speed test code:
-    if strcmp(pm.simu_method, 'big-delay')
-        pm.synaptic_delay = 1.01*pm.dt;
-    else
-        pm.synaptic_delay = [];
-    end
-
-Test and optimize IF-jump
-
+Test the optimized IF-jump
 
 semilogy(sort(diff(ras0(:,2))))
 loglog(sort(diff(ras0(:,2))))

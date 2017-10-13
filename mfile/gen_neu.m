@@ -655,14 +655,21 @@ function b = has_nonempty_field(stru, field_name)
     b = isfield(stru, field_name) && ~isempty(stru.(field_name));
 end
 
-% Give arguement name and value in string.
+% Convert struct field to arguement name and value in string.
+% If only "field_name" is provided, format for contained data and option name
+%   will auto determined.
+%   Recognized formats include interger or floating scalar or vector, string.
+%   If the field is an empty matrix,the option is treated as if not provided.
+% If "formatting" or "option_name" is [], then it is treated as if not
+%   provided. To pass empty string, use ''.
 function str = get_option_str(s, field_name, formatting, option_name)
-    if ~isfield(s, field_name)
+    if ~isfield(s, field_name) ||...
+        isempty(s.(field_name)) && ~ischar(s.(field_name))
         str = '';
         return
     end
     % Auto determine the data formatting.
-    if ~exist('formatting', 'var') || ~ischar(formatting) && isempty(formatting)
+    if ~exist('formatting', 'var') || isempty(formatting) && ~ischar(formatting)
         f = s.(field_name);
         if isnumeric(f) && isvector(f)
             formatting = ' %.17g';
@@ -676,7 +683,7 @@ function str = get_option_str(s, field_name, formatting, option_name)
         end
     end
     % Auto determine the command line option name.
-    if ~exist('option_name', 'var') || ~ischar(option_name) && isempty(option_name)
+    if ~exist('option_name', 'var') || isempty(option_name) && ~ischar(option_name)
         option_name = ['--' strrep(field_name , '_', '-')];
     end
     if isempty(formatting)
