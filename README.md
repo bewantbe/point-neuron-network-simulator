@@ -26,13 +26,14 @@ Optional modification to the neuron models:
   * For HH type neuron, possible to use the peak or falling-threshold-passing as the spike time. (e.g. HH-PT-GH, HH-PT-G)
   * Note: some combinations of neuron model and modification are not yet implemented.
 
-See `doc/neuron_models.pdf` for model details of neuron models.
+See [doc/neuron_models.pdf](doc/neuron_models.pdf) for model details of neuron models.
 
 Features:
 
   * You can provide external input events in a file or just let the program generate (Poisson input) for you.
-  * Input events can be excititory or/and inhibitory, and the strength can be specified at each timing. Each line of the input event file is "i f\_i" where the "f\_i" is the strength of that event, negative means it is inhibitory.
+  * Input events can be excititory or/and inhibitory, and the strength can be specified at each timing. Each line of the input event file is "id time strength", the "strength" term is optional (default to --ps), negative strength means it is inhibitory.
   * Network specification (--net) supports adjacency matrix in either full form or sparse form (each line is "i j a\_{ij}"), and the final coupling strength is a\_{ij} times one of scee scie scei scii.
+  * Neuron indexes are 1-based, but inside the code it is 0-based.
 
 Refer to `bin/gen_neu --help` for full command line option help (after compilation).
 
@@ -48,7 +49,7 @@ Comparison to other simulators
 
     NEST is a full featured point neuron simulator. While this one (APNNS) has much less neuron models and tunable settings. The function of APNNS is extended by directly modifying the source code.
 
-    NEST is a big project. APNNS is rather small, roughly about 3 thousand lines of C++ code.
+    NEST is a big project. APNNS is rather small, roughly about 5 thousand lines of C++ code.
     
     NEST use a high order ODE solver for each neurons (by default it is Runge–Kutta–Fehlberg method (aka rkf45 or ode45()) through GNU Scientific Library). But the interactions between neurons has only order one accuracy, because the interactions is performed at the boundary of time step. APNNS, in contrast, will deal with these spike timings accurately.
 
@@ -234,16 +235,16 @@ big-delay     | T * n * (1/dt + pr + n * sp * fr)
 big-net-delay | same as 'big-delay'
 
 Notes:
-* "Quiet Step": roughly a RK4 step, it means a call to neuron_model.NextStepSingleNeuronQuiet(), which may contain zero (when the neuron is fully in refractory period), one or two (spiked and awaked from refractory in one time step) calls to RK4 procedure.
-* Number of synaptic interaction is: T * n * n * sp * fr. Therefore the time cost can no smaller than this as n goes very large, for all listed simulators.
-* For SSC type simulators, if pr * dt * n * sp * fr * dt >> 1, then smaller dt can make the simulation faster. For the SSC-Sparse variation, replace n to n * sp.
-* The factor (0~1) in front of pr*dt relates to T, dt, fr and dynamics. For a very rough estimation, it is about 1 - n * fr * dt / 4. The more synchronous the network, the smaller the factor.
+* T : simulation time.
+* n : number of neurons.
 * dt: time step, a fixed value.
 * pr: poisson input rate.
 * sp: network sparsity.
 * fr: neuron mean firing rate.
-* n : number of neurons.
-* T : simulation time.
+* "Quiet Step": roughly a RK4 step, it means a call to neuron_model.NextStepSingleNeuronQuiet(), which may contain zero (when the neuron is fully in refractory period), one or two (spiked and awaked from refractory in one time step) calls to RK4 procedure.
+* Number of synaptic interaction is: T * n * n * sp * fr. Therefore the time cost can no smaller than this as n goes very large, for all listed simulators.
+* For SSC type simulators, if pr * dt * n * sp * fr * dt >> 1, then smaller dt can make the simulation faster. For the SSC-Sparse variation, replace n to n * sp.
+* The factor (0~1) in front of pr*dt relates to T, dt, fr and dynamics. For a very rough estimation, it is about 1 - n * fr * dt / 4. The more synchronous the network, the smaller the factor.
 
 ### Single neuron time test.
 
