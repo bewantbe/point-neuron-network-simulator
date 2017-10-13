@@ -8,26 +8,33 @@ A handy GNU Octave/Matlab interface to the core simulator is also provided.
 
 The accuracy is achieved by breaking the simulation time steps (dt) according to the (e.g. spike) event timings. So that the dynamics inside the sub-time-steps are smooth and the classical ODE solves (notably RK4) work well.
 
-Currently there are (parenthesis: Name used inside the code):
+Currently neuron models are (parenthesis: Name used inside the code):
 
   * Leaky Integrate-and-Fire models with exponential decay conductance (LIF-G).
   * Leaky Integrate-and-Fire models with "alpha function" conductance (LIF-GH).
   * Hodgkin Huxley neuron model with exponential decay conductance (HH-G).
   * Hodgkin Huxley neuron model with "alpha function" conductance (HH-GH).
   * Hodgkin Huxley neuron model with continous (but mostly around spike) synaptic interaction (HH-GH-cont-syn).
+  * Jump current neuron model (IF-jump).
+  * Hawkes model (Hawkes-GH).
 
-Optional:
+Optional modification to the neuron models:
 
-  * Add an alternating current to these models.
-  * Add an constant current to these models.
-  * Add synaptic delay. (The delay must larger than dt)
-  * For HH type neuron, option to use the peak as spike time.
+  * Add an alternating current to these models.(--current-sine-amp, --current-sine-freq)
+  * Add an constant current to these models.(--extI)
+  * Add synaptic delay. The delay must larger than dt.(--synaptic-delay or --synaptic-net-delay)
+  * For HH type neuron, possible to use the peak or falling-threshold-passing as the spike time. (e.g. HH-PT-GH, HH-PT-G)
+  * Note: some combinations of neuron model and modification are not yet implemented.
 
-See `doc/neuron_models.pdf` for model details.
+See `doc/neuron_models.pdf` for model details of neuron models.
 
-You can provide external input events in a file or just let the program generate (Poisson input) for you. Input events can be excititory or inhibitory, and the strength can be specified at each timing.
+Features:
 
-Refer to `bin/gen_neu --help` for the command line option help (after compilation).
+  * You can provide external input events in a file or just let the program generate (Poisson input) for you.
+  * Input events can be excititory or/and inhibitory, and the strength can be specified at each timing. Each line of the input event file is "i f\_i" where the "f\_i" is the strength of that event, negative means it is inhibitory.
+  * Network specification (--net) supports adjacency matrix in either full form or sparse form (each line is "i j a\_{ij}"), and the final coupling strength is a\_{ij} times one of scee scie scei scii.
+
+Refer to `bin/gen_neu --help` for full command line option help (after compilation).
 
 ### Note:
 

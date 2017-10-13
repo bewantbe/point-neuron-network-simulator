@@ -1,21 +1,3 @@
-Make it possible to input negative poisson input.
-
-By extend ?? class to include strength item.
-Add override annotation.
-
-Add output of all poisson events.
-
-Test:
-Same old result. same execution time.  
-   done.
-   good.
-   
-Same old result by give strength by hand.
-
-
-Same single neuron behaviour by inject all events.
-
-
 Finish: test/test_cubic_solver
 
 Write example: delay network: difference of delay and non-delay.
