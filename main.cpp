@@ -367,6 +367,10 @@ int MainLoop(const po::variables_map &vm)
   if (vm.count("stv")) {
     e_stv = vm["stv"].as<double>();
   }
+  if (enum_neuron_model == IF_jump) {
+    // There is no point to use finer dt in Poisson driven IF-jump model.
+    e_dt = e_stv;
+  }
   if (!(e_t > 0) || !(e_dt > 0) || !(e_stv > 0)) {
     cerr << "Only support positive time!" << endl;
     return 2;

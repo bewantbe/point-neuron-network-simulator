@@ -21,7 +21,7 @@ c_model = {...
 s_model = cell2struct(c_model, {'exe_path', 'model', 'simu_method', 'prps_mV'}, 2);
 
 pm = [];
-pm.t    = 1e2;
+pm.t    = 1e3;
 pm.dt   = 1/32;
 pm.stv  = 0.5;
 pm.pr      = 2.0;

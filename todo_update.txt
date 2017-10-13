@@ -1,5 +1,3 @@
-Finish: test/test_cubic_solver
-
 Write example: delay network: difference of delay and non-delay.
 	title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 	ras_plot(ras, 0, pm.t, 1:100);
@@ -12,6 +10,8 @@ Write test for 'HH-PT-GH'
 	hold on
 	plot(t, X);
 	hold off
+
+Finish: test/test_cubic_solver
 
 Test of pm.input_evet=
 Test of pm.extI

@@ -219,7 +219,7 @@ Note that there is a transpose for the format of `V` here.
 The parameter `'rm'` for `gen_neu` means delete the temporary files after the result been read (just before function return). Otherwise, in next run, with the same parameters, `gen_neu` will use the cached results.
 
 
-Simualtor Speed
+Simulator Speed
 ---------------
 
 Time complexity for the simulators:
