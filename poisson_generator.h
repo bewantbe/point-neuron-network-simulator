@@ -199,8 +199,8 @@ public:
     poisson_src1.Set(rate1, strength1, 0);
     */
 
-    poisson_src1.Init(rate1, strength1, t1);
-    poisson_src2.Init(rate2, strength2, t2);
+    poisson_src1.Init(rate1,  strength1, t1);
+    poisson_src2.Init(rate2, -strength2, t2);  // Negative for inhibitory.
     clear();
     id_seq = 0;
     FillEvents(-Inf, 1);  // Only one event is filled.

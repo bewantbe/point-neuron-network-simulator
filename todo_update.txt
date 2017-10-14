@@ -5,8 +5,15 @@ Write example: delay network: difference of delay and non-delay.
 Add example using
   [Y2, T2] = SpikeSlicing(X, ras, pm.stv, id_to, id_from, t_range);
 
+Add warning level to cpp code.
+
+Fix bug: the delay simulator do not admit the net strength.
+  Also   void SynapticInteraction(int neuron_id, const int spike_from_id) override
+  is improper.
+
 Test simulators:
 	delta V - dt, delta ras - dt
+	pr, pri, ps, psi, scee, scie, scei, scii
 	1. Self convergence test:
 		use the same code for reference and test.
 	2. Self consistency test:
