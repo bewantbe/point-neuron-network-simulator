@@ -62,3 +62,8 @@ include $(SRCDEP)
 clean:
 	rm -f $(OBJS) $(BIN) $(SRCDEP)
 
+# For e.g. publish.
+.PHONY : clean-tmp
+clean-tmp:
+	rm -rf $(OBJS) $(SRCDEP) data/ test/data/ mfile/data/ *.o test/*.o mfile/*.o *~ .*~ mfile/*~ test/*~
+

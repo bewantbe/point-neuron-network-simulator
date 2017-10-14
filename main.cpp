@@ -105,7 +105,7 @@ int MainLoop(const po::variables_map &vm)
 {
   auto t_begin = tic();
   if (!vm.count("neuron-model")) {
-    cerr << "Error: Neuron model not specified. See --help.\n";
+    cerr << "Error: Use \"--neuron-model\" to specify a neuron model. See --help.\n";
     return -1;
   }
   const std::string &str_nm = vm["neuron-model"].as<std::string>();

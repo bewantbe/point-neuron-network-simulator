@@ -2,15 +2,28 @@ Write example: delay network: difference of delay and non-delay.
 	title(sprintf('%s :: %s', pm.neuron_model, pm.simu_method));
 	ras_plot(ras, 0, pm.t, 1:100);
 
-Finish: test/test_cubic_solver
-
-Test of pm.input_evet=
-Test of pm.extI
-
 Add example using
   [Y2, T2] = SpikeSlicing(X, ras, pm.stv, id_to, id_from, t_range);
 
-Test the optimized IF-jump
+Test simulators:
+	delta V - dt, delta ras - dt
+	1. Self convergence test:
+		use the same code for reference and test.
+	2. Self consistency test:
+		compare SSC-Sparse, SSC-Sparse2 and SSC;
+		compare simple and SSC;
+		compare delay and SSC.
+		compare SSC and exported events to single neuron.
+	3. cross validation:
+		compare legency and SSC.
+		compare HH-cont-syn.
+
+Finish: test/test_cubic_solver
+
+Test of pm.extI
+Use pm.extI for Hawkes model.
+
+Test the optimized IF-jump and add it.
 
 semilogy(sort(diff(ras0(:,2))))
 loglog(sort(diff(ras0(:,2))))
