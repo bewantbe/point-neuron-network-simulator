@@ -248,95 +248,64 @@ Notes:
 
 ### Single neuron time test.
 
-Measured through the interface `gen_neu.m`. See `test/speed_benchmark*` scripts, and [test/speed_benchmark.txt](test/speed_benchmark.txt).
-(commit c4562786)
+Measured through the interface `gen_neu.m`. See `test/speed_benchmark*` scripts, and detailed results [test/speed_benchmark.txt](test/speed_benchmark.txt).
+(commit ce1fc35672da4a140cce9931f0f53e4f489f0791, Oct 13 2017)
 
        n = 1+0, t = 100 s, dt = 1/32 ms, stv = 0.5 ms
 
 Model \ sec \ pr      |  1    |  8    |  64   |  512
 :---------------------|:-----:|:-----:|:-----:|:-----:
-IF-jump               | 0.261 | 0.337 | 0.884 | 5.499
-LIF-G + SSC           | 0.619 | 0.714 | 1.424 | 6.672
-LIF-GH + SSC          | 0.740 | 0.828 | 1.685 | 8.428
-HH-G + SSC            | 1.507 | 1.772 | 3.936 | 21.06
-HH-GH + SSC           | 1.574 | 1.857 | 4.140 | 22.09
-HH-PT-GH + SSC        | 1.678 | 1.973 | 4.243 | 22.14
-HH-GH-sine + SSC      | 1.941 | 2.240 | 4.617 | 23.26
-HH-GH-cont-syn        | 8.197 | 9.862 | 23.51 | 132.0
+IF-jump               | 0.076 | 0.137 | 0.653 | 4.865
+LIF-G + simple        | 0.344 | 0.434 | 1.119 | 6.389
+LIF-GH + simple       | 0.438 | 0.552 | 1.389 | 8.064
+HH-G + simple         | 1.201 | 1.476 | 3.619 | 20.48
+HH-GH + simple        | 1.272 | 1.559 | 3.840 | 22.64
+HH-PT-GH + simple     | 1.368 | 1.656 | 3.927 | 21.85
+HH-GH-sine + simple   | 1.617 | 1.923 | 4.296 | 22.85
+HH-GH-cont-syn        | 8.022 | 9.683 | 22.94 | 128.9
+Hawkes-GH + simple    | 0.446 | 0.549 | 1.317 | 7.347
+||
+legancy-LIF-G         | 0.789 | 0.912 | 1.776 | 7.322
+legancy-LIF-GH        | 0.978 | 1.146 | 2.325 | 10.12
+legancy-HH-GH-cont-syn| 2.231 | 2.586 | 5.395 | 26.44
 
 Note: ps_mV = 0.9 / pr.
 
-For comparing `simple` and `SSC` simulator.
+Note: Legancy simulators are [raster_tuning](https://bitbucket.org/bewantbe/ifsimu).
 
-Model \ sec \ pr      |  1    |  8    |  64   |  512
-:---------------------|:-----:|:-----:|:-----:|:-----:
-LIF-G + simple        | 0.360 | 0.440 | 1.115 | 6.361
-LIF-GH + simple       | 0.441 | 0.553 | 1.408 | 8.062
-HH-G + simple         | 1.181 | 1.453 | 3.604 | 20.56
-HH-GH + simple        | 1.258 | 1.547 | 3.816 | 21.89
-HH-PT-GH + simple     | 1.487 | 1.705 | 4.117 | 22.76
-HH-GH-sine + simple   | 1.644 | 1.925 | 4.285 | 22.85
-
-Legancy simulators ([raster_tuning](https://bitbucket.org/bewantbe/ifsimu) based).
+Comparing overhead of simulators.
 
 Model \ sec \ pr       |  1    |  8    |  64   |  512
 :----------------------|:-----:|:-----:|:-----:|:-----:
-legancy-LIF-G          | 0.797 | 0.920 | 1.790 | 7.355
-legancy-LIF-GH         | 1.000 | 1.157 | 2.326 | 10.13
-legancy-HH-GH-cont-syn | 2.254 | 2.603 | 5.413 | 26.63
+LIF-G + simple         | 0.344 | 0.434 | 1.119 | 6.389
+LIF-G + big-delay      | 0.384 | 0.519 | 1.462 | 7.947
+LIF-G + SSC-Sparse     | 0.489 | 0.583 | 1.266 | 6.545
+LIF-G + SSC-Sparse2    | 0.967 | 1.069 | 1.766 | 7.081
+LIF-G + SSC            | 0.604 | 0.700 | 1.383 | 6.688
+||
+HH-PT-GH + simple      | 1.368 | 1.656 | 3.927 | 21.85
+HH-PT-GH + big-delay   | 1.400 | 1.747 | 4.298 | 23.31
+HH-PT-GH + SSC-Sparse  | 1.524 | 1.813 | 4.169 | 21.95
+HH-PT-GH + SSC-Sparse2 | 2.049 | 2.340 | 4.627 | 22.50
+HH-PT-GH + SSC         | 1.677 | 1.960 | 4.260 | 22.12
+
 
 ### Network
 
-  1000 neurons, fully connected.
-
-  n = 800+200, t = 0.1 s, dt = 1/32 ms, stv = 0.5 ms
-
-model                  | sec   | mean freq (Hz)
-:----------------------|:-----:|:------:
-IF-jump                | 0.458 | 30.290
-LIF-G + SSC            | 0.818 | 24.430
-LIF-GH + SSC           | 1.084 | 24.480
-HH-G + SSC             | 3.692 | 34.570
-HH-GH + SSC            | 4.041 | 34.720
-HH-PT-GH + SSC         | 4.068 | 34.490
-HH-GH-sine + SSC       | 5.354 | 34.720
-||
-LIF-GH + simple        | 0.679 | 24.480
-HH-GH + simple         | 1.599 | 34.700
-||
-legancy-LIF-G          | 1.541 | 39.660
-legancy-LIF-GH         | 1.786 | 34.690
-legancy-HH-GH-cont-syn | 244.0 | 37.380
-
-
-  1000 neurons, 10% connected.
-
-  n=800+200, t = 0.1 s, dt = 1/32 ms, stv = 0.5 ms
-
-model                  | sec   | mean freq (Hz)
-:----------------------|:-----:|:------:
-IF-jump                | 0.339 | 25.820
-||
-LIF-GH + simple        | 0.571 | 26.580
-LIF-GH + SSC-Sparse    | 0.657 | 26.580
-LIF-GH + SSC-Sparse2   | 0.659 | 26.580
-LIF-GH + SSC           | 1.052 | 26.580
-||
-HH-GH + simple         | 1.473 | 35.970
-HH-GH + SSC-Sparse     | 1.808 | 35.970
-HH-GH + SSC-Sparse2    | 1.749 | 35.970
-HH-GH + SSC            | 4.019 | 35.970
-
   Network of different size. Sparsity is 10%.
-  Firing rates are around ~30 Hz, like above.
+  t = 1.0 s, dt = 1/32 ms, stv = 0.5 ms, all E type (very weak coupling).
+  Firing rates are around ~30 Hz.
 
 model \ sec \ n       |  100   |  300  | 1000  | 3000  | 10000
 :---------------------|:------:|:-----:|:-----:|:-----:|:-----:
-IF-jump               |  0.029 | 0.063 | 0.293 | 1.840 | 17.865
-LIF-GH + simple       |  0.092 | 0.156 | 0.515 | 2.349 | 18.543
-LIF-GH + SSC-Sparse   |  0.095 | 0.168 | 0.592 | 2.940 | 24.801
-HH-GH + simple        |  0.198 | 0.427 | 1.391 | 4.947 | 27.095
-HH-GH + SSC-Sparse    |  0.198 | 0.462 | 1.674 | 7.415 | 55.261
-LIF-GH + SSC          |  0.101 | 0.210 | 1.043 | 6.748 | 69.236
-HH-GH + SSC           |  0.226 | 0.665 | 4.047 | 27.71 | 284.15
+IF-jump               |  0.097 | 0.202 | 0.854 | 4.449 | 37.539
+LIF-GH + simple       |  0.381 | 1.054 | 3.415 | 11.49 | 49.816
+LIF-GH + big-delay    |  0.404 | 1.115 | 3.959 | 14.74 | 89.990
+LIF-GH + SSC-Sparse   |  0.408 | 1.137 | 4.245 | 17.63 | 121.59
+HH-GH + simple        |  1.239 | 3.585 | 12.05 | 37.39 | 135.09
+HH-GH + big-delay     |  1.273 | 3.748 | 13.34 | 47.87 | 257.94
+HH-GH + SSC-Sparse    |  1.291 | 3.865 | 14.51 | 58.70 | 381.56
+LIF-GH + SSC          |  0.460 | 1.564 | 9.272 | 62.20 | 615.65
+HH-GH + SSC           |  1.484 | 5.631 | 34.56 | 234.0 | 2355.7
 
+Note: For 10000 neuron case, about 15.5 sec is used for saving the network file and then read it (net and data initialization).

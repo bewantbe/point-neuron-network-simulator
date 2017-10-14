@@ -1,84 +1,162 @@
-commit 0b9ead6599b244d395decc08c510b3da0f1c25aa
+commit ce1fc35672da4a140cce9931f0f53e4f489f0791
 
-i7-6700HQ (2.60GHz no turbo boost), GCC 4.9, Octave 3.8.2
+i7-6700HQ (2.60GHz turbo boost off), DDR4 2133 MHz, GCC 4.9, Octave 3.8.2
 
 
 Description: Single neuron test across models and input poisson rates.
   n = 1+0, t = 100 s, dt = 1/32 ms, stv = 0.5 ms
 model \ sec \ pr        1       8       64      512     
-IF-jump                 0.278   0.331   0.878   5.008       31.2    28.6    28.0    27.9    
-LIF-G + SSC             0.607   0.702   1.389   6.778       31.3    31.3    31.6    31.8    
-LIF-GH + SSC            0.709   0.824   1.675   8.359       31.4    31.5    32.0    32.0    
-HH-G + SSC              1.515   1.790   3.941   20.812      64.5    56.9    48.3    65.9    
-HH-GH + SSC             1.591   1.882   4.189   22.018      64.4    57.6    53.8    66.9    
-HH-PT-GH + SSC          1.693   1.988   4.305   22.115      64.4    57.6    53.8    66.9    
-HH-GH-sine + SSC        1.947   2.249   4.629   23.323      64.4    57.6    53.8    66.9    
-HH-GH-cont-syn          8.224   9.942   23.582  132.012     64.4    57.6    53.8    66.9    
+IF-jump                 0.076   0.137   0.653   4.865       31.2    28.6    28.0    27.9    
+Hawkes-GH + simple      0.446   0.549   1.317   7.347       29.5    29.4    30.5    30.0    
+HH-GH-cont-syn          8.022   9.683   22.941  128.929     64.4    57.6    53.8    66.9    
                         
-LIF-G + simple          0.341   0.440   1.101   6.443       31.3    31.3    31.6    31.8    
-LIF-GH + simple         0.436   0.550   1.395   8.090       31.4    31.5    32.0    32.0    
-HH-G + simple           1.254   1.474   3.627   20.452      64.5    56.9    48.3    65.9    
-HH-GH + simple          1.277   1.563   3.825   21.659      64.4    57.6    53.8    66.9    
-HH-PT-GH + simple       1.377   1.666   3.935   21.746      64.4    57.6    53.8    66.9    
-HH-GH-sine + simple     1.629   1.931   4.296   22.841      64.4    57.6    53.8    66.9    
+LIF-G + SSC             0.604   0.700   1.383   6.688       31.3    31.3    31.6    31.8    
+LIF-GH + SSC            0.696   0.811   1.673   8.389       31.4    31.5    32.0    32.0    
+HH-G + SSC              1.501   1.778   3.937   20.946      64.5    56.9    48.3    65.9    
+HH-GH + SSC             1.580   1.868   4.159   22.041      64.4    57.6    53.8    66.9    
+HH-PT-GH + SSC          1.677   1.960   4.260   22.129      64.4    57.6    53.8    66.9    
+HH-GH-sine + SSC        1.933   2.235   4.627   23.253      64.4    57.6    53.8    66.9    
                         
-legancy-LIF-G           0.792   0.915   1.779   7.320       30.9    31.1    31.7    31.8    
-legancy-LIF-GH          0.979   1.152   2.319   10.131      31.2    31.4    32.0    32.1    
-legancy-HH-GH-cont-syn  2.235   2.591   5.411   26.434      64.8    58.5    56.2    66.9    
+LIF-G + simple          0.344   0.434   1.119   6.389       31.3    31.3    31.6    31.8    
+LIF-GH + simple         0.438   0.552   1.389   8.064       31.4    31.5    32.0    32.0    
+HH-G + simple           1.201   1.476   3.619   20.489      64.5    56.9    48.3    65.9    
+HH-GH + simple          1.272   1.559   3.840   22.645      64.4    57.6    53.8    66.9    
+HH-PT-GH + simple       1.368   1.656   3.927   21.857      64.4    57.6    53.8    66.9    
+HH-GH-sine + simple     1.617   1.923   4.296   22.859      64.4    57.6    53.8    66.9    
+                        
+LIF-G + SSC-Sparse      0.489   0.583   1.266   6.545       31.3    31.3    31.6    31.8    
+LIF-GH + SSC-Sparse     0.586   0.705   1.564   8.237       31.4    31.5    32.0    32.0    
+HH-G + SSC-Sparse       1.352   1.632   3.780   20.735      64.5    56.9    48.3    65.9    
+HH-GH + SSC-Sparse      1.432   1.726   3.999   21.878      64.4    57.6    53.8    66.9    
+HH-PT-GH + SSC-Sparse   1.524   1.813   4.169   21.959      64.4    57.6    53.8    66.9    
+HH-GH-sine + SSC-Sparse 1.796   2.082   4.453   23.108      64.4    57.6    53.8    66.9    
+                        
+LIF-G + SSC-Sparse2     0.967   1.069   1.766   7.081       31.3    31.3    31.6    31.8    
+LIF-GH + SSC-Sparse2    1.053   1.173   2.047   8.809       31.4    31.5    32.0    32.0    
+HH-G + SSC-Sparse2      1.887   2.155   4.348   21.243      64.5    56.9    48.3    65.9    
+HH-GH + SSC-Sparse2     1.956   2.248   4.608   22.484      64.4    57.6    53.8    66.9    
+HH-PT-GH + SSC-Sparse2  2.049   2.340   4.627   22.501      64.4    57.6    53.8    66.9    
+HH-GH-sine + SSC-Sparse22.317   2.616   5.075   23.795      64.4    57.6    53.8    66.9    
+                        
+LIF-G + big-delay       0.384   0.519   1.462   7.947       31.3    31.3    31.6    31.8    
+LIF-GH + big-delay      0.479   0.639   1.748   9.724       31.4    31.5    32.0    32.0    
+HH-G + big-delay        1.235   1.555   3.992   22.093      64.5    56.9    48.3    65.9    
+HH-GH + big-delay       1.305   1.712   4.212   23.274      64.4    57.6    53.8    66.9    
+HH-PT-GH + big-delay    1.400   1.747   4.298   23.312      64.4    57.6    53.8    66.9    
+HH-GH-sine + big-delay  1.655   2.005   4.692   24.461      64.4    57.6    53.8    66.9    
+                        
+legancy-LIF-G           0.789   0.912   1.776   7.322       30.9    31.1    31.7    31.8    
+legancy-LIF-GH          0.978   1.146   2.325   10.121      31.2    31.4    32.0    32.1    
+legancy-HH-GH-cont-syn  2.231   2.586   5.395   26.447      64.8    58.5    56.2    66.9    
+
+
+Description: Network: sparsity = 1
+  n = 800+200, t = 1 s, dt = 1/32 ms, stv = 0.5 ms
+model                     sec     mean freq (Hz)
+IF-jump                   1.427   34.691  
+LIF-G + SSC               5.722   27.936  
+LIF-GH + SSC              8.729   28.064  
+HH-G + SSC                30.760  29.589  
+HH-GH + SSC               33.251  29.980  
+HH-PT-GH + SSC            33.310  29.946  
+HH-GH-sine + SSC          42.862  29.980  
+HH-GH-cont-syn            1148.11630.294  
+                          
+LIF-G + simple            2.494   27.934  
+LIF-GH + simple           3.572   28.067  
+HH-G + simple             11.485  29.600  
+HH-GH + simple            12.152  29.986  
+HH-PT-GH + simple         12.236  29.937  
+HH-GH-sine + simple       15.828  29.986  
+                          
+LIF-G + SSC-Sparse        6.127   27.936  
+LIF-GH + SSC-Sparse       9.122   28.064  
+HH-G + SSC-Sparse         31.518  29.589  
+HH-GH + SSC-Sparse        33.672  29.980  
+HH-PT-GH + SSC-Sparse     34.864  29.946  
+HH-GH-sine + SSC-Sparse   43.568  29.980  
+                          
+LIF-G + SSC-Sparse2       6.273   27.936  
+LIF-GH + SSC-Sparse2      9.391   28.064  
+HH-G + SSC-Sparse2        31.380  29.614  
+HH-GH + SSC-Sparse2       33.981  29.980  
+HH-PT-GH + SSC-Sparse2    33.955  29.958  
+HH-GH-sine + SSC-Sparse2  43.682  29.980  
+                          
+LIF-G + big-delay         5.028   27.938  
+LIF-GH + big-delay        6.641   28.059  
+HH-G + big-delay          21.544  29.589  
+HH-GH + big-delay         23.165  29.939  
+HH-PT-GH + big-delay      23.242  29.930  
+HH-GH-sine + big-delay    29.635  29.939  
+                          
+legancy-LIF-G             13.358  40.568  
+legancy-LIF-GH            16.539  36.719  
+legancy-HH-GH-cont-syn    1798.90832.419  
 
 
 Description: Network: sparsity = 0.0998
-  n = 800+200, t = 0.1 s, dt = 1/32 ms, stv = 0.5 ms
-model                   sec     mean freq (Hz)
-IF-jump                   0.341   25.820  
-LIF-G + SSC               0.759   26.600  
-LIF-GH + SSC              1.049   26.580  
-HH-G + SSC                3.679   35.670  
-HH-GH + SSC               3.970   35.970  
-HH-PT-GH + SSC            4.067   35.920  
-HH-GH-sine + SSC          5.315   35.970  
-HH-GH-cont-syn            56.245  36.020  
+  n = 800+200, t = 1 s, dt = 1/32 ms, stv = 0.5 ms
+model                     sec     mean freq (Hz)
+IF-jump                   0.902   29.809  
+LIF-G + SSC               5.865   30.419  
+LIF-GH + SSC              9.017   30.609  
+HH-G + SSC                31.415  30.771  
+HH-GH + SSC               33.973  31.240  
+HH-PT-GH + SSC            34.107  31.256  
+HH-GH-sine + SSC          43.918  31.240  
+HH-GH-cont-syn            539.941 31.285  
                           
-LIF-G + simple            0.460   26.600  
-LIF-GH + simple           0.570   26.580  
-HH-G + simple             1.361   35.670  
-HH-GH + simple            1.447   35.970  
-HH-PT-GH + simple         1.573   35.900  
-HH-GH-sine + simple       2.084   35.970  
+LIF-G + simple            2.394   30.420  
+LIF-GH + simple           3.539   30.609  
+HH-G + simple             11.274  30.775  
+HH-GH + simple            12.028  31.246  
+HH-PT-GH + simple         12.127  31.242  
+HH-GH-sine + simple       15.670  31.246  
                           
-LIF-G + SSC-Sparse        0.520   26.600  
-LIF-GH + SSC-Sparse       0.643   26.580  
-HH-G + SSC-Sparse         1.623   35.670  
-HH-GH + SSC-Sparse        1.733   35.970  
-HH-PT-GH + SSC-Sparse     1.837   35.970  
-HH-GH-sine + SSC-Sparse   2.448   35.970  
+LIF-G + SSC-Sparse        3.047   30.419  
+LIF-GH + SSC-Sparse       4.295   30.609  
+HH-G + SSC-Sparse         13.637  30.771  
+HH-GH + SSC-Sparse        14.586  31.240  
+HH-PT-GH + SSC-Sparse     14.676  31.263  
+HH-GH-sine + SSC-Sparse   18.934  31.240  
                           
-LIF-G + SSC-Sparse2       0.523   26.600  
-LIF-GH + SSC-Sparse2      0.653   26.580  
-HH-G + SSC-Sparse2        1.634   35.670  
-HH-GH + SSC-Sparse2       1.742   35.970  
-HH-PT-GH + SSC-Sparse2    1.843   35.900  
-HH-GH-sine + SSC-Sparse2  2.469   35.970  
+LIF-G + SSC-Sparse2       3.167   30.419  
+LIF-GH + SSC-Sparse2      4.392   30.609  
+HH-G + SSC-Sparse2        13.683  30.771  
+HH-GH + SSC-Sparse2       15.067  31.240  
+HH-PT-GH + SSC-Sparse2    14.772  31.245  
+HH-GH-sine + SSC-Sparse2  19.074  31.240  
                           
-legancy-LIF-G             1.353   32.030  
-legancy-LIF-GH            1.644   30.470  
-legancy-HH-GH-cont-syn    250.881 36.840  
+LIF-G + big-delay         2.973   30.420  
+LIF-GH + big-delay        3.986   30.609  
+HH-G + big-delay          12.556  30.768  
+HH-GH + big-delay         13.422  31.248  
+HH-PT-GH + big-delay      13.502  31.242  
+HH-GH-sine + big-delay    17.425  31.248  
+                          
+legancy-LIF-G             11.819  32.055  
+legancy-LIF-GH            15.294  31.733  
+legancy-HH-GH-cont-syn    1830.42731.835  
 
 
 Description: Network of changing size
-  t = 0.1 s, dt = 1/32 ms, stv = 0.5 ms
+  t = 1 s, dt = 1/32 ms, stv = 0.5 ms
                         sec     mean freq (Hz)
 model \ nn              100             300             1000            3000            10000           
-IF-jump                 0.029   25.400  0.063   26.600  0.293   26.180  1.840   26.000  17.865  26.012  
-LIF-GH + SSC            0.101   25.900  0.210   27.667  1.043   27.700  6.748   27.233  69.236  27.172  
-HH-GH + SSC             0.226   35.500  0.665   36.300  4.047   36.230  27.718  35.943  284.158 36.039  
+IF-jump                 0.097   30.400  0.202   30.250  0.854   30.191  4.449   30.175  37.539  30.167  
+LIF-GH + SSC            0.460   31.750  1.564   31.703  9.272   31.659  62.205  31.602  615.652 31.583  
+HH-GH + SSC             1.484   31.970  5.631   31.560  34.564  31.516  234.068 31.422  2355.79031.483  
                         
-LIF-GH + simple         0.092   25.900  0.156   27.667  0.515   27.700  2.349   27.233  18.543  27.172  
-HH-GH + simple          0.198   35.500  0.427   36.267  1.391   36.240  4.947   35.933  27.095  36.043  
+LIF-GH + simple         0.381   31.750  1.054   31.703  3.415   31.659  11.490  31.602  49.816  31.583  
+HH-GH + simple          1.239   31.950  3.585   31.557  12.050  31.516  37.393  31.417  135.091 31.483  
                         
-LIF-GH + SSC-Sparse     0.095   25.900  0.168   27.667  0.592   27.700  2.940   27.233  24.801  27.172  
-HH-GH + SSC-Sparse      0.198   35.500  0.462   36.300  1.674   36.230  7.415   35.943  55.261  36.041  
+LIF-GH + SSC-Sparse     0.408   31.750  1.137   31.703  4.245   31.659  17.635  31.602  121.595 31.583  
+HH-GH + SSC-Sparse      1.291   31.970  3.865   31.560  14.518  31.516  58.701  31.422  381.561 31.483  
                         
-LIF-GH + SSC-Sparse2    0.097   25.900  0.173   27.667  0.614   27.700  2.961   27.233  24.725  27.172  
-HH-GH + SSC-Sparse2     0.199   35.500  0.464   36.300  1.691   36.230  7.469   35.943  55.081  36.039  
+LIF-GH + SSC-Sparse2    0.440   31.750  1.190   31.703  4.442   31.659  17.901  31.602  122.344 31.583  
+HH-GH + SSC-Sparse2     1.312   31.970  3.913   31.560  14.650  31.516  59.005  31.422  377.786 31.483  
+                        
+LIF-GH + big-delay      0.404   31.750  1.115   31.703  3.959   31.658  14.744  31.601  89.990  31.583  
+HH-GH + big-delay       1.273   31.980  3.748   31.560  13.341  31.512  47.870  31.417  257.944 31.484  
 

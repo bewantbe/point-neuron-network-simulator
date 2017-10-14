@@ -35,6 +35,13 @@ c_model = {...
 '', 'HH-PT-GH', 'SSC-Sparse2', 1.73
 '', 'HH-GH-sine', 'SSC-Sparse2', 1.73
 '','','', 0
+'', 'LIF-G', 'big-delay', 0.9
+'', 'LIF-GH', 'big-delay', 0.9
+'', 'HH-G', 'big-delay', 1.73
+'', 'HH-GH', 'big-delay', 1.73
+'', 'HH-PT-GH', 'big-delay', 1.73
+'', 'HH-GH-sine', 'big-delay', 1.73
+'','','', 0
 '../external_program/raster_tuning_LIF_icc','legancy-LIF-G','', 0.9
 '../external_program/raster_tuning_LIF_GH_icc','legancy-LIF-GH','', 0.9
 '../external_program/raster_tuning_HH3_gcc', 'legancy-HH-GH-cont-syn', '', 1.73
@@ -44,10 +51,10 @@ s_model = cell2struct(c_model, {'exe_path', 'model', 'simu_method', 'prps_mV'}, 
 randMT19937('state', 1234);
 
 pm = [];
-pm.net  = randMT19937(1000) < 0.1;
+pm.net  = randMT19937(1000) < net_sparsity;
 pm.nE   = 800;
 pm.nI   = 200;
-pm.t    = 1e2;
+pm.t    = 1e3;
 pm.dt   = 1/32;
 pm.stv  = 0.5;
 pm.pr      = 2.0;
@@ -63,12 +70,17 @@ pm_description = sprintf('Network: sparsity = %.3g',...
 fprintf('Description: %s\n', pm_description);
 fprintf('  n = %d+%d, t = %.3g s, dt = 1/%.3g ms, stv = %.3g ms\n',...
         pm.nE, pm.nI, pm.t/1000, 1/pm.dt, pm.stv);
-fprintf('model                   sec     mean freq (Hz)');
+fprintf('model                     sec     mean freq (Hz)');
 fprintf('\n');
 for id_model = 1:numel(s_model)
   pm.prog_path    = s_model(id_model).exe_path;
   pm.neuron_model = s_model(id_model).model;
   pm.simu_method  = s_model(id_model).simu_method;
+  if strfind(pm.simu_method, 'delay')
+    pm.synaptic_delay = 1.01*pm.dt;
+  else
+    pm.synaptic_delay = [];
+  end
   if ~isempty(pm.simu_method)
     fprintf('%-26s', [pm.neuron_model ' + ' pm.simu_method]);
   else

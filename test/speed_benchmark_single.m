@@ -4,14 +4,16 @@ addpath('../mfile');
 warning('off', 'gen_neu:model');
 
 c_model = {...
+'', 'Hawkes-GH', 'simple', 0.9
 '', 'IF-jump', '', 0.9
+'', 'HH-GH-cont-syn', '', 4.0
+'', '', '', 0
 '', 'LIF-G', 'SSC', 0.9
 '', 'LIF-GH', 'SSC', 0.9
 '', 'HH-G', 'SSC', 4.0
 '', 'HH-GH', 'SSC', 4.0
 '', 'HH-PT-GH', 'SSC', 4.0
 '', 'HH-GH-sine', 'SSC', 4.0
-'', 'HH-GH-cont-syn', '', 4.0
 '', '', '', 0
 '', 'LIF-G', 'simple', 0.9
 '', 'LIF-GH', 'simple', 0.9
@@ -19,6 +21,27 @@ c_model = {...
 '', 'HH-GH', 'simple', 4.0
 '', 'HH-PT-GH', 'simple', 4.0
 '', 'HH-GH-sine', 'simple', 4.0
+'', '', '', 0
+'', 'LIF-G', 'SSC-Sparse', 0.9
+'', 'LIF-GH', 'SSC-Sparse', 0.9
+'', 'HH-G', 'SSC-Sparse', 4.0
+'', 'HH-GH', 'SSC-Sparse', 4.0
+'', 'HH-PT-GH', 'SSC-Sparse', 4.0
+'', 'HH-GH-sine', 'SSC-Sparse', 4.0
+'', '', '', 0
+'', 'LIF-G', 'SSC-Sparse2', 0.9
+'', 'LIF-GH', 'SSC-Sparse2', 0.9
+'', 'HH-G', 'SSC-Sparse2', 4.0
+'', 'HH-GH', 'SSC-Sparse2', 4.0
+'', 'HH-PT-GH', 'SSC-Sparse2', 4.0
+'', 'HH-GH-sine', 'SSC-Sparse2', 4.0
+'', '', '', 0
+'', 'LIF-G', 'big-delay', 0.9
+'', 'LIF-GH', 'big-delay', 0.9
+'', 'HH-G', 'big-delay', 4.0
+'', 'HH-GH', 'big-delay', 4.0
+'', 'HH-PT-GH', 'big-delay', 4.0
+'', 'HH-GH-sine', 'big-delay', 4.0
 '','','', 0
 '../external_program/raster_tuning_LIF_icc','legancy-LIF-G','', 0.9
 '../external_program/raster_tuning_LIF_GH_icc','legancy-LIF-GH','', 0.9
@@ -51,6 +74,17 @@ for id_model = 1:numel(s_model)
   pm.prog_path    = s_model(id_model).exe_path;
   pm.neuron_model = s_model(id_model).model;
   pm.simu_method  = s_model(id_model).simu_method;
+  if strfind(pm.simu_method, 'delay')
+    pm.synaptic_delay = 1.01*pm.dt;
+  else
+    pm.synaptic_delay = [];
+  end
+  if strfind(pm.neuron_model, 'Hawkes')
+  disp('gaga');
+    pm.spike_threshold = 0.03;
+  else
+    pm.spike_threshold = [];
+  end
   if ~isempty(pm.simu_method)
     fprintf('%-24s', [pm.neuron_model ' + ' pm.simu_method]);
   else
