@@ -36,3 +36,15 @@ semilogy(sort(diff(ras0(:,2))))
 loglog(sort(diff(ras0(:,2))))
 hist(diff(ras(ras(:,1)==1, 2)), 200);
 
+Make poisson_event belong to population instead of simulator.
+
+Add delta time based poisson event simulator and container.
+
+Add EIF model.
+
+Population to have different time scale.
+
+point-neuron-simulator
+  Bug fix: delay net with non-home connection strength.
+  Ability to read INI file.
+

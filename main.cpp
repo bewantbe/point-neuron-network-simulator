@@ -201,7 +201,7 @@ int MainLoop(const po::variables_map &vm)
     bool is_sparse = vm.count("sparse-net") > 0;
     FillNetFromPath(pm, name_net, is_sparse);
   } else {
-    cout << "You must specify the network. (--net)" << endl;
+    cout << "You must specify a network. (--net)" << endl;
     return -1;
   }
 
@@ -884,13 +884,12 @@ int main(int argc, char *argv[])
       return filename;
     };
     cout << "Usage: " << basename(argv[0]);
-    cout << " --neuron-model [arg]";
-    cout << " --net [arg]";
-    cout << " --ps [arg]";
+    cout << " --neuron-model arg";
+    cout << " --net arg";
     cout << " [OPTION]..." << "\n";
-    cout << "Neuron model simulator, with accurate firing timing and computation.\n";
+    cout << "Neuron model simulator, with accurate spike timing and computation.\n\n";
     cout << desc << "\n";
-    return 1;
+    return 0;
   }
 
   if (vm.count("parameter-path")) {

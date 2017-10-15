@@ -94,6 +94,8 @@ if ~isfield(pm, 'extra_cmd')
     pm.extra_cmd = '';
 end
 
+enable_default_parameters = ~ has_nonempty_field(pm, 'parameter_path');
+
 % Default generator settings
 new_run        = false;
 return_X_name  = false;
@@ -103,6 +105,7 @@ mode_read_only = false;
 mode_legancy   = ~isempty(strfind(pm.prog_path, 'raster_tuning'));
 mode_extra_data = nargout >= 5;
 mode_run_in_background = ~isempty(find(pm.extra_cmd == '&', 1, 'last'));
+b_clean_net_file = false;
 
 ext_tmp = [' ' strtrim(pm.extra_cmd) ' '];
 b_verbose = ~isempty([strfind(ext_tmp,' -v ') strfind(ext_tmp,' --verbose ')]);  % show time cost
@@ -175,56 +178,62 @@ if any(cellfun(@(fv) isfield(pm, [fv '_mV']), field_v))
 end
 
 % Fill-in default values.
-if ~mode_legancy
-    if ~ has_nonempty_field(pm, 'neuron_model')
-        warning('gen_neu:model', 'pm.neuron_model not specified! Using "HH-PT-GH"');
-        pm.neuron_model = 'HH-PT-GH';
-    end
-    if ~ has_nonempty_field(pm, 'simu_method')
-        warning('gen_neu:model', 'pm.simu_method not specified! Using "auto".');
-        pm.simu_method = 'auto';
-    end
-else
-    if ~ has_nonempty_field(pm, 'neuron_model')
-        [~, pm.neuron_model] = fileparts(pm.prog_path);
-        % Try to convert program name to known model.
-        if strmatch('raster_tuning_HH', pm.neuron_model)
-            pm.neuron_model = 'legancy-HH-GH-cont-syn';
-        elseif strmatch('raster_tuning_LIF_GH', pm.neuron_model)
-            pm.neuron_model = 'legancy-LIF-GH';
-        elseif strmatch('raster_tuning_LIF', pm.neuron_model)
-            pm.neuron_model = 'legancy-LIF-G';
+if enable_default_parameters
+    if ~mode_legancy
+        if ~ has_nonempty_field(pm, 'neuron_model')
+            warning('gen_neu:model', 'pm.neuron_model not specified! Using "HH-PT-GH"');
+            pm.neuron_model = 'HH-PT-GH';
+        end
+        if ~ has_nonempty_field(pm, 'simu_method')
+            warning('gen_neu:model', 'pm.simu_method not specified! Using "auto".');
+            pm.simu_method = 'auto';
+        end
+    else
+        if ~ has_nonempty_field(pm, 'neuron_model')
+            [~, pm.neuron_model] = fileparts(pm.prog_path);
+            % Try to convert program name to known model.
+            if strmatch('raster_tuning_HH', pm.neuron_model)
+                pm.neuron_model = 'legancy-HH-GH-cont-syn';
+            elseif strmatch('raster_tuning_LIF_GH', pm.neuron_model)
+                pm.neuron_model = 'legancy-LIF-GH';
+            elseif strmatch('raster_tuning_LIF', pm.neuron_model)
+                pm.neuron_model = 'legancy-LIF-G';
+            end
+        end
+        if ~b_verbose
+            pm.extra_cmd = ['-q' pm.extra_cmd];
         end
     end
-    if ~b_verbose
-        pm.extra_cmd = ['-q' pm.extra_cmd];
+    if ~ has_nonempty_field(pm, 'stv')
+        pm.stv = 0.5;
+    end
+    if ~ has_nonempty_field(pm, 'dt')
+        pm.dt = 1.0/32;
+    end
+    if ~ has_nonempty_field(pm, 'scee')
+        pm.scee = 0;
+    end
+    if ~ has_nonempty_field(pm, 'scie')
+        pm.scie = 0;  % Strength from Ex. to In.
+    end
+    if ~ has_nonempty_field(pm, 'scei')
+        pm.scei = 0;  % Strength from In. to Ex.
+    end
+    if ~ has_nonempty_field(pm, 'scii')
+        pm.scii = 0;
+    end
+    if ~ has_nonempty_field(pm, 'seed')
+        if ~mode_legancy
+            pm.seed = randi(2^32-1, 1, 2);
+        else
+            pm.seed = randi(2^32-1, 1, 1);
+        end
+    end
+    if ~ has_nonempty_field(pm, 'net')
+        pm.net = 'net_1_0';
     end
 end
-if ~ has_nonempty_field(pm, 'stv')
-    pm.stv = 0.5;
-end
-if ~ has_nonempty_field(pm, 'dt')
-    pm.dt = 1.0/32;
-end
-if ~ has_nonempty_field(pm, 'scee')
-    pm.scee = 0;
-end
-if ~ has_nonempty_field(pm, 'scie')
-    pm.scie = 0;  % Strength from Ex. to In.
-end
-if ~ has_nonempty_field(pm, 'scei')
-    pm.scei = 0;  % Strength from In. to Ex.
-end
-if ~ has_nonempty_field(pm, 'scii')
-    pm.scii = 0;
-end
-if ~ has_nonempty_field(pm, 'seed')
-    if ~mode_legancy
-        pm.seed = randi(2^32-1, 1, 2);
-    else
-        pm.seed = randi(2^32-1, 1, 1);
-    end
-end
+
 if has_nonempty_field(pm, 't_warming_up')
     ext_T = 0;  % use pm.t_warming_up instead of ext_T
 end
@@ -239,50 +248,53 @@ if xor(isfield(pm,'pri'), isfield(pm,'psi'))
     warning('gen_neu:pm', 'pri and psi not privided together.');
 end
 
-if ~ has_nonempty_field(pm, 'net')
-    pm.net = 'net_1_0';
-end
-
-if ~ischar(pm.net)
-  b_clean_net_file = true;
-else
-  b_clean_net_file = false;
-end
-
 % Prepare the neuronal network.
-if ischar(pm.net)
-    [network, mat_path] = get_network(pm.net, data_dir_prefix);
-    if isempty(network)
-        if has_nonempty_field(pm, 'net_adj') && isnumeric(pm.net_adj) ...
-           && diff(size(pm.net_adj)) == 0
-            network = pm.net_adj;
-            [mat_path, pm.net] = save_network(pm.net_adj, data_dir_prefix);
-            fprintf('Using pm.net_adj as the network\n');
-        else
-            error('Set pm.net to the file name of net or adjacency matrix');
+if ~ enable_default_parameters && ~ has_nonempty_field(pm, 'net')
+    pm.net = readFromIniFile('', 'net', pm.parameter_path);
+end
+if has_nonempty_field(pm, 'net')
+    if ischar(pm.net)
+        [network, mat_path] = get_network(pm.net, data_dir_prefix);
+        if isempty(network)
+            if has_nonempty_field(pm, 'net_adj') && isnumeric(pm.net_adj) ...
+               && diff(size(pm.net_adj)) == 0
+                network = pm.net_adj;
+                [mat_path, pm.net] = save_network(pm.net_adj, data_dir_prefix);
+                fprintf('Using pm.net_adj as the network\n');
+            else
+                error('Set pm.net to the file name of net or adjacency matrix');
+            end
+        end
+        [~, pm.net] = fileparts(pm.net);          % Use the name without extension
+    else
+        % so pm.net is connectivity matrix?
+        % save this matrix, so that it can be read by `gen_neu'
+        network = pm.net;
+        [mat_path, pm.net] = save_network(pm.net, data_dir_prefix);
+        b_clean_net_file = true;
+    end
+    pm.net_path = mat_path;
+    pm.net_adj  = network;
+
+    p = size(network,1);
+
+    if enable_default_parameters
+        if ~ has_nonempty_field(pm, 'nI')
+            pm.nI = 0;  % number of inhibitory neurons
+        end
+        if ~ has_nonempty_field(pm, 'nE')
+            pm.nE = p - pm.nI;
+        end
+        if pm.nI + pm.nE ~= p || pm.nE < 0 || pm.nI < 0
+            fprintf('  pm.nE(%d) + pm.nI(%d) = %d, p_net = %d\n', ...
+                pm.nE, pm.nI, pm.nE + pm.nI, p);
+            error('gen_neu: Number of neurons inconsist with the network!');
         end
     end
-    [~, pm.net] = fileparts(pm.net);          % Use the name without extension
 else
-    % so pm.net is connectivity matrix?
-    % save this matrix, so that it can be read by `gen_neu'
-    network = pm.net;
-    [mat_path, pm.net] = save_network(pm.net, data_dir_prefix);
-end
-pm.net_path = mat_path;
-pm.net_adj  = network;
-
-p = size(network,1);
-if ~ has_nonempty_field(pm, 'nI')
-    pm.nI = 0;  % number of inhibitory neurons
-end
-if ~ has_nonempty_field(pm, 'nE')
-    pm.nE = p - pm.nI;
-end
-if pm.nI + pm.nE ~= p || pm.nE < 0 || pm.nI < 0
-    fprintf('  pm.nE(%d) + pm.nI(%d) = %d, p_net = %d\n', ...
-        pm.nE, pm.nI, pm.nE + pm.nI, p);
-    error('gen_neu: Number of neurons inconsist with the network!');
+    % You may specify --net in pm.extra_cmd, but still the total number of
+    % neurons must known, for reading the data file.
+    p = pm.p;
 end
 
 if has_nonempty_field(pm, 'synaptic_net_delay')
@@ -328,18 +340,25 @@ else
     force_spike_path = '';
 end
 
-% construct file paths
-pr_name = get_prps_str(pm, 'pr');
-ps_name = get_prps_str(pm, 'ps');
-pri_name = get_prps_str(pm, 'pri');
-psi_name = get_prps_str(pm, 'psi');
-st_sc = strrep(mat2str([pm.scee, pm.scie, pm.scei, pm.scii], 5),' ',',');
-st_p  = strrep(mat2str([pm.nE, pm.nI]),' ',',');
-file_inf_st =...
-    sprintf('%s_p=%s_sc=%s_%s_%s_%s_%s_stv=%g_t=%.2e',...
-            pm.net, st_p(2:end-1), st_sc(2:end-1), pr_name,...
-            ps_name, pri_name, psi_name, pm.stv, pm.t);
-file_prefix = [data_dir_prefix, pm.neuron_model, '_'];
+% Construct file paths.
+if enable_default_parameters
+    pr_name = get_prps_str(pm, 'pr');
+    ps_name = get_prps_str(pm, 'ps');
+    pri_name = get_prps_str(pm, 'pri');
+    psi_name = get_prps_str(pm, 'psi');
+    st_sc = strrep(mat2str([pm.scee, pm.scie, pm.scei, pm.scii], 5),' ',',');
+    st_p  = strrep(mat2str([pm.nE, pm.nI]),' ',',');
+    file_inf_st =...
+        sprintf('%s_p=%s_sc=%s_%s_%s_%s_%s_stv=%g_t=%.2e',...
+                pm.net, st_p(2:end-1), st_sc(2:end-1), pr_name,...
+                ps_name, pri_name, psi_name, pm.stv, pm.t);
+    file_prefix = [data_dir_prefix, pm.neuron_model, '_'];
+else
+    [~, tmp_f_name] = fileparts(tempname(['.' filesep]));
+    file_inf_st = tmp_f_name;
+    file_prefix = data_dir_prefix;
+    mode_rm_only   = true;
+end
 output_name     = [file_prefix, 'volt_',file_inf_st,'.dat'];
 output_ISI_name = [file_prefix, 'ISI_', file_inf_st,'.txt'];
 output_RAS_name = [file_prefix, 'RAS_', file_inf_st,'.txt'];
@@ -355,6 +374,11 @@ if mode_extra_data
                 output_G_name, output_gating_name)];
 end
 
+t_string = '';
+if has_nonempty_field(pm, 't')
+    t_string = sprintf('%.17g', pm.t + ext_T);
+end
+
 % Path string escape
 f_unescape = @(s) strrep(strrep(s, '%', '%%'), '\', '\\');
 
@@ -367,7 +391,7 @@ if ~mode_legancy
     {'nE'}
     {'nI'}
     {'net_path', [], '--net'}
-    {'net_adj', '', inlineif(issparse(pm.net_adj), '--sparse-net', '')}
+    {'net_adj', '', inlineif(isfield(pm, 'net_adj') && issparse(pm.net_adj), '--sparse-net', '')}
     {'pr'}
     {'ps'}
     {'pri'}
@@ -379,7 +403,7 @@ if ~mode_legancy
     {'extI'}
     {'sine_amp', [], '--current-sine-amp'}
     {'sine_freq', [], '--current-sine-freq'}
-    {'t', sprintf('%.17g', pm.t + ext_T)}
+    {'t', t_string}
     {'dt'}
     {'stv'}
     {'t_warming_up'}
@@ -391,8 +415,10 @@ if ~mode_legancy
     {'force_spikes', '', ['--force-spike-list "' force_spike_path '"']}
     {'prog_path', '', st_paths}
     {'output_poisson_path'}
+    {'parameter_path'}
     {'extra_cmd', '%s', ''}
     % Recognized parameters that will not pass to gen_neu.
+    {'p', '', ''}
     {'net', '', ''}
     {'cmd_str', '', ''}
     {'ext_T', '', ''}
@@ -550,6 +576,7 @@ end
 % If requested, read and return data.
 % At this point, the files should be generated, and ready for read.
 if nargout > 0
+    need_verify_time_length = has_nonempty_field(pm, 't');
     % Fixme: The Octave function isargout() is not in Matlab.
     %        So seems no way to skip non-required data in Matlab
     %        in some condition.
@@ -560,16 +587,18 @@ if nargout > 0
         X = fread(fid, [p, Inf], 'double');
         fclose(fid);
         len = size(X,2);
-        if len ~= floor((pm.t+ext_T)/pm.stv)
-            fprintf('gen_neu:\n');
-            fprintf('  size(X,2) = %d (read in file),\n', size(X,2));
-            fprintf('  floor((pm.t+ext_T)/pm.stv) = %d (expected)\n',...
-                    floor((pm.t+ext_T)/pm.stv));
-            warning('gen_neu:out', 'inconsistant data length! Exceed part will be truncated.');
-        end
-        len_cut = len - floor(pm.t/pm.stv);
-        if (len_cut>0)
-            X(:, 1:end-floor(pm.t/pm.stv)) = [];
+        if need_verify_time_length
+            if len ~= floor((pm.t+ext_T)/pm.stv)
+                fprintf('gen_neu:\n');
+                fprintf('  size(X,2) = %d (read in file),\n', size(X,2));
+                fprintf('  floor((pm.t+ext_T)/pm.stv) = %d (expected)\n',...
+                        floor((pm.t+ext_T)/pm.stv));
+                warning('gen_neu:out', 'inconsistant data length! Exceed part will be truncated.');
+            end
+            len_cut = len - floor(pm.t/pm.stv);
+            if (len_cut>0)
+                X(:, 1:end-floor(pm.t/pm.stv)) = [];
+            end
         end
     end
     if (nargout>1)
@@ -593,25 +622,31 @@ if nargout > 0
         else
             ras = [];
         end
-        if exist('len_cut','var') && len_cut>0 && ~isempty(ras)
-            ras(ras(:,2) <= len_cut*pm.stv, :) = [];
-            ras(:,2) = ras(:,2) - len_cut*pm.stv;
+        if need_verify_time_length
+            if exist('len_cut','var') && len_cut>0 && ~isempty(ras)
+                ras(ras(:,2) <= len_cut*pm.stv, :) = [];
+                ras(:,2) = ras(:,2) - len_cut*pm.stv;
+            end
         end
     end
     if mode_extra_data
         % read conductance and gating varialbes (if any)
         fid = fopen(output_G_name, 'r');
         extra_data.G = fread(fid, [2*p, Inf], 'double');
-        extra_data.G(:, 1:end-floor(pm.t/pm.stv)) = [];
+        if need_verify_time_length
+            extra_data.G(:, 1:end-floor(pm.t/pm.stv)) = [];
+        end
         fclose(fid);
         fid = fopen(output_gating_name, 'r');
         if fid >=0
-          extra_data.gatings = fread(fid, [3*p, Inf], 'double');
-          extra_data.gatings(:, 1:end-floor(pm.t/pm.stv)) = [];
-          fclose(fid);
-          % The order of gating variables is defined in
-          %   single_neuron_dynamics.h
-          % See id_h, id_m, id_n in struct Ty_HH_GH
+            extra_data.gatings = fread(fid, [3*p, Inf], 'double');
+            if need_verify_time_length
+                extra_data.gatings(:, 1:end-floor(pm.t/pm.stv)) = [];
+            end
+            fclose(fid);
+            % The order of gating variables is defined in
+            %   single_neuron_dynamics.h
+            % See id_h, id_m, id_n in struct Ty_HH_GH
         end
     end
 end
