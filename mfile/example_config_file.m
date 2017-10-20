@@ -1,13 +1,13 @@
 % Demo of using configure file as parameter input.
-% When using "parameter_path," at least pm.p needs to be provided.
+% Extra parameters specified in "pm" will override settings in the config file.
 
 pm = [];
 pm.parameter_path = 'example_config.ini';
 [X, ISI, ras] = gen_neu(pm, 'extra_data');
 
-stv = 0.5;
+stv = 0.5;  % need to specify, it is not in "pm".
 
-figure(20);  % For single neuron
+figure(20);
 title('V');
 rg = 1 : floor(100 / stv);
 s_t = rg * stv;

@@ -251,6 +251,9 @@ end
 % Prepare the neuronal network.
 if ~ enable_default_parameters && ~ has_nonempty_field(pm, 'net')
     pm.net = readFromIniFile('', 'net', pm.parameter_path);
+    if strcmp(pm.net, '-') || strcmp(pm.net, '--')
+        pm.net = [];
+    end
 end
 if has_nonempty_field(pm, 'net')
     if ischar(pm.net)
@@ -507,6 +510,48 @@ for id_c = 1:length(c_options)
 end
 
 pm.cmd_str = strjoin(c_options_str(1:cnt_options-1));
+
+if isunix()
+%    [~, cmd_length_limit] = system('getconf ARG_MAX');  % cost 11 ms
+%    cmd_length_limit = str2num(cmd_length_limit);
+    cmd_length_limit = 128*1024;
+else
+    cmd_length_limit = 1800;  % 2047 or 8191
+end
+
+% If command line too long, use a config file.
+config_file_path = '';
+if length(pm.cmd_str) > cmd_length_limit
+    % strip pr, ps, pri, psi
+    cmd = pm.cmd_str;
+    for opt = {'--pr', '--ps', '--pri', '--psi'}
+        opt = opt{1};
+        st_len = length(cmd);
+        p1 = strfind(cmd, opt);  % only one is allowed
+        if isempty(p1)
+            continue
+        end
+        p2 = [strfind(cmd(p1+2:end), '-')+p1+1 st_len+1];
+        while p2(1) < st_len && isdigit(cmd(p2(1) + 1))
+            p2(1) = [];
+        end
+        cmd(p1:p2-1) = [];
+    end
+    % write to config file
+    [~, tmp_f_name] = fileparts(tempname(['.' filesep]));
+    config_file_path = ['gen_neu_' tmp_f_name '.ini'];
+    fid = fopen(config_file_path, 'w');
+    for field_name = {'pr', 'ps', 'pri', 'psi'}
+        field_name = field_name{1};
+        if isfield(pm, field_name)
+            fprintf(fid, [field_name '=%.17g\n'], pm.(field_name));
+        end
+    end
+    % TODO: merge possible another --parameter-path
+    fclose(fid);
+    pm.cmd_str = [cmd ' --parameter-path ' config_file_path];
+end
+
 extra_data.cmdst = pm.cmd_str;
 if mode_show_cmd
     disp(pm.cmd_str);
@@ -665,6 +710,7 @@ if mode_rm_only
 end
 QuietDelete(poisson_path);
 QuietDelete(force_spike_path);
+QuietDelete(config_file_path);
 
 if b_verbose
     fprintf('Load data and clean  : %.3f s\n', toc(t_start));
