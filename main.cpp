@@ -369,7 +369,10 @@ int MainLoop(const po::variables_map &vm)
   }
   if (enum_neuron_model == IF_jump) {
     // There is no point to use finer dt in Poisson driven IF-jump model.
-    e_dt = e_stv;
+    if (e_stv > e_dt && e_dt < 1) {
+      cout << "Warning: dt (" << e_dt << " ms) < stv (" << e_stv << " ms)";
+      cout << " in IF-jump model, which is pointless. Use a larger dt please.\n";
+    }
   }
   if (!(e_t > 0) || !(e_dt > 0) || !(e_stv > 0)) {
     cerr << "Only support positive time!" << endl;
