@@ -532,7 +532,7 @@ if length(pm.cmd_str) > cmd_length_limit
             continue
         end
         p2 = [strfind(cmd(p1+2:end), '-')+p1+1 st_len+1];
-        while p2(1) < st_len && isdigit(cmd(p2(1) + 1))
+        while p2(1) < st_len && isstrprop(cmd(p2(1) + 1),'digit')  % damn matlab do not have isdigit
             p2(1) = [];
         end
         cmd(p1:p2-1) = [];
