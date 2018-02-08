@@ -117,10 +117,10 @@ struct TySpikeEvent
   {}
 
   bool operator < (const TySpikeEvent &b) const
-  { return time < b.time; }
+  { return time < b.time || (time == b.time && id < b.id); }
 
   bool operator > (const TySpikeEvent &b) const
-  { return time > b.time; }
+  { return time > b.time || (time == b.time && id > b.id); }
 
   bool operator == (const TySpikeEvent &b) const
   { return time == b.time && id == b.id; }

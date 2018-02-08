@@ -196,6 +196,7 @@ int MainLoop(const po::variables_map &vm)
   pm.scei = vm["scei"].as<double>();
   pm.scii = vm["scii"].as<double>();
 
+  // Initialize net before initialize delay-net (in neuron population)
   if (vm.count("net")) {
     std::string name_net = vm["net"].as<std::string>();
     bool is_sparse = vm.count("sparse-net") > 0;
@@ -232,6 +233,9 @@ int MainLoop(const po::variables_map &vm)
       case HH_FT_GH:
         p_neu_pop = new
           NeuronPopulationDeltaInteractNetDelay<Ty_HH_FT_GH>(pm);
+        break;
+      case IF_jump:
+        p_neu_pop = new IFJumpPopulation(pm);
         break;
       default:
         cerr << "The neuron type with delay net is not supported yet.\n";
@@ -302,7 +306,7 @@ int MainLoop(const po::variables_map &vm)
         cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
         return -1;
       case IF_jump:
-        cerr << "Delay for IF-jump is not supported yet.\n";
+        p_neu_pop = new IFJumpPopulation(pm);
         return -1;
       case Hawkes_GH:
         cerr << "Delay for Hawkes-GH is not supported yet.\n";
@@ -447,6 +451,8 @@ int MainLoop(const po::variables_map &vm)
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt, t0);
     } else if (str_simu_method == "IF-jump") {
       p_neu_simu = new IFJumpSimulator(pm, e_dt, t0);
+    } else if (str_simu_method == "IF-jump-delay") {
+      p_neu_simu = new IFJumpDelayNetSimulator(pm, e_dt, t0);
     } else {
       cerr << "No this simulation method:\"" << str_simu_method << "\"\n";
       return -2;
@@ -457,8 +463,13 @@ int MainLoop(const po::variables_map &vm)
       str_simu_method = "cont-syn";
       p_neu_simu = new NeuronSimulatorCont(pm, e_dt, t0);
     } else if (IF_jump == enum_neuron_model) {
-      str_simu_method = "IF-jump";
-      p_neu_simu = new IFJumpSimulator(pm, e_dt, t0);
+      if (vm.count("synaptic-net-delay") || vm.count("synaptic-delay")) {
+        str_simu_method = "IF-jump-delay";
+        p_neu_simu = new IFJumpDelayNetSimulator(pm, e_dt, t0);
+      } else {
+        str_simu_method = "IF-jump";
+        p_neu_simu = new IFJumpSimulator(pm, e_dt, t0);
+      }
     } else if (vm.count("synaptic-net-delay")) {
       str_simu_method = "big-net-delay";
       p_neu_simu = new NeuronSimulatorBigNetDelay(pm, e_dt, t0);
@@ -483,8 +494,8 @@ int MainLoop(const po::variables_map &vm)
     return -1;
   }
   if ((enum_neuron_model == IF_jump)
-      ^ (str_simu_method == "IF-jump")) {
-    cerr << "Error: Neuron Model \"IF-jump\" must pair with simulator \"IF-jump\".\n";
+      ^ (str_simu_method == "IF-jump" || str_simu_method == "IF-jump-delay")) {
+    cerr << "Error: Neuron Model \"IF-jump\" must pair with simulator \"IF-jump\" or \"IF-jump-delay\".\n";
     return -1;
   }
   if (enum_neuron_model == Hawkes_GH && str_simu_method != "simple") {
@@ -792,7 +803,7 @@ int main(int argc, char *argv[])
       ("neuron-model",  po::value<std::string>(),
        "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH.")
       ("simulation-method",  po::value<std::string>(),
-       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
+       "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, IF-jump-delay, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
        "Produce help message.")
       ("verbose,v",

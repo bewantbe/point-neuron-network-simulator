@@ -5,7 +5,7 @@
 %
 % reference: http://graphviz.org
 
-function adj2dot(network, basename, b_fix)
+function adj2dot(network, basename, b_fix, node_name, node_color)
 
 gheader0 = {
 'digraph "G" {',
@@ -36,10 +36,17 @@ gheader{1} = strrep(gheader{1}, '"G"', ['"', basename, '"']);
 cellfun(@(st)fprintf(fid, '%s\n', st), gheader);
 fprintf(fid, '\n');
 
+if ~exist('node_name', 'var')
+  node_name = cell(size(network, 1), 1);
+  for k = 1:size(network, 1)
+    node_name{k} = sprintf('%d', k);
+  end
+end
+
 % output edges (connections)
 [conn_row, conn_col] = find(network);
 arrayfun(...
-  @(ii,jj) fprintf(fid, '  "%d" -> "%d";\n', jj,ii), ...
+  @(ii,jj) fprintf(fid, '  "%s" -> "%s";\n', node_name{jj},node_name{ii}), ...
   conn_row, conn_col);
 
 if ~exist('b_fix', 'var') || length(b_fix(:))==1 && ~b_fix
@@ -55,18 +62,28 @@ else
         %    z = 0.2*n*exp(2*pi*I*k/n);
         %  end
           z = 0.2*n*exp(2*pi*1i*(k/n-0.25));
-%          fprintf(fid, '  "%d" [pos = "%f,%f!"]\n', k, real(z), imag(z));
-          if mod(k,2)==1
-            fprintf(fid, '  "%d" [pos = "%f,%f!" color = "red"]\n', k, real(z), imag(z));
+          if b_fix == 1
+            if ~exist('node_color', 'var')
+              fprintf(fid, '  "%s" [pos = "%f,%f!"]\n', ...
+                node_name{k}, real(z), imag(z));
+            else
+              fprintf(fid, '  "%s" [pos = "%f,%f!" color = "%s"]\n', ...
+                node_name{k}, real(z), imag(z), node_color{k});
+            end
           else
-            fprintf(fid, '  "%d" [pos = "%f,%f!" color = "blue"]\n', k, real(z), imag(z));
+            if mod(k,2)==1
+              fprintf(fid, '  "%s" [pos = "%f,%f!" color = "red"]\n', ...
+                node_name{k}, real(z), imag(z));
+            else
+              fprintf(fid, '  "%s" [pos = "%f,%f!" color = "blue"]\n', ...
+                node_name{k}, real(z), imag(z));
+            end
           end
-          
         end
     else
         for k=1:n
-          fprintf(fid, '  "%d" [pos = "%f,%f!"]\n',...
-                       k, b_fix(k, 1), b_fix(k, 2));
+          fprintf(fid, '  "%s" [pos = "%f,%f!"]\n',...
+                       node_name{k}, b_fix(k, 1), b_fix(k, 2));
         end
     end
     prog = 'neato';

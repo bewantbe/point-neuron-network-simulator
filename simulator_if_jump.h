@@ -142,12 +142,49 @@ public:
     TyN.T_refractory = t_ref;
   }
 
+  SparseMat synaptic_delay_net;
+  bool is_constant_delay_net = false;
+
   const Ty_Neuron_Dym_Base * GetNeuronModel() const override
   { return &TyN; }
+
+  double SynapticDelay() const override
+  {
+    if (is_constant_delay_net) {
+      return *synaptic_delay_net.valuePtr();
+    } else {
+      throw "Non-compatible simulator - population pair. You should call SynapticDelayNet() in simulator.";
+    }
+    return 0;
+  }
+  void SetSynapticDelay(double d) override
+  {
+    // Set constant delay.
+    // Note: the net should be set properly first.
+    synaptic_delay_net = net;
+    for (int j=0; j<n_neurons(); j++) {
+      for (SparseMat::InnerIterator it(synaptic_delay_net, j); it; ++it) {
+        // it.row() <- j
+        it.valueRef() = d;
+      }
+    }
+    is_constant_delay_net = true;
+  }
+
+  const SparseMat * SynapticDelayNet() const override
+  {
+    return &synaptic_delay_net;
+  }
+  void SetSynapticDelayNet(const SparseMat &_dn) override
+  {
+    synaptic_delay_net = _dn;
+    is_constant_delay_net = false;
+  }
 };
 
 class IFJumpSimulator :public NeuronSimulatorBase
 {
+protected:
   double t, dt;
   TyNeuronalParams pm;
   TyPoissonTimeVec poisson_time_vec;
@@ -242,11 +279,6 @@ public:
       const TySpikeEventStrength &e = input_events[id_input_events++];
       double *dym_val = state.StatePtr(e.id);
 
-//      if (6 < e.time && e.time < 200) {
-//        fprintf(fdbg, "e.id = %d, %f, %f\n", e.id, e.time, e.strength);
-//        fprintf(fdbg, "  dym1= %f\t%f\n", dym_val[0], dym_val[1]);
-//      }
-
       TyN.EvolveToKick(dym_val, e.time, e.strength);
 
       cospike_list.clear();
@@ -257,14 +289,7 @@ public:
         cospike_list.push_back(e.id);
         ras.emplace_back(e.time, e.id);
         vec_n_spike[e.id]++;
-//        if (6 < e.time && e.time < 200) {
-//          fprintf(fdbg, "~~~~ spike id = %d\n", e.id);
-//        }
       }
-
-//      if (6 < e.time && e.time < 200) {
-//        fprintf(fdbg, "  dym2= %f\t%f\n", dym_val[0], dym_val[1]);
-//      }
 
       // Loop over possible cascaded spikes.
       while (! cospike_list.empty()) {
@@ -338,3 +363,151 @@ public:
   }
 };
 
+class IFJumpDelayNetSimulator :public IFJumpSimulator
+{
+protected:
+  struct SmallHeadExtractor
+  {
+    const TySpikeEventStrengthVec &va, &vb;
+    size_t ia, ib;
+    const TySpikeEventStrength * p_min;
+    double val;
+
+    SmallHeadExtractor(
+        const TySpikeEventStrengthVec &_va, size_t _ia,
+        const TySpikeEventStrengthVec &_vb, size_t _ib)
+      :va(_va), vb(_vb), ia(_ia), ib(_ib)
+    {
+      Next();
+    }
+
+    double Next()
+    {
+      /*const _Ty &a = ia < va.size() ? va[ia] : Inf;*/
+      /*const _Ty &b = ib < vb.size() ? vb[ib] : Inf;*/
+      if (ia >= va.size()) {
+        if (ib >= vb.size()) {
+          p_min = NULL;
+          val = Inf;
+          return val;
+        } else {
+          p_min = &vb[ib++];
+        }
+      } else {
+        if (ib >= vb.size()) {
+          p_min = &va[ia++];
+        } else {
+          if (va[ia] < vb[ib]) {
+            p_min = &va[ia++];
+          } else {
+            p_min = &vb[ib++];
+          }
+        }
+      }
+      val = p_min->time;
+      return val;
+    }
+  };
+
+  TySpikeEventStrengthVec intra_events;
+  size_t id_intra_events = 0;
+
+public:
+  IFJumpDelayNetSimulator(const TyNeuronalParams &_pm, double _dt, double t0)
+    :IFJumpSimulator(_pm, _dt, t0)
+  {}
+
+  void IF_jump_simulator(NeuronPopulationBase * p_neu_pop, double t_end,
+      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
+  {
+    TyNeuronalDymState &state = p_neu_pop->GetDymState();
+    const auto &synaptic_delay_net = *(p_neu_pop->SynapticDelayNet());
+    const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
+    TySpikeEventStrengthVec simultaneous_events;
+
+    const double sc_vec[2][2] = {{pm.scee, -pm.scei},{pm.scie, -pm.scii}};
+
+    if (input_events.size() == 0 || input_events.back().time <= t_end) {
+      RefillPoissonEvent(t_end, 1);
+    }
+
+    // extract the least time event.
+    SmallHeadExtractor extract_min_t(input_events, id_input_events,
+                                     intra_events, id_intra_events);
+
+    while (extract_min_t.val <= t_end) {
+      double t_event = extract_min_t.val;
+      simultaneous_events.clear();
+      simultaneous_events.push_back(*extract_min_t.p_min);
+      // Get all events at time t_event
+      while (extract_min_t.Next() == t_event) {
+        if (extract_min_t.p_min->id == simultaneous_events.back().id) {
+          // Merge events if they apply to the same neuron (at the same time)
+          simultaneous_events.back().strength += extract_min_t.p_min->strength;
+        } else {
+          simultaneous_events.push_back(*extract_min_t.p_min);
+        }
+      }
+      size_t vb_end_save = intra_events.size();
+      // Apply these events at a time.
+      for (auto &e : simultaneous_events) {
+        double *dym_val = state.StatePtr(e.id);
+        TyN.EvolveToKick(dym_val, t_event, e.strength);
+        if (dym_val[TyN.id_V] > TyN.V_threshold) {
+          // this neuron firing
+          TyN.ForceSpike(dym_val, e.time);
+          ras.emplace_back(e.time, e.id);
+          vec_n_spike[e.id]++;
+          // Note down afected neurons.
+          for (SparseMat::InnerIterator it(net, e.id),
+               delay_it(synaptic_delay_net, e.id);
+               it; ++it, ++delay_it) {
+            intra_events.emplace_back(
+                t_event + delay_it.value(),
+                it.row(),
+                it.value() * sc_vec[it.row() >= pm.n_E][e.id >= pm.n_E]);
+          }
+        }
+      }
+      // possible optimization: when only one neuron fired at t_event and all delay are the same, then no need to sort.
+      std::sort(intra_events.begin() + vb_end_save, intra_events.end());
+      // If (1) new events inserted; and (2) old non-used event exist; and
+      //    (3) last old event is later than first new event.
+      //    then we need a event sorting.
+      if (intra_events.size() > vb_end_save && vb_end_save > extract_min_t.ib &&
+         !(intra_events[vb_end_save-1] < intra_events[vb_end_save])) {
+        std::inplace_merge(intra_events.begin()+extract_min_t.ib,
+            intra_events.begin()+vb_end_save, intra_events.end());
+      }
+      // TODO: reintialize extract_min_t to deal with Inf problem.
+    }
+    id_input_events = extract_min_t.ia;
+    id_intra_events = extract_min_t.ib;
+    if (extract_min_t.ib > 1000) {
+      // we need to clean up the intra_event array
+      intra_events.erase(intra_events.begin(), intra_events.begin() + extract_min_t.ib);
+      id_intra_events = 0;
+    }
+  }
+
+  void NextDt(NeuronPopulationBase * p_neu_pop,
+      TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
+  {
+    if (~ty_neuron_init) {
+      TyN = dynamic_cast<IFJumpPopulation*>(p_neu_pop) -> TyN;
+      ty_neuron_init = true;
+    }
+    t += dt;
+    poisson_time_vec.SaveIdxAndClean();
+    
+    // Step the network.
+    IF_jump_simulator(p_neu_pop, t, ras, vec_n_spike);
+
+    // Calculate voltage.
+    TyNeuronalDymState &state = p_neu_pop->GetDymState();
+    for (size_t j = 0; j < poisson_time_vec.size(); j++) {
+      double *dym_val = state.StatePtr(j);
+      dym_val[TyN.id_V_grid] = TyN.GetV(dym_val, t);
+    }
+  }
+};
