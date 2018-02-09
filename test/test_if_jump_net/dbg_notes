@@ -1,0 +1,51 @@
+#!/bin/bash
+
+gdb ../../bin/gen_neu
+b simulator_if_jump.h:479
+b simulator_if_jump.h:514
+skip file /usr/include/c++/4.9/bits/stl_algobase.h
+skip file /usr/include/c++/4.9/bits/stl_vector.h
+skip file /usr/include/c++/4.9/bits/vector.tcc
+skip file /usr/include/c++/4.9/cmath
+
+run --neuron-model IF-jump --simulation-method IF-jump-delay --nE 3 --nI 2 --net "./data/net_5_0X2867A9F7.txt" --pr 2 --ps 0.125 --scee 0.13 --scie 0.12 --scei 0.15 --scii 0.14 --t 1000 --dt 1 --stv 1 --seed 24 --synaptic-net-delay "./data/net_delay_net_5_0X00000000.txt"
+
+next -- Step program
+nexti -- Step one instruction
+
+step -- Step program until it reaches a different source line
+stepi -- Step one instruction exactly
+
+finish
+
+p *dym_val@4
+p *extract_min_t.p_min
+
+info b
+
+d
+
+b simulator_if_jump.h:479 if t >= 21.0
+b simulator_if_jump.h:514
+
+reverse-finish -- Execute backward until just before the selected stack frame is called
+reverse-next ('rn') -- Step program backward, proceeding through subroutine calls.
+reverse-nexti ('rni') -- Step backward one instruction, but proceed through called subroutines.
+reverse-step ('rs') -- Step program backward until it reaches the beginning of a previous source line
+reverse-stepi -- Step backward exactly one instruction 
+
+octave-gui:8> [ras1(18:25, :), ras2(18:25, :)]                                  
+ans =
+
+    2.0000   18.6320    2.0000   18.6320
+    5.0000   18.6320    5.0000   18.6320
+    2.0000   21.9919    2.0000   21.9919
+    1.0000   21.9919    1.0000   21.9919
+    3.0000   21.9919    4.0000   22.0531
+    4.0000   21.9919    3.0000   21.9919
+    5.0000   22.8991    5.0000   22.8991
+    3.0000   25.6064    3.0000   25.6321
+
+p p_neu_pop->GetDymState().dym_vals.m_storage.m_data
+
+

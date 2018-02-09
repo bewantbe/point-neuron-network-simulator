@@ -56,7 +56,7 @@ if issparse(A)
   if fd == -1
     error('Unable to open output file `%s''', matpath);
   end
-  fprintf(fd, '# sparse network, size = %d x %d, format: i,j,value\n', size(A,1), size(A,2));
+  fprintf(fd, '%% sparse network, size = %d x %d, format: i,j,value\n', size(A,1), size(A,2));
   [ii, jj, val] = find(A);
   ijv = [ii jj val];
   if all(floor(val) == val)

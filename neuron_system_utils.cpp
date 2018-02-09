@@ -80,7 +80,7 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
       }
     } else {
       char file_sig = fin_net.peek();
-      if (file_sig == '#') {
+      if (file_sig == '#' || file_sig == '%') {
         std::string sig_line;
         std::getline(fin_net, sig_line);
         // remove sig line, assume correct sparse matrix.
@@ -126,7 +126,7 @@ SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net)
   bool is_sparse = false;
 
   char file_sig = fin_net.peek();
-  if (file_sig == '#') {
+  if (file_sig == '#' || file_sig == '%') {
     std::string sig_line;
     std::getline(fin_net, sig_line);
     std::transform(sig_line.begin(), sig_line.end(), sig_line.begin(), ::tolower);

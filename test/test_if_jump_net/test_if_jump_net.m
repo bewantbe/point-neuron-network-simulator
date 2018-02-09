@@ -22,7 +22,7 @@ tic
 [V1, ISI1, ras1, pm1] = gen_neu(pm, 'new', 'data/ref_');
 toc
 fprintf('\n\n');
-fflush(stdout);
+%fflush(stdout);
 
 pm.neuron_model = 'IF-jump';
 pm.simu_method = 'IF-jump-delay';
@@ -31,7 +31,7 @@ tic
 [V2, ISI2, ras2, pm2] = gen_neu(pm, 'new');
 toc
 fprintf('\n\n');
-fflush(stdout);
+%fflush(stdout);
 
 %[ras1(18:25, :), ras2(18:25, :)]
 
@@ -41,7 +41,7 @@ size(ras1)
 size(ras2)
 
 assert(any(size(ras1) == size(ras2)));
-assert(any(ras1 == ras2));
+assert(any(ras1(:) == ras2(:)));
 
 %figure(1);
 %plot(V');
