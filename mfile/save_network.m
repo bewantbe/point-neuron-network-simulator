@@ -56,13 +56,17 @@ if issparse(A)
   if fd == -1
     error('Unable to open output file `%s''', matpath);
   end
+  fprintf(fd, '# sparse network, size = %d x %d, format: i,j,value\n', size(A,1), size(A,2));
   [ii, jj, val] = find(A);
   ijv = [ii jj val];
   if all(floor(val) == val)
-    % All data are integer
+    % All data are integers
     fprintf(fd, '%d %d %d\n', ijv');
   else
     fprintf(fd, '%d %d %.17g\n', ijv');
+  end
+  if size(ijv,1) == 0
+    fprintf(fd, '%d %d %d\n', [size(A),0]');
   end
   fclose(fd);
   return

@@ -79,6 +79,12 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
         throw "Bad network file!\n";
       }
     } else {
+      char file_sig = fin_net.peek();
+      if (file_sig == '#') {
+        std::string sig_line;
+        std::getline(fin_net, sig_line);
+        // remove sig line, assume correct sparse matrix.
+      }
       int i, j;
       double ev;
       while (fin_net >> i >> j >> ev) {
@@ -114,31 +120,97 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
 
 SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net)
 {
-  typedef Eigen::Triplet<double> TyEdgeTriplet;
-  std::vector<TyEdgeTriplet> net_coef;
-
-  // Read network delay from text file
   std::ifstream fin_net(dn_name);
-  double ev;
   int n_neu = net.outerSize();
-  for (int i = 0; i < n_neu; i++) {
-    for (int j = 0; j < n_neu; j++) {
-      fin_net >> ev;
-      // dn and net should have identical size
-      if (net.coeff(i, j) != 0) {
-        net_coef.push_back(TyEdgeTriplet(i, j, ev));
+  SparseMat dn(n_neu, n_neu);
+  bool is_sparse = false;
+
+  char file_sig = fin_net.peek();
+  if (file_sig == '#') {
+    std::string sig_line;
+    std::getline(fin_net, sig_line);
+    std::transform(sig_line.begin(), sig_line.end(), sig_line.begin(), ::tolower);
+    if (sig_line.find("sparse") != std::string::npos) {
+      is_sparse = true;
+    }
+    size_t pos_size = sig_line.find("size");
+    if (pos_size != std::string::npos) {
+      auto fnum = [](char ch) -> bool { return '0'<=ch && ch<='9'; };
+      auto frange = [&](std::string::const_iterator it0) {
+        auto it1 = std::find_if(it0, sig_line.cend(), fnum);
+        auto it2 = std::find_if_not(it1, sig_line.cend(), fnum);
+        return std::make_pair(it1, it2);
+      };
+      auto rg1 = frange(sig_line.begin() + pos_size);
+      if (rg1.first != sig_line.end()) {
+        long n1 = std::stol(sig_line.substr(
+              rg1.first-sig_line.begin(), rg1.second - rg1.first));
+        auto rg2 = frange(rg1.second);
+        long n2 = std::stol(sig_line.substr(
+              rg2.first-sig_line.begin(), rg2.second - rg2.first));
+        if (n1 != n_neu || n2 != n_neu) {
+          cerr << "Number of neuron inconsistant:\n";
+          cerr << "        net: "<< n_neu <<" x "<< n_neu <<"\n";
+          cerr << "  delay-net: "<< n1 <<" x "<< n2 <<"\n";
+        }
+        cout << "  delay-net: "<< n1 <<" x "<< n2 <<"\n";
       }
     }
   }
 
-  // Construct the sparse net delay
-  SparseMat dn(n_neu, n_neu);
-  dn.setFromTriplets(net_coef.begin(), net_coef.end());
-  dn.makeCompressed();
+  if (!is_sparse) {
+    typedef Eigen::Triplet<double> TyEdgeTriplet;
+    std::vector<TyEdgeTriplet> net_coef;
 
-  if (!fin_net) {
-    cerr << "Bad network delay file was read!\n";
-    throw "Bad network file was read!\n";
+    // Read network delay from text file
+    double ev;
+    for (int i = 0; i < n_neu; i++) {
+      for (int j = 0; j < n_neu; j++) {
+        fin_net >> ev;
+        // dn and net should have identical size
+        if (net.coeff(i, j) != 0) {
+          net_coef.push_back(TyEdgeTriplet(i, j, ev));
+        }
+      }
+    }
+    if (!fin_net) {
+      cerr << "Bad network file: \"" << dn_name << "\"\n";
+      throw "Bad network file!\n";
+    }
+
+    // Construct the sparse net delay
+    dn.setFromTriplets(net_coef.begin(), net_coef.end());
+    dn.makeCompressed();
+  } else {
+    dn = net;  // Make sure that the two networks have the same shape.
+    for (int k=0; k<dn.outerSize(); k++)
+      for (SparseMat::InnerIterator it(dn, k); it; ++it) {
+        it.valueRef() = 0;
+      }
+
+    int i, j;
+    double ev;
+    while (fin_net >> i >> j >> ev) {
+      if (ev != 0 && std::isfinite(ev) && i != j) {
+        if (i > n_neu || j > n_neu) {
+          cout << "i j ev = " << i << " " << j << " " << ev << "\n";
+          cout << "n_neuron = " << n_neu << "\n";
+          throw "Number of neurons inconsistant.";
+        }
+        if (i <= 0 || j <= 0) {
+          cout << "i j ev = " << i << " " << j << " " << ev << "\n";
+          throw "Neuron index start from 1.";
+        }
+        if (net.coeff(i-1, j-1) != 0) {
+          dn.coeffRef(i-1, j-1) = ev;
+        }
+      }
+    }
+    dn.makeCompressed();
+    if (! fin_net.eof() && (fin_net.rdstate() & std::ios_base::failbit)) {
+      cerr << "Bad network file: \"" << dn_name << "\"\n";
+      throw "Bad network file!\n";
+    }
   }
 
   return dn;

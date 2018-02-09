@@ -178,7 +178,18 @@ public:
   void SetSynapticDelayNet(const SparseMat &_dn) override
   {
     synaptic_delay_net = _dn;
-    is_constant_delay_net = false;
+
+    is_constant_delay_net = true;
+    double v = *synaptic_delay_net.valuePtr();
+    for (int j=0; j<n_neurons(); j++)
+      for (SparseMat::InnerIterator it(synaptic_delay_net, j); it; ++it) {
+        if (v != it.value()) {
+          is_constant_delay_net = false;
+          cout << "  Non-constant delay.\n";
+          return;
+        }
+      }
+    cout << "  Constant delay.\n";
   }
 };
 
@@ -333,7 +344,7 @@ public:
   void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
   {
-    if (~ty_neuron_init) {
+    if (!ty_neuron_init) {
       TyN = dynamic_cast<IFJumpPopulation*>(p_neu_pop) -> TyN;
       ty_neuron_init = true;
     }
@@ -465,6 +476,7 @@ protected:
     }
   };
 
+  bool is_constant_delay_net = false;
   TySpikeEventStrengthVec intra_events;
   size_t id_intra_events = 0;
 
@@ -505,11 +517,13 @@ public:
         }
       }
       size_t vb_end_save = intra_events.size();
+      int n_fired = 0;
       // Apply these events at a time.
       for (auto &e : simultaneous_events) {
         double *dym_val = state.StatePtr(e.id);
         TyN.EvolveToKick(dym_val, t_event, e.strength);
         if (dym_val[TyN.id_V] > TyN.V_threshold) {
+          n_fired++;
           // this neuron firing
           TyN.ForceSpike(dym_val, e.time);
           ras.emplace_back(e.time, e.id);
@@ -526,7 +540,9 @@ public:
         }
       }
       // possible optimization: when only one neuron fired at t_event and all delay are the same, then no need to sort.
-      std::sort(intra_events.begin() + vb_end_save, intra_events.end());
+      if (n_fired > 1 || !is_constant_delay_net) {
+        std::sort(intra_events.begin() + vb_end_save, intra_events.end());
+      }
       // If (1) new events inserted; and (2) old non-used event exist; and
       //    (3) last old event is later than first new event.
       //    then we need a event sorting.
@@ -549,11 +565,15 @@ public:
     }
   }
 
+
   void NextDt(NeuronPopulationBase * p_neu_pop,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) override
   {
-    if (~ty_neuron_init) {
-      TyN = dynamic_cast<IFJumpPopulation*>(p_neu_pop) -> TyN;
+    const IFJumpPopulation *const pif_pop =
+      dynamic_cast<const IFJumpPopulation*>(p_neu_pop);
+    is_constant_delay_net = pif_pop->is_constant_delay_net;
+    if (!ty_neuron_init) {
+      TyN = pif_pop -> TyN;
       ty_neuron_init = true;
     }
     t += dt;

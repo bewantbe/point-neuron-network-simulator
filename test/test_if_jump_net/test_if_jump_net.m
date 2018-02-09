@@ -12,8 +12,8 @@ pm.scei = 0.15;
 pm.scii = 0.14;
 pm.ps   = 0.125;
 pm.pr   = 2.0;
-pm.t    = 1e3;
-pm.dt   = 1.0;
+pm.t    = 1e6;
+pm.dt   = 10.0;
 pm.stv  = pm.dt;
 pm.seed = 24;
 pm.extra_cmd = '-v --verbose-echo';
@@ -23,12 +23,6 @@ tic
 toc
 fprintf('\n\n');
 fflush(stdout);
-
-%figure(1);
-%plot(V0');
-
-%figure(2);
-%ras_plot(ras0, true);
 
 pm.neuron_model = 'IF-jump';
 pm.simu_method = 'IF-jump-delay';
@@ -43,8 +37,10 @@ fflush(stdout);
 
 %V1'(18:25, :) - V2'(18:25, :)
 
-assert(any(size(ras1) == size(ras2)));
+size(ras1)
+size(ras2)
 
+assert(any(size(ras1) == size(ras2)));
 assert(any(ras1 == ras2));
 
 %figure(1);
@@ -52,5 +48,4 @@ assert(any(ras1 == ras2));
 
 %figure(2);
 %ras_plot(ras, true);
-size(ras1)
-size(ras2)
+
