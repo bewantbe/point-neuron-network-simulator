@@ -366,14 +366,17 @@ public:
 class IFJumpDelayNetSimulator :public IFJumpSimulator
 {
 protected:
-  struct SmallHeadExtractor
+  /*
+  struct SmallHeadExtractorOld
   {
-    const TySpikeEventStrengthVec &va, &vb;
-    size_t ia, ib;
+    const TySpikeEventStrength SEInf(Inf, 0, 0);
     const TySpikeEventStrength * p_min;
     double val;
 
-    SmallHeadExtractor(
+    const TySpikeEventStrengthVec &va, &vb;
+    size_t ia, ib;
+
+    SmallHeadExtractorOld(
         const TySpikeEventStrengthVec &_va, size_t _ia,
         const TySpikeEventStrengthVec &_vb, size_t _ib)
       :va(_va), vb(_vb), ia(_ia), ib(_ib)
@@ -383,11 +386,9 @@ protected:
 
     double Next()
     {
-      /*const _Ty &a = ia < va.size() ? va[ia] : Inf;*/
-      /*const _Ty &b = ib < vb.size() ? vb[ib] : Inf;*/
       if (ia >= va.size()) {
         if (ib >= vb.size()) {
-          p_min = NULL;
+          p_min = SEInf;
           val = Inf;
           return val;
         } else {
@@ -407,6 +408,61 @@ protected:
       val = p_min->time;
       return val;
     }
+
+    double StepBack()  // call this when data source updated
+    {
+    }
+  };
+  */
+  struct SmallHeadExtractor
+  {
+    const TySpikeEventStrength SEInf;
+    const TySpikeEventStrength *p_min;
+    double val;
+    int sw;        // point to last winner
+    size_t iv[2];  // point to last compared pair
+    const TySpikeEventStrength *pe[2];
+    const TySpikeEventStrengthVec *pv[2];
+
+    SmallHeadExtractor(
+        const TySpikeEventStrengthVec &_va, size_t _ia,
+        const TySpikeEventStrengthVec &_vb, size_t _ib)
+    : SEInf(Inf, 0, 0), sw(0)
+    {
+      init(_va, _ia, _vb, _ib);
+    }
+
+    void init(
+        const TySpikeEventStrengthVec &_va, size_t _ia,
+        const TySpikeEventStrengthVec &_vb, size_t _ib) {
+      pv[0] = &_va;
+      pv[1] = &_vb;
+      iv[0] = _ia;
+      iv[1] = _ib;
+      ReCompare();
+    }
+
+    void ReCompare()  // call this when data source updated
+    {
+      pe[0] = iv[0] < pv[0]->size() ? pv[0]->data() + iv[0] : &SEInf;
+      pe[1] = iv[1] < pv[1]->size() ? pv[1]->data() + iv[1] : &SEInf;
+      UpdateCmp();
+    }
+
+    double Next()  // NextCurrent
+    {
+      iv[sw] += iv[sw] < pv[sw]->size();
+      pe[sw] = iv[sw] < pv[sw]->size() ? pv[sw]->data() + iv[sw] : &SEInf;
+      return UpdateCmp();
+    }
+
+    // call this if you know the modification do not alter memory
+    double UpdateCmp()
+    {
+      sw = pe[0]->time >= pe[1]->time;
+      p_min = pe[sw];
+      return val = p_min->time;
+    }
   };
 
   TySpikeEventStrengthVec intra_events;
@@ -420,9 +476,9 @@ public:
   void IF_jump_simulator(NeuronPopulationBase * p_neu_pop, double t_end,
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike)
   {
-    TyNeuronalDymState &state = p_neu_pop->GetDymState();
     const auto &synaptic_delay_net = *(p_neu_pop->SynapticDelayNet());
     const auto &net = p_neu_pop->GetNeuronalParamsPtr()->net;
+    TyNeuronalDymState &state = p_neu_pop->GetDymState();
     TySpikeEventStrengthVec simultaneous_events;
 
     const double sc_vec[2][2] = {{pm.scee, -pm.scei},{pm.scie, -pm.scii}};
@@ -439,10 +495,10 @@ public:
       double t_event = extract_min_t.val;
       simultaneous_events.clear();
       simultaneous_events.push_back(*extract_min_t.p_min);
-      // Get all events at time t_event
+      // Get all events at the same time=t_event
       while (extract_min_t.Next() == t_event) {
         if (extract_min_t.p_min->id == simultaneous_events.back().id) {
-          // Merge events if they apply to the same neuron (at the same time)
+          // Merge events if they apply to the same neuron at the same time
           simultaneous_events.back().strength += extract_min_t.p_min->strength;
         } else {
           simultaneous_events.push_back(*extract_min_t.p_min);
@@ -474,18 +530,21 @@ public:
       // If (1) new events inserted; and (2) old non-used event exist; and
       //    (3) last old event is later than first new event.
       //    then we need a event sorting.
-      if (intra_events.size() > vb_end_save && vb_end_save > extract_min_t.ib &&
+      if (vb_end_save < intra_events.size() &&
+          vb_end_save > extract_min_t.iv[1] &&
          !(intra_events[vb_end_save-1] < intra_events[vb_end_save])) {
-        std::inplace_merge(intra_events.begin()+extract_min_t.ib,
+        std::inplace_merge(intra_events.begin()+extract_min_t.iv[1],
             intra_events.begin()+vb_end_save, intra_events.end());
       }
+      // if new event inserted
+      extract_min_t.ReCompare();
       // TODO: reintialize extract_min_t to deal with Inf problem.
     }
-    id_input_events = extract_min_t.ia;
-    id_intra_events = extract_min_t.ib;
-    if (extract_min_t.ib > 1000) {
+    id_input_events = extract_min_t.iv[0];
+    id_intra_events = extract_min_t.iv[1];
+    if (extract_min_t.iv[1] > 1000) {
       // we need to clean up the intra_event array
-      intra_events.erase(intra_events.begin(), intra_events.begin() + extract_min_t.ib);
+      intra_events.erase(intra_events.begin(), intra_events.begin() + extract_min_t.iv[1]);
       id_intra_events = 0;
     }
   }
