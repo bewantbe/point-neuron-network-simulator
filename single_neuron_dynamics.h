@@ -407,6 +407,7 @@ template<typename ExtraCurrent>
 struct Ty_HH_GH_CUR_core
   :public Ty_Neuron_Dym_Base
 {
+  using Ty_Neuron_Dym_Base::NextStepSingleNeuronQuiet;
   typedef typename ExtraCurrent::TyData TyCurrentData;
 
   double V_Na = 115;             // mV
