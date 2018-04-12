@@ -365,7 +365,6 @@ public:
   using NBase::StatePtr;
   using NBase::neuron_model;
   using NBase::time_in_refractory;
-  using NBase::TyDVec;
   using NBase::cur_param;
 
   NeuronPopulationDeltaInteractExtI(const TyNeuronalParams &_pm)
@@ -397,7 +396,7 @@ class NeuronPopulationDeltaInteractConstantDelay
 public:
   double synaptic_delay;
   double SynapticDelay() const override { return synaptic_delay; }
-  void SetSynapticDelay(double d) { synaptic_delay = d; }
+  void SetSynapticDelay(double d) override { synaptic_delay = d; }
 
   NeuronPopulationDeltaInteractConstantDelay(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm)
@@ -413,7 +412,7 @@ class NeuronPopulationDeltaInteractConstantDelaySine
 public:
   double synaptic_delay;
   double SynapticDelay() const override { return synaptic_delay; }
-  void SetSynapticDelay(double d) { synaptic_delay = d; }
+  void SetSynapticDelay(double d) override { synaptic_delay = d; }
 
   NeuronPopulationDeltaInteractConstantDelaySine(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractSine<TyNeu>(_pm)
@@ -428,7 +427,7 @@ class NeuronPopulationDeltaInteractConstantDelayExtI
 public:
   double synaptic_delay;
   double SynapticDelay() const override { return synaptic_delay; }
-  void SetSynapticDelay(double d) { synaptic_delay = d; }
+  void SetSynapticDelay(double d) override { synaptic_delay = d; }
 
   NeuronPopulationDeltaInteractConstantDelayExtI(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractExtI<TyNeu>(_pm)

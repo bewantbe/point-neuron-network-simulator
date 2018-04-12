@@ -33,6 +33,12 @@ struct Ty_Neuron_Dym_Base
     double &t_in_refractory,
     double &spike_time_local,
     double dt_local) const = 0;
+  // TODO: Need a better way to pass external current to the neuron.
+  //       If only pass a constant current, the simulation accuracy will be a bit low.
+  //       If pass a callable object, then we either need to
+  //         a) Use template for neuron model in NeuronPopulation (like now).
+  //         b) Use virtual class to hold the external data, but that will hurt speed.
+  //            Probably use (void*) ?
   virtual void VoltHandReset(double *dym_val) const = 0;
   virtual const double * Get_dym_default_val() const = 0;
 };
@@ -383,7 +389,7 @@ struct Ty_LIF_stepper: public TyNeuronModel, public Ty_Neuron_Dym_Base
     }
   }
 
-  const double * Get_dym_default_val() const
+  const double * Get_dym_default_val() const override
   {
      static const double dym[n_var] = {0};
      return dym;
@@ -563,7 +569,8 @@ struct Ty_HH_GH_CUR_core
     //t_in_refractory = 0;
     //}
   }
-  const double * Get_dym_default_val() const
+
+  const double * Get_dym_default_val() const override
   {
     static const double dym_default[n_var] = {
       2.7756626542950876e-04, 5.9611104634682788e-01,
@@ -881,7 +888,8 @@ template<template<class> class Ty_Neuron_With_Current>
 struct Neuron_Zero_Current_Adaper
     :public Ty_Neuron_With_Current<TyZeroCurrent>
 {
-  /*using Ty_HH_GH_CUR<TyZeroCurrent>::NextStepSingleNeuronQuiet;*/
+  //using Ty_Neuron_With_Current<TyZeroCurrent>::NextStepSingleNeuronQuiet;
+
   void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
     double &spike_time_local, double dt_local) const override
   {
