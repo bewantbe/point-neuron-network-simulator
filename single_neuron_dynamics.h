@@ -47,14 +47,14 @@ struct Ty_LIF_G_core
 {
   // The neuron model named LIF-G in this code.
   // This is the Leaky Integrate-and-Fire model with jump conductance.
-  double V_threshold   = 1.0;  // voltages are in dimensionless unit
-  double V_reset       = 0.0;
-  double V_leakage     = 0.0;
-  double V_excitatory  = 14.0/3.0;
-  double V_inhibitory  = -2.0/3.0;
-  double Con_Leakage     = 0.05;  // ms^-1
-  double Time_ExCon      = 2.0;   // ms
-  double Time_InCon      = 5.0;   // ms
+  double V_threshold  = 1.0;  // voltages are in dimensionless unit
+  double V_reset      = 0.0;
+  double V_leakage    = 0.0;
+  double V_excitatory = 14.0/3.0;
+  double V_inhibitory = -2.0/3.0;
+  double G_leak       = 0.05;  // ms^-1
+  double tau_gE       = 2.0;   // ms
+  double tau_gI       = 5.0;   // ms
   double Time_Refractory = 2.0;   // ms
   static const int n_var = 3;  // number of dynamical variables
   static const int id_V  = 0;  // index of V variable
@@ -66,14 +66,14 @@ struct Ty_LIF_G_core
   // Evolve conductance only
   void NextDtConductance(double *dym_val, double dt) const
   {
-    dym_val[id_gE] *= exp(-dt / Time_ExCon);
-    dym_val[id_gI] *= exp(-dt / Time_InCon);
+    dym_val[id_gE] *= exp(-dt / tau_gE);
+    dym_val[id_gI] *= exp(-dt / tau_gI);
   }
 
   // Get instantaneous dv/dt for current dynamical state
   double GetDv(const double *dym_val) const
   {
-    return - Con_Leakage * (dym_val[id_V] - V_leakage)
+    return - G_leak * (dym_val[id_V] - V_leakage)
            - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
            - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory);
   }
@@ -86,8 +86,8 @@ struct Ty_LIF_G_core
   {
     double v_n = dym_val[id_V];
     double k1, k2, k3, k4;
-    double exp_E = exp(-0.5 * dt / Time_ExCon);
-    double exp_I = exp(-0.5 * dt / Time_InCon);
+    double exp_E = exp(-0.5 * dt / tau_gE);
+    double exp_I = exp(-0.5 * dt / tau_gI);
 
     // k1 = f(t_n, y_n)
     k1 = GetDv(dym_val);
@@ -121,16 +121,16 @@ struct Ty_LIF_GH_core
 {
   // The neuron model named LIF-GH in this code.
   // This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance.
-  double V_threshold   = 1.0;  // voltages are in dimensionless unit
-  double V_reset       = 0.0;
-  double V_leakage     = 0.0;
-  double V_excitatory  = 14.0/3.0;
-  double V_inhibitory  = -2.0/3.0;
-  double Con_Leakage     = 0.05;  // ms^-1
-  double Time_ExCon      = 2.0;   // ms
-  double Time_ExConR     = 0.5;   // ms
-  double Time_InCon      = 5.0;   // ms
-  double Time_InConR     = 0.8;   // ms
+  double V_threshold  = 1.0;  // voltages are in dimensionless unit
+  double V_reset      = 0.0;
+  double V_leakage    = 0.0;
+  double V_excitatory = 14.0/3.0;
+  double V_inhibitory = -2.0/3.0;
+  double G_leak       = 0.05;  // ms^-1
+  double tau_gE       = 2.0;   // ms
+  double tau_gE_s1    = 0.5;   // ms
+  double tau_gI       = 5.0;   // ms
+  double tau_gI_s1    = 0.8;   // ms
   double Time_Refractory = 2.0;   // ms
   static const int n_var    = 5;  // number of dynamical variables
   static const int id_V     = 0;  // index of V variable
@@ -157,21 +157,21 @@ struct Ty_LIF_GH_core
         g [t] = exp(-t/tC) * g[0] + exp(-t/tCR) * gR[0] * (exp((1/tCR-1/tC)*t) - 1) / (1/tCR-1/tC)
     */
     // Excitatory
-    double expC  = exp(-dt / Time_ExCon);
-    double expCR = exp(-dt / Time_ExConR);
-    dym_val[id_gE] = expC*dym_val[id_gE] + (expC - expCR) * dym_val[id_gE_s1] * Time_ExCon * Time_ExConR / (Time_ExCon - Time_ExConR);
+    double expC  = exp(-dt / tau_gE);
+    double expCR = exp(-dt / tau_gE_s1);
+    dym_val[id_gE] = expC*dym_val[id_gE] + (expC - expCR) * dym_val[id_gE_s1] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
     dym_val[id_gE_s1] *= expCR;
     // Inhibitory
-    expC  = exp(-dt / Time_InCon);
-    expCR = exp(-dt / Time_InConR);
-    dym_val[id_gI] = expC*dym_val[id_gI] + (expC - expCR) * dym_val[id_gI_s1] * Time_InCon * Time_InConR / (Time_InCon - Time_InConR);
+    expC  = exp(-dt / tau_gI);
+    expCR = exp(-dt / tau_gI_s1);
+    dym_val[id_gI] = expC*dym_val[id_gI] + (expC - expCR) * dym_val[id_gI_s1] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
     dym_val[id_gI_s1] *= expCR;
   }
 
   // Get instantaneous dv/dt for current dynamical state
   inline double GetDv(const double *dym_val) const
   {
-    return - Con_Leakage * (dym_val[id_V] - V_leakage)
+    return - G_leak * (dym_val[id_V] - V_leakage)
            - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
            - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory);
   }
@@ -184,12 +184,12 @@ struct Ty_LIF_GH_core
   {
     double v_n = dym_val[id_V];
     double k1, k2, k3, k4;
-    double expEC  = exp(-0.5 * dt / Time_ExCon);  // TODO: maybe cache this value?
-    double expECR = exp(-0.5 * dt / Time_ExConR);
-    double expIC  = exp(-0.5 * dt / Time_InCon);
-    double expICR = exp(-0.5 * dt / Time_InConR);
-    double gE_s_coef = (expEC - expECR) * Time_ExCon * Time_ExConR / (Time_ExCon - Time_ExConR);
-    double gI_s_coef = (expIC - expICR) * Time_InCon * Time_InConR / (Time_InCon - Time_InConR);
+    double expEC  = exp(-0.5 * dt / tau_gE);  // TODO: maybe cache this value?
+    double expECR = exp(-0.5 * dt / tau_gE_s1);
+    double expIC  = exp(-0.5 * dt / tau_gI);
+    double expICR = exp(-0.5 * dt / tau_gI_s1);
+    double gE_s_coef = (expEC - expECR) * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+    double gI_s_coef = (expIC - expICR) * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
 
     // k1 = f(t_n, y_n)
     k1 = GetDv(dym_val);
@@ -1034,11 +1034,11 @@ struct Ty_HH_GH_cont_syn
 */
 struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
 {
-  double V_threshold     = 0.2;   // Currently used as input current.
-  double Time_ExCon      = 2.0;   // ms, same as "Ty_LIF_GH_core"
-  double Time_ExConR     = 0.5;   // ms
-  double Time_InCon      = 5.0;   // ms
-  double Time_InConR     = 0.8;   // ms
+  double tau_gE      = 2.0;   // ms, same as "Ty_LIF_GH_core"
+  double tau_gE_s1   = 0.5;   // ms
+  double tau_gI      = 5.0;   // ms
+  double tau_gI_s1   = 0.8;   // ms
+  double V_threshold = 0.2;   // Currently used as input current.
 
   static const int n_var    = 6;
   static const int id_V     = 0;
@@ -1093,12 +1093,12 @@ struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
 
     double v_n = dym_val[id_V];
     double k1, k2, k3, k4;
-    double expEC  = exp(-0.5 * dt / Time_ExCon);
-    double expECR = exp(-0.5 * dt / Time_ExConR);
-    double expIC  = exp(-0.5 * dt / Time_InCon);
-    double expICR = exp(-0.5 * dt / Time_InConR);
-    double gE_s_coef = (expEC - expECR) * Time_ExCon * Time_ExConR / (Time_ExCon - Time_ExConR);
-    double gI_s_coef = (expIC - expICR) * Time_InCon * Time_InConR / (Time_InCon - Time_InConR);
+    double expEC  = exp(-0.5 * dt / tau_gE);
+    double expECR = exp(-0.5 * dt / tau_gE_s1);
+    double expIC  = exp(-0.5 * dt / tau_gI);
+    double expICR = exp(-0.5 * dt / tau_gI_s1);
+    double gE_s_coef = (expEC - expECR) * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+    double gI_s_coef = (expIC - expICR) * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
 
     // k1 = f(t_n, y_n)
     k1 = GetDv(dym_val);
