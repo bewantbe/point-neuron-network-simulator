@@ -21,7 +21,7 @@ int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
     neu_dym_stat.time_in_refractory[j] = 0;
     j++;
     if (j >= neu_dym_stat.time_in_refractory.size()) {
-      cerr << "read " << j << " init data" << endl;
+      //cerr << "Read " << j << " init data" << endl;
       break;
     }
   }

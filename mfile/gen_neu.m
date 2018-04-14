@@ -337,6 +337,7 @@ else
     poisson_path = '';
 end
 
+tau_g_path = '';
 if has_nonempty_field(pm, 'tau_g')
     % validate format of pm.tau_g
     if size(pm.tau_g, 2) ~= 4 || size(pm.tau_g, 1) ~= pm.nI + pm.nE
@@ -347,8 +348,19 @@ if has_nonempty_field(pm, 'tau_g')
     tau_g_path = [data_dir_prefix 'tau_g_' tmp_f_name '.txt'];
     tau_g = pm.tau_g;
     save('-ascii', '-double', tau_g_path, 'tau_g');
-else
-    tau_g_path = '';
+end
+
+initial_state_path = '';
+if has_nonempty_field(pm, 'initial_state')
+    % validate format of pm.initial_state
+    if size(pm.tau_g, 1) ~= pm.nI + pm.nE
+        error('.initial_state number of neuron mismatch');
+    end
+    % save the data to a file
+    [~, tmp_f_name] = fileparts(tempname('./'));
+    initial_state_path = [data_dir_prefix 'initial_state_' tmp_f_name '.txt'];
+    initial_state = pm.initial_state;
+    save('-ascii', '-double', initial_state_path, 'initial_state');
 end
 
 if has_nonempty_field(pm, 'force_spikes')
@@ -422,21 +434,23 @@ if ~mode_legancy
     {'scei'}
     {'scii'}
     {'extI'}
-    {'sine_amp', [], '--current-sine-amp'}
-    {'sine_freq', [], '--current-sine-freq'}
+    {'sine_amp',           [], '--current-sine-amp'}
+    {'sine_freq',          [], '--current-sine-freq'}
     {'t', t_string}
     {'dt'}
     {'stv'}
     {'t_warming_up'}
     {'seed'}
-    {'spike_threshold', [], '--set-threshold'}
+    {'spike_threshold',    [], '--set-threshold'}
     {'synaptic_delay'}
     {'synaptic_net_delay', '', ['--synaptic-net-delay "' net_delay_path '"']}
     {'tau_g_path'}
-    {'tau_g', '', ['--tau-g-path "' tau_g_path '"']}
-    {'input_event', '', ['--input-event-path "' poisson_path '"']}
-    {'force_spikes', '', ['--force-spike-list "' force_spike_path '"']}
-    {'prog_path', '', st_paths}
+    {'tau_g',              '', ['--tau-g-path "' tau_g_path '"']}
+    {'initial_state_path'}
+    {'initial_state',      '', ['--initial-state-path "' initial_state_path '"']}
+    {'input_event',        '', ['--input-event-path "' poisson_path '"']}
+    {'force_spikes',       '', ['--force-spike-list "' force_spike_path '"']}
+    {'prog_path',          '', st_paths}
     {'output_poisson_path'}
     {'parameter_path'}
     {'extra_cmd', '%s', ''}
@@ -729,6 +743,7 @@ if mode_rm_only
     end
 end
 QuietDelete(tau_g_path);
+QuietDelete(initial_state_path);
 QuietDelete(poisson_path);
 QuietDelete(force_spike_path);
 QuietDelete(config_file_path);

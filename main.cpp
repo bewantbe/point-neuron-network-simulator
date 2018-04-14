@@ -530,7 +530,7 @@ int MainLoop(const po::variables_map &vm)
                  vm["initial-state-path"].as<std::string>().c_str());
     if (rt == 0) {
       b_init_loaded = true;
-      cout << "Initial state loaded." << endl;
+      if (b_verbose_echo) cout << "Initial state loaded." << endl;
     }
     //p_neu_simu->SaneTestVolt();
   }
