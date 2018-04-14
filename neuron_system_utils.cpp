@@ -32,6 +32,38 @@ int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path)
   return 0;
 }
 
+int FillVecFromFile(TyArrVals &v, const char *path)
+{
+  std::ifstream fin(path);
+  if (fin.fail()) {
+    cerr << "File not found: \"" << path << "\"" << endl;
+    return -1;
+  }
+  v.clear();
+  double d;
+  while (fin >> d) {
+    v.push_back(d);
+  }
+  return 0;
+}
+
+// Fill tau for conductance into dym_param from path.
+// The order is tau_gE_s1, tau_gE, tau_gI_s1, tau_gI.
+int FillTauG(TyNeuDymParam &dym_param, const char *path)
+{
+  TyArrVals v;
+  int rt = FillVecFromFile(v, path);
+  if (rt != 0) return rt;
+  if (v.size() % 4 != 0) {
+    cerr << "FillTauG: wrong content in file: \"" << path << "\"\n";
+    return 1;
+  }
+  int n_neu = v.size() / 4;
+  dym_param.resize(n_neu, 4);
+  memcpy(dym_param.data(), v.data(), v.size()*sizeof(v[0]));
+  return 0;
+}
+
 // Read network from text file. The number neurons should be known first.
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
                      bool is_sparse)

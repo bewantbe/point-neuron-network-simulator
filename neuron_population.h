@@ -43,10 +43,14 @@ public:
   virtual const TyNeuronalParams * GetNeuronalParamsPtr() const = 0;
   virtual const Ty_Neuron_Dym_Base * GetNeuronModel() const = 0;
 
+  // For delayed synaptic network only
   virtual double SynapticDelay() const { return 0; }
   virtual void SetSynapticDelay(double d) { };
   virtual const SparseMat * SynapticDelayNet() const { return nullptr; }
   virtual void SetSynapticDelayNet(const SparseMat &_dn) { };
+
+  // For setting neuronal dynamical constants
+  virtual void SetRisingFallingTau(const TyNeuDymParam &dym_param) { }
 };
 
 class NeuronPopulationBaseCommon:
@@ -163,6 +167,7 @@ public:
     }
   }
 
+  // FIXME: Bug here, network weight is not used here
   void SynapticInteraction(int neuron_id, const int spike_from_id) override
   {
     if (spike_from_id < n_E) {
@@ -265,6 +270,55 @@ public:
   }
   */
 
+};
+
+// A model allow to set all dynamical constants for each neuron
+template<class TyNeu>
+class NeuronPopulationDeltaInteractHeterogeneous
+  : public NeuronPopulationDeltaInteractTemplate<TyNeu>
+{
+  typedef NeuronPopulationDeltaInteractTemplate<TyNeu> NBase;
+  using NBase::StatePtr;
+  using NBase::n_neurons;
+  using NBase::time_in_refractory;
+
+public:
+  std::vector<TyNeu> neuron_model_array;
+  
+  NeuronPopulationDeltaInteractHeterogeneous(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractTemplate<TyNeu>(_pm),
+     neuron_model_array(_pm.n_total())
+  { }
+  
+  void SetRisingFallingTau(const TyNeuDymParam &dym_param) override
+  {
+    if (dym_param.rows() != n_neurons()) {
+      cerr << "dym_param.rows != n_neurons : " << dym_param.rows() << " != " << n_neurons() << "\n";
+      throw "Inconsistent number of neurons. ";
+    }
+    for (int k = 0; k < n_neurons(); k++) {
+      neuron_model_array[k].tau_gE_s1 = dym_param(k, 0);
+      neuron_model_array[k].tau_gE    = dym_param(k, 1);
+      neuron_model_array[k].tau_gI_s1 = dym_param(k, 2);
+      neuron_model_array[k].tau_gI    = dym_param(k, 3);
+    }
+  }
+
+  // TODO: load other dynamical parameters?
+  
+  void NoInteractDt(int neuron_id, double dt, double t_local,
+                    TySpikeEventVec &spike_events) override
+  {
+    dbg_printf("NoInteractDt(): neuron_id = %d\n", neuron_id);
+    double spike_time_local = qNaN;
+    double *dym_val = StatePtr(neuron_id);
+    QUIET_STEP_CALL_INC();
+    neuron_model_array[neuron_id].NextStepSingleNeuronQuiet(
+        dym_val, time_in_refractory[neuron_id], spike_time_local, dt);
+    if (!std::isnan(spike_time_local)) {
+      spike_events.emplace_back(t_local + spike_time_local, neuron_id);
+    }
+  }
 };
 
 class NeuronPopulationBaseSine: public NeuronPopulationBaseCommon

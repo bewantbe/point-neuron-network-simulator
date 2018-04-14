@@ -9,7 +9,10 @@
 
 typedef Eigen::SparseMatrix<double, Eigen::ColMajor> SparseMat;
 
-// Parameters about neuronal system, Especially the interactions.
+// Type to hold the dynamical constants (e.g. tau_gE).
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> TyNeuDymParam;
+
+// Parameters about the neuronal system, especially the interactions.
 struct TyNeuronalParams
 {
   int n_E, n_I;    // Number of neurons, Excitatory and Inhibitory type
@@ -23,7 +26,7 @@ struct TyNeuronalParams
   inline int n_total() const
   { return n_E + n_I; }
 
-  // should use this this function to initialize neurons
+  // use this function to initialize neurons
   void SetNumberOfNeurons(int _n_E, int _n_I)
   {
     n_E = _n_E;
@@ -42,7 +45,7 @@ struct TyNeuronalParams
   }
 };
 
-// All dynamical variables (V and G etc) for the neuron system
+// Dynamical (state) variables (V and G etc) for the neuron system.
 struct TyNeuronalDymState
 {
   // Current dynamical states of neurons
@@ -151,6 +154,7 @@ typedef std::vector< TySpikeEvent > TySpikeEventVec;
 typedef std::vector< TySpikeEventStrength > TySpikeEventStrengthVec;
 
 int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
+int FillTauG(TyNeuDymParam &dym_param, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
                      bool is_sparse);

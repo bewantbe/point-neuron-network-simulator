@@ -24,6 +24,8 @@
 %  pm.extra_cmd = '-v';  % All other parameters go here.
 %  [X, ISI, ras] = gen_neu(pm);
 %
+% Tip: see variable "c_options" for all supported options.
+%
 % Usage example 2: Always re-generate data, then read it.
 %  X = gen_neu(pm, 'new');
 %
@@ -32,10 +34,10 @@
 %
 % Usage example 4: Get also conductance and gating variables.
 %  [X, isi, ras, pm, extra_data] = gen_neu(pm,'new,extra_data');
-%  extra_data.G(1)  % E conductance of #1 neuron.
-%  extra_data.G(2)  % I conductance of #1 neuron.
-%  extra_data.G(3)  % E conductance of #2 neuron.
-%  extra_data.G(4)  % I conductance of #2 neuron.
+%  extra_data.G(1,:)  % E conductance of #1 neuron.
+%  extra_data.G(2,:)  % I conductance of #1 neuron.
+%  extra_data.G(3,:)  % E conductance of #2 neuron.
+%  extra_data.G(4,:)  % I conductance of #2 neuron.
 %  etc.
 %
 % Other possible values for "gen_cmd":
@@ -308,8 +310,7 @@ else
 end
 
 if has_nonempty_field(pm, 'input_event')
-    [~, tmp_f_name] = fileparts(tempname('./'));
-    poisson_path = [data_dir_prefix 'external_event_' tmp_f_name '.txt'];
+    % validate format of pm.input_event
     if (size(pm.input_event,2) ~= 2 && size(pm.input_event,2) ~= 3)
         error('pm.input_event must be 2 or 3 column, the order is "id time [strength]"');
     end
@@ -322,6 +323,9 @@ if has_nonempty_field(pm, 'input_event')
         [~, id_sort] = sort(pm.input_event(:,2));
         pm.input_event = pm.input_event(id_sort, :);
     end
+    % save the data to a file
+    [~, tmp_f_name] = fileparts(tempname('./'));
+    poisson_path = [data_dir_prefix 'external_event_' tmp_f_name '.txt'];
     fd = fopen(poisson_path, 'w');
     if size(pm.input_event, 2) == 2
         fprintf(fd, '%d %.16e\n', pm.input_event');
@@ -331,6 +335,20 @@ if has_nonempty_field(pm, 'input_event')
     fclose(fd);
 else
     poisson_path = '';
+end
+
+if has_nonempty_field(pm, 'tau_g')
+    % validate format of pm.tau_g
+    if size(pm.tau_g, 2) ~= 4 || size(pm.tau_g, 1) ~= pm.nI + pm.nE
+        error('The dimension of .tau_g should be n x 4.');
+    end
+    % save the data to a file
+    [~, tmp_f_name] = fileparts(tempname('./'));
+    tau_g_path = [data_dir_prefix 'tau_g_' tmp_f_name '.txt'];
+    tau_g = pm.tau_g;
+    save('-ascii', '-double', tau_g_path, 'tau_g');
+else
+    tau_g_path = '';
 end
 
 if has_nonempty_field(pm, 'force_spikes')
@@ -414,6 +432,8 @@ if ~mode_legancy
     {'spike_threshold', [], '--set-threshold'}
     {'synaptic_delay'}
     {'synaptic_net_delay', '', ['--synaptic-net-delay "' net_delay_path '"']}
+    {'tau_g_path'}
+    {'tau_g', '', ['--tau-g-path "' tau_g_path '"']}
     {'input_event', '', ['--input-event-path "' poisson_path '"']}
     {'force_spikes', '', ['--force-spike-list "' force_spike_path '"']}
     {'prog_path', '', st_paths}
@@ -448,7 +468,7 @@ else
         pm.psi_mul = pm.psi;
         pm.psi = 1;
     end
-    % Parameters that will pass to executable gen_neu.
+    % Parameters that will pass to the old simulator raster_tuning.
     c_options = {...
     {'prog_path', '"%s" -ng -inf - --RC-filter 0 1', ''}
     {'nE', [], '-n'}
@@ -708,6 +728,7 @@ if mode_rm_only
         QuietDelete(pm.net_path);
     end
 end
+QuietDelete(tau_g_path);
 QuietDelete(poisson_path);
 QuietDelete(force_spike_path);
 QuietDelete(config_file_path);
@@ -744,13 +765,12 @@ end
 % If "formatting" or "option_name" is [], then it is treated as if not
 %   provided. To pass empty string, use ''.
 function str = get_option_str(s, field_name, formatting, option_name)
-    if ~isfield(s, field_name) ||...
-        isempty(s.(field_name)) && ~ischar(s.(field_name))
+    if ~isfield(s, field_name) || isemptymatrix(s.(field_name))
         str = '';
         return
     end
     % Auto determine the data formatting.
-    if ~exist('formatting', 'var') || isempty(formatting) && ~ischar(formatting)
+    if ~exist('formatting', 'var') || isemptymatrix(formatting)
         f = s.(field_name);
         if isnumeric(f) && isvector(f)
             formatting = ' %.17g';
@@ -764,7 +784,7 @@ function str = get_option_str(s, field_name, formatting, option_name)
         end
     end
     % Auto determine the command line option name.
-    if ~exist('option_name', 'var') || isempty(option_name) && ~ischar(option_name)
+    if ~exist('option_name', 'var') || isemptymatrix(option_name)
         option_name = ['--' strrep(field_name , '_', '-')];
     end
     if isempty(formatting)
@@ -777,6 +797,10 @@ function str = get_option_str(s, field_name, formatting, option_name)
     end
     white_space = char(' '*ones(1, 1-(length(option_name)==0 || length(str1)==0 || str1(1)==' ')));
     str = [option_name white_space str1];
+end
+
+function b = isemptymatrix(a)
+  b = isempty(a) && ~ischar(a);
 end
 
 function z = inlineif(c, a, b)
