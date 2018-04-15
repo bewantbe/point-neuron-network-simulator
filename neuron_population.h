@@ -51,6 +51,7 @@ public:
 
   // For setting neuronal dynamical constants
   virtual void SetRisingFallingTau(const TyNeuDymParam &dym_param) { }
+  virtual void SetAllDymParam(const TyArrVals &v) { }
 };
 
 class NeuronPopulationBaseCommon:
@@ -304,7 +305,28 @@ public:
     }
   }
 
-  // TODO: load other dynamical parameters?
+  void SetAllDymParam(const TyArrVals &v) override
+  {
+    /*
+    int neu_sz = sizeof(TyNeu);
+    cout << "SetAllDymParam: sz of model = " << neu_sz << " byte.\n";
+    double *vd = (double*)neuron_model_array.data();
+    size_t *vi = (size_t*)neuron_model_array.data();
+    for (int k = 0; k < neu_sz / sizeof(double); k++) {
+      printf("v[%d] = %.16g = %lx\n", k, vd[k], vi[k]);
+    }
+    */
+    int offset = 8;  // offset in byte, to the start of struct data member
+    int neu_sz = sizeof(TyNeu) - offset;
+    if (v.size() != n_neurons() * neu_sz/sizeof(double)) {
+      throw "Data length inconsistent: neuronal constants. ";
+    }
+    // Fill in the fields in the struct of neuron model
+    for (int k = 0; k < n_neurons(); k++) {
+      memcpy((char*)(neuron_model_array.data() + k) + offset,
+          v.data() + k * neu_sz, neu_sz);
+    }
+  }
   
   void NoInteractDt(int neuron_id, double dt, double t_local,
                     TySpikeEventVec &spike_events) override

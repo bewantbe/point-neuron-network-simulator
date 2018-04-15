@@ -154,6 +154,7 @@ typedef std::vector< TySpikeEvent > TySpikeEventVec;
 typedef std::vector< TySpikeEventStrength > TySpikeEventStrengthVec;
 
 int FillNeuStateFromFile(TyNeuronalDymState &neu_dym_stat, const char *path);
+int FillVecFromFile(TyArrVals &v, const char *path);
 int FillTauG(TyNeuDymParam &dym_param, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,

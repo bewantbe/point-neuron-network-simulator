@@ -249,6 +249,9 @@ end
 if xor(isfield(pm,'pri'), isfield(pm,'psi'))
     warning('gen_neu:pm', 'pri and psi not privided together.');
 end
+if isfield(pm, 'neuron_const') && isfield(pm, 'scee_mV')
+    warning('When .neuron_const is provided, .scee_mV is no longer valid in general.');
+end
 
 % Prepare the neuronal network.
 if ~ enable_default_parameters && ~ has_nonempty_field(pm, 'net')
@@ -353,7 +356,7 @@ end
 initial_state_path = '';
 if has_nonempty_field(pm, 'initial_state')
     % validate format of pm.initial_state
-    if size(pm.tau_g, 1) ~= pm.nI + pm.nE
+    if size(pm.initial_state, 1) ~= pm.nI + pm.nE
         error('.initial_state number of neuron mismatch');
     end
     % save the data to a file
@@ -361,6 +364,19 @@ if has_nonempty_field(pm, 'initial_state')
     initial_state_path = [data_dir_prefix 'initial_state_' tmp_f_name '.txt'];
     initial_state = pm.initial_state;
     save('-ascii', '-double', initial_state_path, 'initial_state');
+end
+
+neuron_const_path = '';
+if has_nonempty_field(pm, 'neuron_const')
+    % validate format of pm.neuron_const
+    if size(pm.neuron_const, 1) ~= pm.nI + pm.nE
+        error('.neuron_const number of neuron mismatch');
+    end
+    % save the data to a file
+    [~, tmp_f_name] = fileparts(tempname('./'));
+    neuron_const_path = [data_dir_prefix 'neuron_const_' tmp_f_name '.txt'];
+    neuron_const = pm.neuron_const;
+    save('-ascii', '-double', neuron_const_path, 'neuron_const');
 end
 
 if has_nonempty_field(pm, 'force_spikes')
@@ -448,6 +464,8 @@ if ~mode_legancy
     {'tau_g',              '', ['--tau-g-path "' tau_g_path '"']}
     {'initial_state_path'}
     {'initial_state',      '', ['--initial-state-path "' initial_state_path '"']}
+    {'neuron_const_path'}
+    {'neuron_const',      '', ['--neuron-const-path "' neuron_const_path '"']}
     {'input_event',        '', ['--input-event-path "' poisson_path '"']}
     {'force_spikes',       '', ['--force-spike-list "' force_spike_path '"']}
     {'prog_path',          '', st_paths}

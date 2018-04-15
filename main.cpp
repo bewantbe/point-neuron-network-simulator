@@ -313,7 +313,7 @@ int MainLoop(const po::variables_map &vm)
         return -1;
     }
     p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
-  } else if (vm.count("tau-g-path")) {
+  } else if (vm.count("tau-g-path") || vm.count("neuron-const-path")) {
     switch (enum_neuron_model) {
       case LIF_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractHeterogeneous<Ty_LIF_GH>(pm);
@@ -324,9 +324,16 @@ int MainLoop(const po::variables_map &vm)
       default:
         throw "tau-g-path: only LIF-GH and HH-GH are supported";
     }
-    TyNeuDymParam dym_param;
-    FillTauG(dym_param, vm["tau-g-path"].as<std::string>().c_str());
-    p_neu_pop->SetRisingFallingTau(dym_param);
+    if (vm.count("tau-g-path")) {
+      TyNeuDymParam dym_param;
+      FillTauG(dym_param, vm["tau-g-path"].as<std::string>().c_str());
+      p_neu_pop->SetRisingFallingTau(dym_param);
+    }
+    if (vm.count("neuron-const-path")) {
+      TyArrVals v;
+      FillVecFromFile(v, vm["neuron-const-path"].as<std::string>().c_str());
+      p_neu_pop->SetAllDymParam(v);
+    }
   } else {
     switch (enum_neuron_model) {
       case LIF_G:
@@ -890,6 +897,8 @@ int main(int argc, char *argv[])
        "Output generated poisson events to the path")
       ("tau-g-path", po::value<std::string>(),
        "Set rising and falling time constants for E and I conductance for each neuron from path.")
+      ("neuron-const-path", po::value<std::string>(),
+       "Set dynamical constants for each neuron from path.")
       ("initial-state-path", po::value<std::string>(),
        "Read initial state from path.")
       ("input-event-path", po::value<std::string>(),
