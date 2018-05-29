@@ -1,7 +1,7 @@
 %
 
 pm = [];
-pm.neuron_model = 'LIF-GH';
+pm.neuron_model = 'DIF-single-GH';
 pm.simu_method = 'simple';
 pm.net  = zeros(1);
 pm.nI   = floor(length(pm.net)/2);
@@ -27,20 +27,21 @@ pm.input_event = [...
 ];
 
 % Set neuronal dynamical constants.
-% For LIF-GH that is:
-%   V_threshold, V_reset, V_leakage, V_excitatory, V_inhibitory, G_leak, tau_gE,
-%   tau_gE_s1, tau_gI, tau_gI_s1, Time_Refractory
+% For DIF-single-GH that is:
+%   V_threshold, V_reset, V_leakage, V_excitatory, V_inhibitory, G_leak, synaptic_alpha,
+%   tau_gE, tau_gE_s1, tau_gI, tau_gI_s1, Time_Refractory
 % See single_neuron_dynamics.h and search "int n_var" for the details of other
 %   neuron models.
-% Currently, only LIF-GH and HH-GH model support this function. And it can not 
-%   combine with delayed synaptic or current/sine input.
+% Currently, only LIF-GH, DIF-single-GH and HH-GH model support this function.
+% And it can not combine with delayed synaptic or current/sine input.
 pm.neuron_const = [...
-1.0, 0.0, 0.0, 14/3.0, -2/3.0, 0.05, 2.0, 0.5, 5.0, 0.8, 2.0
+1.0, 0.0, 0.0, 14/3.0, -2/3.0, 0.05, 1, 2.0, 0.5, 5.0, 0.8, 2.0
 ];
 
 % Set initial state of the neurons.
-% For LIF-GH that is V, gE, gI, gE_s1, gI_s1
-%   The s1 means the equation that receives delta input directly.
+% For DIF-single-GH that is
+%   V, gE, gI, gE_s1, gI_s1
+% The s1 means the equation that receives delta input directly.
 % See single_neuron_dynamics.h and search "int n_var" for the details of other
 %   neuron models.
 % Note: no error checking is performed.
@@ -51,15 +52,15 @@ pm.initial_state = [...
 [X, ISI, ras, pm1, extra_data] = gen_neu(pm, 'rm');
 
 s_t = (1:length(X))*pm.stv;
-figure(10);
+figure(11);
 plot(s_t, X);
 
 f_exp_rise_fall = @(t, tg, th) tg*th*(exp(-t/tg) - exp(-t/th))/(tg-th) .* (t>0);
-GE_ref = pm.ps  * f_exp_rise_fall(s_t-5.0, pm.neuron_const(7), pm.neuron_const(8));
-GI_ref = pm.psi * f_exp_rise_fall(s_t-5.0, pm.neuron_const(9), pm.neuron_const(10));
+GE_ref = pm.ps  * f_exp_rise_fall(s_t-5.0, pm.neuron_const(8), pm.neuron_const(9));
+GI_ref = pm.psi * f_exp_rise_fall(s_t-5.0, pm.neuron_const(10), pm.neuron_const(11));
 G_ref = [GE_ref; GI_ref];
 
-figure(20);
+figure(21);
 plot(s_t, extra_data.G, s_t, G_ref);
 
 fprintf('Should be machine eps: \n');

@@ -1176,4 +1176,104 @@ struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
   }
 };
 
+//
+struct Ty_LIF_GH_single_dendritic_core
+{
+  // The neuron model named DIF-GH in this code.
+  // This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance. and the conductance has second order term.
+  double V_threshold  = 1.0;  // voltages are in dimensionless unit
+  double V_reset      = 0.0;
+  double V_leakage    = 0.0;
+  double V_excitatory = 14.0/3.0;
+  double V_inhibitory = -2.0/3.0;
+  double G_leak       = 0.05;  // ms^-1
+  double synaptic_alpha = 0.01;
+  double tau_gE       = 2.0;   // ms
+  double tau_gE_s1    = 0.5;   // ms
+  double tau_gI       = 5.0;   // ms
+  double tau_gI_s1    = 0.8;   // ms
+  double Time_Refractory = 2.0;   // ms
+  static const int n_var    = 5;  // number of dynamical variables
+  static const int id_V     = 0;  // index of V variable
+  static const int id_gE    = 1;  // index of gE variable
+  static const int id_gI    = 2;  // index of gI variable
+  static const int id_gE_s1 = 3;  // index of derivative of gE
+  static const int id_gI_s1 = 4;  // index of derivative of gI
+  static const int id_gEInject = id_gE_s1;  // index of gE injection variable
+  static const int id_gIInject = id_gI_s1;  // index of gI injection variable
+
+  // Evolve conductance only
+  void NextDtConductance(double *dym_val, double dt) const
+  {
+    // Excitatory
+    double expC  = exp(-dt / tau_gE);
+    double expCR = exp(-dt / tau_gE_s1);
+    dym_val[id_gE] = expC*dym_val[id_gE] + (expC - expCR) * dym_val[id_gE_s1] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+    dym_val[id_gE_s1] *= expCR;
+    // Inhibitory
+    expC  = exp(-dt / tau_gI);
+    expCR = exp(-dt / tau_gI_s1);
+    dym_val[id_gI] = expC*dym_val[id_gI] + (expC - expCR) * dym_val[id_gI_s1] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
+    dym_val[id_gI_s1] *= expCR;
+  }
+
+  // Get instantaneous dv/dt for current dynamical state
+  inline double GetDv(const double *dym_val) const
+  {
+    return - G_leak * (dym_val[id_V] - V_leakage)
+           - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
+           - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory)
+           + synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] *
+             ((dym_val[id_V] - V_excitatory));
+  }
+
+  // Evolve the state `dym_val' a `dt' forward,
+  // using classical Runge–Kutta 4-th order scheme for voltage.
+  // Conductance will evolve using the exact formula.
+  // Return derivative k1 at t_n, for later interpolation.
+  MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
+  {
+    double v_n = dym_val[id_V];
+    double k1, k2, k3, k4;
+    double expEC  = exp(-0.5 * dt / tau_gE);  // TODO: maybe cache this value?
+    double expECR = exp(-0.5 * dt / tau_gE_s1);
+    double expIC  = exp(-0.5 * dt / tau_gI);
+    double expICR = exp(-0.5 * dt / tau_gI_s1);
+    double gE_s_coef = (expEC - expECR) * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+    double gI_s_coef = (expIC - expICR) * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
+
+    // k1 = f(t_n, y_n)
+    k1 = GetDv(dym_val);
+
+    // y_n + 0.5*k1*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k1;
+    dym_val[id_gE] = expEC * dym_val[id_gE] + gE_s_coef * dym_val[id_gE_s1];
+    dym_val[id_gI] = expIC * dym_val[id_gI] + gI_s_coef * dym_val[id_gI_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI_s1] *= expICR;
+    // k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+    k2 = GetDv(dym_val);
+
+    // y_n + 0.5*k2*dt
+    dym_val[id_V ] = v_n + 0.5 * dt * k2;
+    // k3 = f(t+dt/2, y_n + 0.5*k2*dt)
+    k3 = GetDv(dym_val);
+
+    // y_n + k3*dt
+    dym_val[id_V ] = v_n + dt * k3;
+    dym_val[id_gE] = expEC * dym_val[id_gE] + gE_s_coef * dym_val[id_gE_s1];
+    dym_val[id_gI] = expIC * dym_val[id_gI] + gI_s_coef * dym_val[id_gI_s1];
+    dym_val[id_gE_s1] *= expECR;
+    dym_val[id_gI_s1] *= expICR;
+    // k4 = f(t+dt, y_n + k3*dt)
+    k4 = GetDv(dym_val);
+
+    dym_val[id_V ] = v_n + dt/6.0 * (k1 + 2*k2 + 2*k3 + k4);
+
+    return k1;
+  }
+};
+
+typedef Ty_LIF_stepper<Ty_LIF_GH_single_dendritic_core> Ty_DIF_single_GH;
+
 #endif

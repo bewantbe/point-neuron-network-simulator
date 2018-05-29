@@ -125,7 +125,8 @@ int MainLoop(const po::variables_map &vm)
     LIF_G, LIF_GH, HH_G, HH_GH, HH_PT_GH, HH_FT_GH,
     HH_G_sine, HH_GH_sine, HH_PT_GH_sine, HH_FT_GH_sine,
     HH_G_extI, HH_GH_extI,
-    HH_GH_cont_syn, IF_jump, Hawkes_GH
+    HH_GH_cont_syn, IF_jump, Hawkes_GH,
+    DIF_single_GH
   };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
@@ -158,6 +159,8 @@ int MainLoop(const po::variables_map &vm)
     enum_neuron_model =     IF_jump;
   } else if (str_nm ==     "Hawkes-GH") {
     enum_neuron_model =     Hawkes_GH;
+  } else if (str_nm ==     "DIF-single-GH") {
+    enum_neuron_model =     DIF_single_GH;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -311,6 +314,8 @@ int MainLoop(const po::variables_map &vm)
       case Hawkes_GH:
         cerr << "Delay for Hawkes-GH is not supported yet.\n";
         return -1;
+      default:
+        throw "not supported combination of model and network.";
     }
     p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
   } else if (vm.count("tau-g-path") || vm.count("neuron-const-path")) {
@@ -318,11 +323,14 @@ int MainLoop(const po::variables_map &vm)
       case LIF_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractHeterogeneous<Ty_LIF_GH>(pm);
         break;
+      case DIF_single_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractHeterogeneous<Ty_DIF_single_GH>(pm);
+        break;
       case HH_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractHeterogeneous<Ty_HH_GH>(pm);
         break;
       default:
-        throw "tau-g-path: only LIF-GH and HH-GH are supported";
+        throw "tau-g-path: only LIF-GH, DIF_single_GH and HH-GH are supported";
     }
     if (vm.count("tau-g-path")) {
       TyNeuDymParam dym_param;
@@ -380,6 +388,9 @@ int MainLoop(const po::variables_map &vm)
         break;
       case Hawkes_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_Hawkes_GH>(pm);
+        break;
+      case DIF_single_GH:
+        p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_DIF_single_GH>(pm);
         break;
     }
   }
@@ -822,7 +833,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH.")
+       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH, DIF_single_GH.")
       ("simulation-method",  po::value<std::string>(),
        "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, IF-jump-delay, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
