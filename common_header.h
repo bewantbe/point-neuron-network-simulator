@@ -33,6 +33,7 @@ static const double Inf = std::numeric_limits<double>::infinity();
 static const double qNaN = std::numeric_limits<double>::quiet_NaN();
 
 typedef std::vector<double> TyArrVals;
+typedef std::vector<TyArrVals> TyMatVals;
 
 extern std::mt19937 rand_eng;
 double g_rand();

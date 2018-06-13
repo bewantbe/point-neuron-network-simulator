@@ -126,7 +126,7 @@ int MainLoop(const po::variables_map &vm)
     HH_G_sine, HH_GH_sine, HH_PT_GH_sine, HH_FT_GH_sine,
     HH_G_extI, HH_GH_extI,
     HH_GH_cont_syn, IF_jump, Hawkes_GH,
-    DIF_single_GH
+    DIF_single_GH, DIF_GH
   };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
@@ -160,7 +160,9 @@ int MainLoop(const po::variables_map &vm)
   } else if (str_nm ==     "Hawkes-GH") {
     enum_neuron_model =     Hawkes_GH;
   } else if (str_nm ==     "DIF-single-GH") {
-    enum_neuron_model =     DIF_single_GH;
+	enum_neuron_model =		DIF_single_GH;
+  } else if (str_nm ==     "DIF-GH"){
+	  enum_neuron_model = DIF_GH;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -207,6 +209,23 @@ int MainLoop(const po::variables_map &vm)
   } else {
     cout << "You must specify a network. (--net)" << endl;
     return -1;
+  }
+
+  // Only for DIF
+  // Parameters about --alpha-coefficient
+  // Initialize alpha_coef(ficient) before DIF-related models contruction
+  pm.DIF_flag = false;
+  if (enum_neuron_model == DIF_GH) {
+	  pm.DIF_flag = true;
+	  if (vm.count("alpha-coefficient")) {
+		  std::string name_coef = vm["alpha-coefficient"].as<std::string>();
+		  bool is_sparse = vm.count("sparse-net") > 0;
+		  InitAlphaCoeffFromPath(pm, name_coef, is_sparse);
+	  }
+	  else {
+		  cout << "You must specify alpha coefficients. (--alpha-coefficient)" << endl;
+		  return -1;
+	  }
   }
 
   // Set neuron population type
@@ -392,6 +411,8 @@ int MainLoop(const po::variables_map &vm)
       case DIF_single_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_DIF_single_GH>(pm);
         break;
+	  case DIF_GH:
+		p_neu_pop = new NeuronPopulationDendriticDeltaInteractTemplate<Ty_DIF_GH>(pm);
     }
   }
   // Get basic single neuron info
@@ -833,7 +854,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH, DIF_single_GH.")
+       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH, DIF-single-GH, DIF-GH.")
       ("simulation-method",  po::value<std::string>(),
        "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, IF-jump-delay, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",

@@ -150,6 +150,74 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
   }
 }
 
+
+// YWS
+// credit to http://www.cplusplus.com/forum/general/42594/
+double string2double(const std::string& a)
+{
+	// Convert a string representation of a number into a floating point value.
+	// Throws an int if the string contains anything but whitespace and a valid
+	// numeric representation.
+	//
+	double result;
+	std::string s(a);
+
+	// Get rid of any trailing whitespace
+	s.erase(s.find_last_not_of(" \f\n\r\t\v") + 1);
+
+	// Read it into the target type
+	std::istringstream ss(s);
+	ss >> result;
+
+	// Check to see that there is nothing left over
+	if (!ss.eof())
+		throw 1;
+
+	return result;
+}
+
+bool isNumber(std::string str) {
+	try
+	{
+		string2double(str);
+	}
+	catch (int)
+	{
+		return false;
+	}
+}
+
+void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef, bool is_sparse)
+{
+	int n_neu = pm.n_total();
+
+	if (isNumber(name_coef)) {
+		double value = string2double(name_coef);
+		std::vector<double > onerow(n_neu, value);
+		std::vector<std::vector<double> > onemat(n_neu, onerow);
+
+		pm.alpha.resize(n_neu, onemat);
+
+	}
+	else {
+		std::ifstream fin_net(name_coef);
+		if (!fin_net) {
+			cerr << "Fail to open file! \"" << name_coef << "\"" << endl;
+			throw "Fail to open file!\n";
+		}
+		if (!is_sparse) {
+			// Read network from text file
+			// TODO YWS
+		}
+		else {
+			// TODO YWS
+
+		}
+
+	}
+}
+
+
 SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net)
 {
   std::ifstream fin_net(dn_name);
