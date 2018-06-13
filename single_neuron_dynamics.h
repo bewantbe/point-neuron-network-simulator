@@ -1342,6 +1342,9 @@ struct Ty_DIF_GH_core
 		double expCI = exp(-dt / tau_gI);
 		double expCRI = exp(-dt / tau_gI_s1);
 
+		dym_val[id_gEPoisson] *= expCE;
+		dym_val[id_gIPoisson] *= expCI;
+		
 		for (int i = 0; i < n_neu; i++) {
 			// exhibitory
 			dym_val[get_id_gE(i)] = expCE*dym_val[get_id_gE(i)] + (expCE - expCRE) * dym_val[get_id_gE_s1(i)] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
@@ -1350,6 +1353,7 @@ struct Ty_DIF_GH_core
 			dym_val[get_id_gI(i)] = expCI*dym_val[get_id_gI(i)] + (expCI - expCRI) * dym_val[get_id_gI_s1(i)] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
 			dym_val[get_id_gI_s1(i)] *= expCRI;
 		}
+		
 	}
 
 	// Get instantaneous dv/dt for current dynamical state
@@ -1360,17 +1364,21 @@ struct Ty_DIF_GH_core
 
 		double retval = 0;
 		retval += G_leak * (v_n - V_leakage);
+		retval += dym_val[id_gEPoisson] * (v_n - V_excitatory);
+		retval += dym_val[id_gIPoisson] * (v_n - V_inhibitory);
 
-		for (int i = 0; i < n_var; i++) {
+		
+		for (int i = 0; i < n_neu; i++) {
 			retval += dym_val[get_id_gE(i)] * (v_n - V_excitatory);
 			retval += dym_val[get_id_gI(i)] * (v_n - V_inhibitory);
 
 		}
-		for (int i = 0; i < n_var; i++) {
-			for (int j = 0; j < n_var; j++) {
-				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(i)];  // *(V-V_excitatory)
+		for (int i = 0; i < n_neu; i++) {
+			for (int j = 0; j < n_neu; j++) {
+				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(i)] * (dym_val[id_V] - V_excitatory);
 			}
 		}
+		
 
 		return -retval;  // NOTE that in fact all terms are negative
 	}

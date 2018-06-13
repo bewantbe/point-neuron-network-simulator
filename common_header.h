@@ -21,7 +21,7 @@
 using std::cout;
 using std::cerr;
 using std::endl;
-
+#undef NDEBUG
 #ifdef NDEBUG
 #define dbg_printf(...) ((void)0);
 #else

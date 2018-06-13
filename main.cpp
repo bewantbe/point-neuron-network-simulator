@@ -14,6 +14,7 @@ TODO:
    * add to Poisson event queue?
    * isomerisom of neurons in a network?
 */
+#pragma warning(disable : 4996)  
 
 #ifndef DEBUG
 #define NDEBUG  // disable assert() and disable checks in Eigen
@@ -939,6 +940,8 @@ int main(int argc, char *argv[])
        "Read parameters from path, in INI style.")
       ("force-spike-list", po::value<std::string>(),
        "Read force spike list.")
+	  ("alpha-coefficient", po::value<std::string>(),
+	   "Set alpha-coeffecient from path, needed for DIF model.")
   ;
   // filter?
 

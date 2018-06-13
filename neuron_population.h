@@ -652,10 +652,10 @@ public:						 // It is defined in struct TyNeuronalDymState
 			// Inhibitory neuron fired
 			for (SparseMat::InnerIterator it(net, se.id); it; ++it) {
 				if (it.row() < n_E) {
-					dym_vals(it.row(), TyNeu::n_var + n_total() * 2 + se.id) += it.value() * scei;
+					dym_vals(it.row(), TyNeu::n_var + n_total() * 3 + se.id) += it.value() * scei; // YWSCHECK
 				}
 				else {
-					dym_vals(it.row(), TyNeu::n_var + n_total() * 2 + se.id) += it.value() * scii;
+					dym_vals(it.row(), TyNeu::n_var + n_total() * 3 + se.id) += it.value() * scii;
 				}
 			}
 		}
@@ -725,7 +725,7 @@ public:						 // It is defined in struct TyNeuronalDymState
 
 	const Ty_Neuron_Dym_Base * GetNeuronModel() const override
 	{
-		assert(0);
+		// YWSCHECK assert(0);
 		return &neuron_models[0];
 	}
 };

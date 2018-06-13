@@ -185,6 +185,7 @@ bool isNumber(std::string str) {
 	{
 		return false;
 	}
+	return true;
 }
 
 void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef, bool is_sparse)
