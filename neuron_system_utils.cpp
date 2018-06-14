@@ -230,7 +230,8 @@ void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef
 			}
 
 			if (!fin_alpha) {
-				cerr << "Bad alpha coefficient file: \"" << name_coef << "\"\n";
+				cerr << "Bad alpha coefficient file: \"" << name_coef << "\"\n"
+					<< " Notice that alpha coefficent file shall contain n*n*n doubles (n is the number of neurons)\n";
 				throw "Bad alpha coefficient file!\n";
 			}
 		}
