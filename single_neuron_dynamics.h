@@ -1223,7 +1223,7 @@ struct Ty_LIF_GH_single_dendritic_core
     return - G_leak * (dym_val[id_V] - V_leakage)
            - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
            - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory)
-           + synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] *
+           - synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] * // YWS I did a test here
              ((dym_val[id_V] - V_excitatory));
   }
 
@@ -1300,10 +1300,12 @@ struct Ty_DIF_GH_core
 
 	int n_neu;			 // number of neurons, it will be intialized in 
 								 // NeuronPopulationDendriticDeltaInteractTemplate and other similar classes
-	static const int n_var = 3;  // number of dynamical variables
+	static const int n_var = 5;  // number of dynamical variables
 	static const int id_V = 0;   // index of V variable
 	static const int id_gEPoisson = 1; // index of conductance rlatinng to Poisson input
 	static const int id_gIPoisson = 2; // index of conductance rlatinng to Poisson input
+	static const int id_gEPoisson_s1 = 3; // index of conductance rlatinng to Poisson input
+	static const int id_gIPoisson_s1 = 4; // index of conductance rlatinng to Poisson input
 
 	// The following id shall be interpreted differentyl, since the there are a vector of gE, gI, etc
 	// id_x = n really means the data is stored continously in dymvals 
@@ -1342,8 +1344,11 @@ struct Ty_DIF_GH_core
 		double expCI = exp(-dt / tau_gI);
 		double expCRI = exp(-dt / tau_gI_s1);
 
-		dym_val[id_gEPoisson] *= expCE;
-		dym_val[id_gIPoisson] *= expCI;
+		// The two lines below is for test, based on my guess YWS, it seems works well 
+		dym_val[id_gEPoisson] = expCE*dym_val[id_gEPoisson] + (expCE - expCRE) * dym_val[id_gEPoisson_s1] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+		dym_val[id_gIPoisson] = expCI*dym_val[id_gIPoisson] + (expCI - expCRI) * dym_val[id_gIPoisson_s1] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
+		dym_val[id_gEPoisson_s1] *= expCE;
+		dym_val[id_gIPoisson_s1] *= expCI;
 		
 		for (int i = 0; i < n_neu; i++) {
 			// exhibitory
@@ -1403,6 +1408,11 @@ struct Ty_DIF_GH_core
 
 		// y_n + 0.5*k1*dt
 		dym_val[id_V] = v_n + 0.5 * dt * k1;
+
+		dym_val[id_gEPoisson] = expEC * dym_val[id_gEPoisson] + gE_s_coef * dym_val[id_gEPoisson_s1];
+		dym_val[id_gIPoisson] = expIC * dym_val[id_gIPoisson] + gI_s_coef * dym_val[id_gIPoisson_s1];
+		dym_val[id_gEPoisson_s1] *= expECR;
+		dym_val[id_gIPoisson_s1] *= expICR;
 		for (int i = 0; i < n_neu; i++) {
 			dym_val[get_id_gE(i)] = expEC * dym_val[get_id_gE(i)] + gE_s_coef * dym_val[get_id_gE_s1(i)];
 			dym_val[get_id_gI(i)] = expIC * dym_val[get_id_gI(i)] + gI_s_coef * dym_val[get_id_gI_s1(i)];
@@ -1419,6 +1429,10 @@ struct Ty_DIF_GH_core
 
 		// y_n + k3*dt
 		dym_val[id_V] = v_n + dt * k3;
+		dym_val[id_gEPoisson] = expEC * dym_val[id_gEPoisson] + gE_s_coef * dym_val[id_gEPoisson_s1];
+		dym_val[id_gIPoisson] = expIC * dym_val[id_gIPoisson] + gI_s_coef * dym_val[id_gIPoisson_s1];
+		dym_val[id_gEPoisson_s1] *= expECR;
+		dym_val[id_gIPoisson_s1] *= expICR;
 		for (int i = 0; i < n_neu; i++) {
 			dym_val[get_id_gE(i)] = expEC * dym_val[get_id_gE(i)] + gE_s_coef * dym_val[get_id_gE_s1(i)];
 			dym_val[get_id_gI(i)] = expIC * dym_val[get_id_gI(i)] + gI_s_coef * dym_val[get_id_gI_s1(i)];

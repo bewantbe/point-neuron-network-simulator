@@ -710,16 +710,16 @@ public:						 // It is defined in struct TyNeuronalDymState
 	void InjectPoissonE(int neuron_id) override
 	{
 		// Add Poisson input
-		dym_vals(neuron_id, TyNeu::id_gEPoisson) += arr_ps[neuron_id];
+		dym_vals(neuron_id, TyNeu::id_gEPoisson_s1) += arr_ps[neuron_id];
 	}
 
 	void InjectDeltaInput(int neuron_id, double strength) override
 	{
 		if (strength >= 0) {
-			dym_vals(neuron_id, TyNeu::id_gEPoisson) += strength;
+			dym_vals(neuron_id, TyNeu::id_gEPoisson_s1) += strength;
 		}
 		else {
-			dym_vals(neuron_id, TyNeu::id_gIPoisson) -= strength;
+			dym_vals(neuron_id, TyNeu::id_gIPoisson_s1) -= strength;
 		}
 	}
 
