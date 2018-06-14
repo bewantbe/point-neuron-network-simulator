@@ -194,23 +194,48 @@ void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef
 
 	if (isNumber(name_coef)) {
 		double value = string2double(name_coef);
-		std::vector<double > onerow(n_neu, value);
-		std::vector<std::vector<double> > onemat(n_neu, onerow);
+		TyArrVals onerow(n_neu, value);
+		TyMatVals onemat(n_neu, onerow);
 
 		pm.alpha.resize(n_neu, onemat);
 
 	}
 	else {
-		std::ifstream fin_net(name_coef);
-		if (!fin_net) {
+		std::ifstream fin_alpha(name_coef);
+		if (!fin_alpha) {
 			cerr << "Fail to open file! \"" << name_coef << "\"" << endl;
 			throw "Fail to open file!\n";
 		}
 		if (!is_sparse) {
 			// Read network from text file
-			// TODO YWS
+			double a;
+			for (int i = 0; i < n_neu; i++) {
+				TyMatVals amat;
+
+				for (int j = 0; j < n_neu; j++) {
+					TyArrVals arow;
+					for (int k = 0; k < n_neu; k++) {
+						fin_alpha >> a;
+						if (j == k && a != 0) {
+							dbg_printf("Warning: in InitAlphaCoeffFromPath: it is unusual that alpha[i][i] to be nonzero. \n");
+						}
+						if (!std::isfinite(a)) {
+							dbg_printf("Warning: in InitAlphaCoeffFromPath: it is unusual that alpha[i][i] to be infinite. \n");
+						}
+						arow.push_back(a);
+					}
+					amat.push_back(arow);
+				}
+				pm.alpha.push_back(amat);
+			}
+
+			if (!fin_alpha) {
+				cerr << "Bad alpha coefficient file: \"" << name_coef << "\"\n";
+				throw "Bad alpha coefficient file!\n";
+			}
 		}
 		else {
+			printf("DIF-GH model doesn't suppport sparse net");
 			// TODO YWS
 
 		}
