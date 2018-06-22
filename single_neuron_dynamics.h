@@ -1365,24 +1365,27 @@ struct Ty_DIF_GH_core
 	inline double GetDv(const double *dym_val) const
 	{
 		double v_n = dym_val[id_V];
-
+		double v_E_diff = v_n - V_excitatory;
+		double v_I_diff = v_n - V_inhibitory;
 
 		double retval = 0;
 		retval += G_leak * (v_n - V_leakage);
-		retval += dym_val[id_gEPoisson] * (v_n - V_excitatory);
-		retval += dym_val[id_gIPoisson] * (v_n - V_inhibitory);
+		retval += dym_val[id_gEPoisson] * v_E_diff;
+		retval += dym_val[id_gIPoisson] * v_I_diff;
 
 		
 		for (int i = 0; i < n_neu; i++) {
-			retval += dym_val[get_id_gE(i)] * (v_n - V_excitatory);
-			retval += dym_val[get_id_gI(i)] * (v_n - V_inhibitory);
+			retval += dym_val[get_id_gE(i)] * v_E_diff;
+			retval += dym_val[get_id_gI(i)] * v_I_diff;
 
 		}
 		for (int i = 0; i < n_neu; i++) {
 			for (int j = 0; j < n_neu; j++) {
-				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(i)] * (dym_val[id_V] - V_excitatory);
+				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(i)] * v_E_diff;
 			}
 		}
+
+		retval += alpha->at(0).at(0) * dym_val[id_gEPoisson] * dym_val[id_gIPoisson] * v_E_diff;
 		
 
 		return -retval;  // NOTE that in fact all terms are negative
@@ -1392,8 +1395,17 @@ struct Ty_DIF_GH_core
 	// using classical Runge–Kutta 4-th order scheme for voltage.
 	// Conductance will evolve using the exact formula.
 	// Return derivative k1 at t_n, for later interpolation.
+	//static long counter;
 	MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
 	{
+		/*
+		if (++counter % 100 == 0) {
+			printf("V=%.4f, gE=%.4f, gI=.4f, gE_s1=%.4f, gI_s1=%.4f", 
+				dym_val[id_V], dym_val[id_gE], dym_val[id_gI],
+				dym_val[id_gE_s1], dym_val[id_gI_s1]);
+		}
+		*/
+
 		double v_n = dym_val[id_V];
 		double k1, k2, k3, k4;
 		double expEC = exp(-0.5 * dt / tau_gE);  // TODO: maybe cache this value?
@@ -1447,6 +1459,7 @@ struct Ty_DIF_GH_core
 		return k1;
 	}
 };
+//long Ty_DIF_GH_core::counter = 0;
 
 // Adapter for DIF model (only sub-threshold dynamics and need hand reset)
 template<typename TyNeuronModel>
@@ -1454,7 +1467,8 @@ struct Ty_DIF_stepper : public TyNeuronModel, public Ty_Neuron_Dym_Base
 {
 	// for template class we need these "using"s. It's a requirement for TyNeuronModel.
 	using TyNeuronModel::id_V;
-	//using TyNeuronModel::id_gE;
+	using TyNeuronModel::id_gE;
+	using TyNeuronModel::id_gI;
 	using TyNeuronModel::V_threshold;
 	using TyNeuronModel::V_reset;
 	using TyNeuronModel::Time_Refractory;
@@ -1462,20 +1476,23 @@ struct Ty_DIF_stepper : public TyNeuronModel, public Ty_Neuron_Dym_Base
 	using TyNeuronModel::NextDtConductance;
 	//using TyNeuronModel::DymInplaceRK4;
 
-	//using TyNeuronModel::id_gEInject;
-	//using TyNeuronModel::id_gIInject;
+	using TyNeuronModel::id_gEInject;
+	using TyNeuronModel::id_gIInject;
 	using TyNeuronModel::n_var;
 	//using TyNeuronModel::id_gI;
 	// YWS the following is added for DIF
 	using TyNeuronModel::n_neu;
+	using TyNeuronModel::id_gEPoisson_s1; // not used so far
+	using TyNeuronModel::id_gIPoisson_s1;
+
 
 	double Get_V_threshold() const override { return V_threshold; };
-	int Get_id_gEInject() const override { return n_var + n_neu * 2; assert(0); } // YWSTODO
-	int Get_id_gIInject() const override { return n_var + n_neu * 3; assert(0); }
+	int Get_id_gEInject() const override { return id_gEInject; assert(0); } // YWSTODO
+	int Get_id_gIInject() const override { return id_gIInject; assert(0); } // use with care!
 	int Get_n_dym_vars() const override { return n_var; }
 	int Get_id_V() const override { return id_V; }
-	int Get_id_gE() const override { return n_var; assert(0); }
-	int Get_id_gI() const override { return n_var + n_neu; assert(0); }
+	int Get_id_gE() const override { return id_gE; assert(0);}
+	int Get_id_gI() const override { return id_gI; assert(0);}
 
 	void Set_Time_Refractory(double t_ref) override
 	{

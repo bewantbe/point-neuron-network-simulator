@@ -626,6 +626,8 @@ int MainLoop(const po::variables_map &vm)
   std::ofstream fout_G;    // G: conductance
   bool b_output_G = fout_try_open("conductance-path", fout_G);
 
+  bool b_output_extra_G_DIF = (enum_neuron_model == DIF_GH);
+
   std::ofstream fout_HH_gate;    // File for saving gating variables: h, m, n
   bool b_output_HH_gate = false;
   if (str_nm.find("HH") != std::string::npos) {
@@ -736,7 +738,7 @@ int MainLoop(const po::variables_map &vm)
   // Function for save data to file
   auto func_save_dym_values = [
     b_output_volt, &fout_volt,
-    b_output_G, &fout_G,
+    b_output_G, b_output_extra_G_DIF, &fout_G,     // EIDTED YWS, to enable output extra conductance data for DIF model
     b_output_HH_gate, &fout_HH_gate,
     p_neuron_model]
     (const NeuronPopulationBase &neu_pop) {
@@ -748,7 +750,7 @@ int MainLoop(const po::variables_map &vm)
       }
       fout_volt.write((char*)v.data(), neu_pop.n_neurons()*sizeof(double));
     }
-    if (b_output_G) {
+    if (b_output_G && ! b_output_extra_G_DIF) {
       int id_gE = p_neuron_model->Get_id_gE();
       int id_gI = p_neuron_model->Get_id_gI();
       std::vector<double> v(2*neu_pop.n_neurons());
@@ -758,6 +760,17 @@ int MainLoop(const po::variables_map &vm)
       }
       fout_G.write((char*)v.data(), 2*neu_pop.n_neurons()*sizeof(double));
     }
+	if (b_output_G && b_output_extra_G_DIF) {							// output conductence for DIF-GH model
+		int n_var = (p_neuron_model->Get_n_dym_vars() + 2* neu_pop.n_neurons()) * neu_pop.n_neurons();
+		std::vector<double> v(n_var*neu_pop.n_neurons());
+		for (int j = 0; j < neu_pop.n_neurons(); j++) {					// I think we can just write the whole dym_val[]
+			for (int i = 0; i < n_var; i++) {
+				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i);
+			}
+		}
+		fout_G.write((char*)v.data(), n_var*neu_pop.n_neurons()*sizeof(double));
+
+	}
     if (b_output_HH_gate) {
       int id_gating = p_neuron_model->Get_id_V() + 1;
       int n_gating = ((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1;
