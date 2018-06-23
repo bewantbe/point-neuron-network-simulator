@@ -575,10 +575,12 @@ int MainLoop(const po::variables_map &vm)
 //      printf("\n");
 //    }
 
+  size_t n_external_events = 0;
   if (vm.count("input-event-path")) {
-    FillPoissonEventsFromFile(p_neu_simu->Get_poisson_time_vec(),
-                              vm["input-event-path"].as<std::string>().c_str(),
-                              p_neu_pop->GetNeuronalParamsPtr()->arr_ps);
+    n_external_events = FillPoissonEventsFromFile(
+      p_neu_simu->Get_poisson_time_vec(),
+      vm["input-event-path"].as<std::string>().c_str(),
+      p_neu_pop->GetNeuronalParamsPtr()->arr_ps);
   }
 
   auto fout_try_open = [&vm](const char * const st_id, std::ofstream &fs)
@@ -686,7 +688,13 @@ int MainLoop(const po::variables_map &vm)
     printf("\n     scee     scie     scei     scii\n");
     printf(" %8.3g %8.3g %8.3g %8.3g\n",
            cpm.scee, cpm.scie, cpm.scei, cpm.scii);
+
+    if (vm.count("input-event-path")) {
+      printf("\nNumber of external events: %lu\n", n_external_events);
+    }
+    
     printf("\nSimulator: \"%s\"\n", str_simu_method.c_str());
+    
     if (t_warming_up > 0)
       printf("  t = %.2g (warming-up) + %.2g ms, dt = %.2g ms, stv = %.2g ms (%d dt)\n",
              t_warming_up, e_t, e_dt, e_stv, n_dt_in_stv);

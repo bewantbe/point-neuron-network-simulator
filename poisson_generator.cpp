@@ -4,14 +4,15 @@
 #include <stdlib.h>  // for strtod()
 
 // The event's times for each neuron should be ascending.
-void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path, const TyArrVals &arr_ps)
+size_t FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *path, const TyArrVals &arr_ps)
 {
   std::ifstream fin(path);
   if (!fin.good()) {
     cerr << "Fail to open input file: \"" << path << "\"\n";
-    return;
+    return 0;
   }
   size_t id;
+  size_t count_events = 0;
   double time;
   double strength;
   const int buf_size = 1024;
@@ -46,10 +47,12 @@ void FillPoissonEventsFromFile(TyPoissonTimeVec &poisson_time_vec, const char *p
       strength = arr_ps[id];
     }
     poisson_time_vec[id].emplace_back(time, strength);
+    count_events++;
   }
   for (auto &i : poisson_time_vec) {  // seal the queue
     i.emplace_back(Inf, 0.0);
   }
+  return count_events;
 }
 
 void SavePoissonInput(std::ofstream &fout, TyPoissonTimeVec &poisson_time_vec, double t_step_end)
