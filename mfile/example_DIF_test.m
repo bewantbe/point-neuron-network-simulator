@@ -21,9 +21,10 @@ pm.extra_cmd = '';
 
 % Suppose there are events to neuron 1 at time 5.0ms with strength 
 % 0.01 (Excitatory) and 0.012 (negative means Inhibitory).
+t_event_start = 5.0;
 pm.input_event = [...
-1 5.0 0.01
-1 5.0 -0.012
+1 t_event_start pm.ps
+1 t_event_start -pm.psi
 ];
 
 % Set neuronal dynamical constants.
@@ -56,8 +57,8 @@ figure(11);
 plot(s_t, X);
 
 f_exp_rise_fall = @(t, tg, th) tg*th*(exp(-t/tg) - exp(-t/th))/(tg-th) .* (t>0);
-GE_ref = pm.ps  * f_exp_rise_fall(s_t-5.0, pm.neuron_const(8), pm.neuron_const(9));
-GI_ref = pm.psi * f_exp_rise_fall(s_t-5.0, pm.neuron_const(10), pm.neuron_const(11));
+GE_ref = pm.ps  * f_exp_rise_fall(s_t-t_event_start, pm.neuron_const(8), pm.neuron_const(9));
+GI_ref = pm.psi * f_exp_rise_fall(s_t-t_event_start, pm.neuron_const(10), pm.neuron_const(11));
 G_ref = [GE_ref; GI_ref];
 
 figure(21);
