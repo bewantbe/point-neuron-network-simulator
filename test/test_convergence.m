@@ -1,48 +1,41 @@
-% Convergence across different simulator
+% Convergence across for finer dt
+
 addpath('../mfile');
 maxabs = @(x) max(abs(x(:)));
-
-% single neuron case
-
-%pm = [];
-%pm.t    = 1e3;
-%pm.dt   = 1/32;
-%pm.stv  = 1/32;
-%pm.pr   = 1.0;
-%pm.ps   = 0.04;
-%pm.seed = 123; % randi(2^31-1, 1, 1);
-%pm.neuron_model = 'HH-GH-cont-syn';
-%pm.simu_method  = 'auto';
-%pm.spike_threshold = 1.0;
-%pm.input_event = ie;
-%pm.extra_cmd = '';
 
 % network case
 
 pm0 = [];
-pm0.net  = ones(15);
-pm0.nI   = 0;
-pm0.scee = 0.05;
-pm0.scie = 0.06;
-pm0.scei = 0.07;
-pm0.scii = 0.04;
-pm0.pr   = 1.0;
-pm0.ps   = 0.02;
+pm0.neuron_model = 'LIF-GH';
+pm0.simu_method  = 'SSC';
+
+pm0.net  = ones(5);
+pm0.nI   = 2;
+pm0.scee_mV = 0.5;
+pm0.scie_mV = 0.5;
+pm0.scei_mV = 0.5;
+pm0.scii_mV = 0.5;
+pm0.pr      = 1.0;
+pm0.ps_mV   = 1.0;
+% The pm0.t should be small, otherwise the error can be too large to see
+% the convergence behaviour.
 pm0.t    = 1e3;
 pm0.dt   = 1.0/1024;
-pm0.stv  = pm0.dt;
+pm0.stv  = 1.0/32;
 pm0.seed = 4563;
 
 s_dt = 1 ./ [32 64 128 256 512 1024];
-s_err_V    = zeros(size(s_dt));
-s_err_Vend = zeros(size(s_dt));
-s_err_ras  = zeros(size(s_dt));
+s_err_V    = zeros(size(s_dt));   % error of overall volt
+s_err_Vend = zeros(size(s_dt));   % error of volt at T-end
+s_err_ras  = zeros(size(s_dt));   % error of last spike event timing
 
 pm = pm0;
+p = length(pm.net);
 
 % Reference answer
-pm.dt = s_dt(end)/2;
+pm.dt = min(s_dt)/4;
 [X_r, isi_r, ras_r, pm_expand_r] = gen_neu(pm, 'new,rm');
+s_se_r = arrayfun(@(id) ras_r(ras_r(:,1)==id, 2), 1:p, 'UniformOutput', false);
 
 v0 = X_r(:, end);
 t_last = lastRASEvent(ras_r, size(pm.net,1));
@@ -58,7 +51,20 @@ for id_dt = 1:numel(s_dt)
 
   s_err_Vend(id_dt) = maxabs(v - v0);
   s_err_V(id_dt) = maxabs(X - X_r) / maxabs(X_r);
-  s_err_ras(id_dt) = maxabs(ras - ras_r);
+  #lmin = min([length(ras), length(ras_r)]);
+  #s_err_ras(id_dt) = maxabs(ras(1:lmin, :) - ras_r(1:lmin, :));
+  
+  # error in ras
+  s_se = arrayfun(@(id) ras(ras(:,1)==id, 2), 1:p, 'UniformOutput', false);
+  ras_err = 0;
+  for id=1:p
+    se   = s_se{id};
+    se_r = s_se_r{id};
+    lmin = min([length(se), length(se_r)]);
+    ras_err = ras_err + maxabs(se(1:lmin) - se_r(1:lmin));
+  end
+  s_err_ras(id_dt) = ras_err;
+
 end
 
 figure(1);
