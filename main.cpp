@@ -14,7 +14,8 @@ TODO:
    * add to Poisson event queue?
    * isomerisom of neurons in a network?
 */
-#pragma warning(disable : 4996)  
+
+
 
 #ifndef DEBUG
 #define NDEBUG  // disable assert() and disable checks in Eigen
@@ -735,6 +736,17 @@ int MainLoop(const po::variables_map &vm)
     printf("  Simulation         : ");
   }
 
+
+  /*                             TODOYWS: check
+	 example of the case storing conductance of DIF-GH model (n neuron, [t/dt] = m):
+	 {t = 1*dt, 1st neu} {t = 1*dt, 2ed neu} ... {t = 1*dt, nst neu} 
+	 {t = 2*dt, 1st neu} {t = 2*dt, 2ed neu} ... {t = 2*dt, nst neu}
+	 ......
+	 {t = m*dt, 1st neu} {t = m*dt, 2ed neu} ... {t = m*dt, nst neu}
+	 where
+	 {t = i*dt, jth ner} means: data of jth neu at time i*dt,
+	 'data' includes gEP gIP gEPs gIPs  gE(1) gE(2) ... gE(n)  gI(1) gI(2) ... gI(n), refer to @@Ty_DIF_GH_core for more information
+   */
   // Function for save data to file
   auto func_save_dym_values = [
     b_output_volt, &fout_volt,
@@ -761,13 +773,27 @@ int MainLoop(const po::variables_map &vm)
       fout_G.write((char*)v.data(), 2*neu_pop.n_neurons()*sizeof(double));
     }
 	if (b_output_G && b_output_extra_G_DIF) {							// output conductence for DIF-GH model
-		int n_var = (p_neuron_model->Get_n_dym_vars() + 2* neu_pop.n_neurons()) * neu_pop.n_neurons();
+
+		int n_var = (2 + 2 * neu_pop.n_neurons()) * neu_pop.n_neurons();
+		std::vector<double> v(n_var*neu_pop.n_neurons());
+		for (int j = 0; j < neu_pop.n_neurons(); j++) {
+			v[n_var*j + 0] = neu_pop.GetDymState().dym_vals(j, 1);      // id_gEPoisson == 1
+			v[n_var*j + 1] = neu_pop.GetDymState().dym_vals(j, 2);		// id_gIPoisson == 2
+			for (int i = 2; i < n_var; i++) {
+				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i+3); // we skipped '3' varibles, namely gEP, gIP, gEPs, gIPs
+			}
+		}
+		
+		/* // the following part of code output all dynamic varibles, including V gEP gEI gE(i) gI(i) gEs(i) gIs(i)
+		   // useful when debug
+		int n_var = (p_neuron_model->Get_n_dym_vars() + 4* neu_pop.n_neurons()) * neu_pop.n_neurons();
 		std::vector<double> v(n_var*neu_pop.n_neurons());
 		for (int j = 0; j < neu_pop.n_neurons(); j++) {					// I think we can just write the whole dym_val[]
 			for (int i = 0; i < n_var; i++) {
 				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i);
 			}
 		}
+		*/
 		fout_G.write((char*)v.data(), n_var*neu_pop.n_neurons()*sizeof(double));
 
 	}
@@ -934,7 +960,7 @@ int main(int argc, char *argv[])
       ("isi-path",         po::value<std::string>(),
        "Output mean InterSpike Interval to path.")
       ("conductance-path", po::value<std::string>(),
-       "Output conductance to path.")
+       "Output conductance to path")
       ("ion-gate-path", po::value<std::string>(),
        "Output gating variables to path. In raw binary format.")
       ("output-first-data-point",

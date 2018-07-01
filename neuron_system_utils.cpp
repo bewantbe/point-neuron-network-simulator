@@ -152,13 +152,13 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
 
 
 // YWS
+// TODO use strtod instead?
 // credit to http://www.cplusplus.com/forum/general/42594/
 double string2double(const std::string& a)
 {
 	// Convert a string representation of a number into a floating point value.
 	// Throws an int if the string contains anything but whitespace and a valid
 	// numeric representation.
-	//
 	double result;
 	std::string s(a);
 
@@ -188,6 +188,9 @@ bool isNumber(std::string str) {
 	return true;
 }
 
+
+// if the input string is a double, fill in the alpha(3d vector, vector<vector<vector<double> > >) with the double
+// otherwise, fill alpha from the path recogized in the input string
 void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef, bool is_sparse)
 {
 	int n_neu = pm.n_total();
@@ -237,6 +240,7 @@ void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef
 		}
 		else {
 			printf("DIF-GH model doesn't suppport sparse net");
+			exit(-101);
 			// TODO YWS
 
 		}

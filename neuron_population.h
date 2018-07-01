@@ -723,9 +723,10 @@ public:						 // It is defined in struct TyNeuronalDymState
 		}
 	}
 
+	// to get inform of the neuron model in main.c
+	// NOTE that some varibles may not be homogeneous!
 	const Ty_Neuron_Dym_Base * GetNeuronModel() const override
 	{
-		// YWSCHECK assert(0);
 		return &neuron_models[0];
 	}
 };

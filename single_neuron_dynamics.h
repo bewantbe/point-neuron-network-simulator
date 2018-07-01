@@ -1299,8 +1299,23 @@ struct Ty_DIF_GH_core
 								 // it will be initialized in NeuronPopulationDendriticDeltaInteractTemplate
 
 	int n_neu;			 // number of neurons, it will be intialized in 
-								 // NeuronPopulationDendriticDeltaInteractTemplate and other similar classes
-	static const int n_var = 5;  // number of dynamical variables
+					     // NeuronPopulationDendriticDeltaInteractTemplate and other similar classes
+
+
+	/* The following costants describes how the dynmaic varibles are stored in the memory 
+	 * for a single neuron, voltage, conductances, derivatives of conductances are stored continously
+	 * the order is:
+	 * V gEP gIP gEPs gIPs  gE(1) gE(2) ... gE(n)  gI(1) gI(2) ... gI(n)  gEs(1) gEs(2) ... gEs(n)  gIs(1) gIs(2) ... gIs(n)
+	 * where:
+	 * V is the voltage of the neuron, 
+	 * gEP (gIP) is the excitatory(inhibitory) conductance related with poisson input
+	 * gE(i) (gI(i)) is the excitatory(inhibitory) conductance input from the ith neuron, n is the number of ALL neurons
+	 * gEPs, gIPs, gEs, gIs are the corresponding derivatives
+	 *
+	 * @@get_id_gE and others will help when deal with a specific conductance
+	 */
+
+	static const int n_var = 5;  // number of dynamical variables, EXculding gE(i), gI(i), gEs(i), gIs(i)
 	static const int id_V = 0;   // index of V variable
 	static const int id_gEPoisson = 1; // index of conductance rlatinng to Poisson input
 	static const int id_gIPoisson = 2; // index of conductance rlatinng to Poisson input
@@ -1395,16 +1410,8 @@ struct Ty_DIF_GH_core
 	// using classical Runge–Kutta 4-th order scheme for voltage.
 	// Conductance will evolve using the exact formula.
 	// Return derivative k1 at t_n, for later interpolation.
-	//static long counter;
 	MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
 	{
-		/*
-		if (++counter % 100 == 0) {
-			printf("V=%.4f, gE=%.4f, gI=.4f, gE_s1=%.4f, gI_s1=%.4f", 
-				dym_val[id_V], dym_val[id_gE], dym_val[id_gI],
-				dym_val[id_gE_s1], dym_val[id_gI_s1]);
-		}
-		*/
 
 		double v_n = dym_val[id_V];
 		double k1, k2, k3, k4;
@@ -1459,27 +1466,25 @@ struct Ty_DIF_GH_core
 		return k1;
 	}
 };
-//long Ty_DIF_GH_core::counter = 0;
 
 // Adapter for DIF model (only sub-threshold dynamics and need hand reset)
 template<typename TyNeuronModel>
 struct Ty_DIF_stepper : public TyNeuronModel, public Ty_Neuron_Dym_Base
 {
 	// for template class we need these "using"s. It's a requirement for TyNeuronModel.
-	using TyNeuronModel::id_V;
-	using TyNeuronModel::id_gE;
-	using TyNeuronModel::id_gI;
+	using TyNeuronModel::id_V;	
+	using TyNeuronModel::id_gE;	// not to use to avoid confusion, interpreted in DIF-GH, DO READ the comments there before use them
+	using TyNeuronModel::id_gI; // use with care if needed, READ the comments!
 	using TyNeuronModel::V_threshold;
 	using TyNeuronModel::V_reset;
 	using TyNeuronModel::Time_Refractory;
 	using TyNeuronModel::GetDv;
 	using TyNeuronModel::NextDtConductance;
-	//using TyNeuronModel::DymInplaceRK4;
+	using TyNeuronModel::DymInplaceRK4;
 
 	using TyNeuronModel::id_gEInject;
 	using TyNeuronModel::id_gIInject;
 	using TyNeuronModel::n_var;
-	//using TyNeuronModel::id_gI;
 	// YWS the following is added for DIF
 	using TyNeuronModel::n_neu;
 	using TyNeuronModel::id_gEPoisson_s1; // not used so far
@@ -1487,10 +1492,10 @@ struct Ty_DIF_stepper : public TyNeuronModel, public Ty_Neuron_Dym_Base
 
 
 	double Get_V_threshold() const override { return V_threshold; };
-	int Get_id_gEInject() const override { return id_gEInject; assert(0); } // YWSTODO
-	int Get_id_gIInject() const override { return id_gIInject; assert(0); } // use with care!
-	int Get_n_dym_vars() const override { return n_var; }
-	int Get_id_V() const override { return id_V; }
+	int Get_id_gEInject() const override { return id_gEInject; assert(0); } // These functions shall not be called to avoid confusion
+	int Get_id_gIInject() const override { return id_gIInject; assert(0); } // use with care if u do need them
+	int Get_n_dym_vars() const override { return n_var; }   // OK to use
+	int Get_id_V() const override { return id_V; }			// OK to use
 	int Get_id_gE() const override { return id_gE; assert(0);}
 	int Get_id_gI() const override { return id_gI; assert(0);}
 
