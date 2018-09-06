@@ -42,10 +42,15 @@ function local_ras = ras_pick(ras, id_neu, t_range)
   % Default id_neu.
   if ~exist('id_neu') || isempty(id_neu)
     id_neu = 1:p;
-  elseif any(id_neu(1, :) > p)
-    % No such index, probably due to silent neuron.
-    % Without this id_b_neu and id_map will be auto expanded.
-    id_neu(:, id_neu(1, :) > p) = [];
+  else
+    if any(id_neu(1, :) > p)
+      % No such index, probably due to silent neuron.
+      % Without this id_b_neu and id_map will be auto expanded.
+      id_neu(:, id_neu(1, :) > p) = [];
+    end
+    if isvector(id_neu)
+      id_neu = id_neu(:).';
+    end
   end
   
   % Select variables.

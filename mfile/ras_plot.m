@@ -10,6 +10,9 @@
 %   hd = ras_plot( ras_pick(ras, id_neu, [t_bg, t_ed]) );
 
 function hd = ras_plot(ras, ras_line_mode)
+if isempty(ras)
+  cla;
+end
 if ~exist('ras_line_mode', 'var') || isempty(ras_line_mode)
   ras_line_mode = max(ras(:,1)) <= 100;
 end
