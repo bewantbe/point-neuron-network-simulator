@@ -211,6 +211,7 @@ int MainLoop(const po::variables_map &vm)
 
   // Set neuron population type
   NeuronPopulationBase * p_neu_pop = nullptr;
+  bool b_heterogeneous = vm.count("tau-g-path") || vm.count("neuron-const-path");
   if (vm.count("synaptic-net-delay")) {
     switch (enum_neuron_model) {
       case LIF_G:
@@ -256,69 +257,81 @@ int MainLoop(const po::variables_map &vm)
       }
     }
   } else if (vm.count("synaptic-delay")) {
-    switch (enum_neuron_model) {
-      case LIF_G:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_LIF_G>(pm);
-        break;
-      case LIF_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_LIF_GH>(pm);
-        break;
-      case HH_G:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_G>(pm);
-        break;
-      case HH_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_GH>(pm);
-        break;
-      case HH_PT_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_PT_GH>(pm);
-        break;
-      case HH_FT_GH:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH>(pm);
-        break;
-      case HH_G_sine:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_G_sine>(pm);
-        break;
-      case HH_GH_sine:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_GH_sine>(pm);
-        break;
-      case HH_PT_GH_sine:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_PT_GH_sine>(pm);
-        break;
-      case HH_FT_GH_sine:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_FT_GH_sine>(pm);
-        break;
-      case HH_G_extI:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelayExtI<Ty_HH_G_extI>(pm);
-        break;
-      case HH_GH_extI:
-        p_neu_pop = new
-          NeuronPopulationDeltaInteractConstantDelayExtI<Ty_HH_GH_extI>(pm);
-        break;
-      case HH_GH_cont_syn:
-        cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
-        return -1;
-      case IF_jump:
-        p_neu_pop = new IFJumpPopulation(pm);
-        return -1;
-      case Hawkes_GH:
-        cerr << "Delay for Hawkes-GH is not supported yet.\n";
-        return -1;
-      default:
-        throw "not supported combination of model and network.";
+    if (b_heterogeneous) {
+      // TODO: re think the structure.
+      switch (enum_neuron_model) {
+        case LIF_GH:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelayHeterogeneous<Ty_LIF_GH>(pm);
+          break;
+        default:
+          throw "not supported combination of model and network.";
+      }
+    } else {
+      switch (enum_neuron_model) {
+        case LIF_G:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelay<Ty_LIF_G>(pm);
+          break;
+        case LIF_GH:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelay<Ty_LIF_GH>(pm);
+          break;
+        case HH_G:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelay<Ty_HH_G>(pm);
+          break;
+        case HH_GH:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelay<Ty_HH_GH>(pm);
+          break;
+        case HH_PT_GH:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelay<Ty_HH_PT_GH>(pm);
+          break;
+        case HH_FT_GH:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelay<Ty_HH_FT_GH>(pm);
+          break;
+        case HH_G_sine:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_G_sine>(pm);
+          break;
+        case HH_GH_sine:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_GH_sine>(pm);
+          break;
+        case HH_PT_GH_sine:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_PT_GH_sine>(pm);
+          break;
+        case HH_FT_GH_sine:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelaySine<Ty_HH_FT_GH_sine>(pm);
+          break;
+        case HH_G_extI:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelayExtI<Ty_HH_G_extI>(pm);
+          break;
+        case HH_GH_extI:
+          p_neu_pop = new
+            NeuronPopulationDeltaInteractConstantDelayExtI<Ty_HH_GH_extI>(pm);
+          break;
+        case HH_GH_cont_syn:
+          cerr << "Delay for HH_GH_cont_syn is not supported yet.\n";
+          return -1;
+        case IF_jump:
+          p_neu_pop = new IFJumpPopulation(pm);
+          return -1;
+        case Hawkes_GH:
+          cerr << "Delay for Hawkes-GH is not supported yet.\n";
+          return -1;
+        default:
+          throw "not supported combination of model and network.";
+      }
     }
     p_neu_pop->SetSynapticDelay(vm["synaptic-delay"].as<double>());
-  } else if (vm.count("tau-g-path") || vm.count("neuron-const-path")) {
+  } else if (b_heterogeneous) {
     switch (enum_neuron_model) {
       case LIF_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractHeterogeneous<Ty_LIF_GH>(pm);
@@ -331,16 +344,6 @@ int MainLoop(const po::variables_map &vm)
         break;
       default:
         throw "tau-g-path: only LIF-GH, DIF_single_GH and HH-GH are supported";
-    }
-    if (vm.count("tau-g-path")) {
-      TyNeuDymParam dym_param;
-      FillTauG(dym_param, vm["tau-g-path"].as<std::string>().c_str());
-      p_neu_pop->SetRisingFallingTau(dym_param);
-    }
-    if (vm.count("neuron-const-path")) {
-      TyArrVals v;
-      FillVecFromFile(v, vm["neuron-const-path"].as<std::string>().c_str());
-      p_neu_pop->SetAllDymParam(v);
     }
   } else {
     switch (enum_neuron_model) {
@@ -394,6 +397,18 @@ int MainLoop(const po::variables_map &vm)
         break;
     }
   }
+
+  if (vm.count("tau-g-path")) {
+    TyNeuDymParam dym_param;
+    FillTauG(dym_param, vm["tau-g-path"].as<std::string>().c_str());
+    p_neu_pop->SetRisingFallingTau(dym_param);
+  }
+  if (vm.count("neuron-const-path")) {
+    TyArrVals v;
+    FillVecFromFile(v, vm["neuron-const-path"].as<std::string>().c_str());
+    p_neu_pop->SetAllDymParam(v);
+  }
+  
   // Get basic single neuron info
   const Ty_Neuron_Dym_Base *p_neuron_model = p_neu_pop->GetNeuronModel();
 
@@ -828,7 +843,8 @@ int MainLoop(const po::variables_map &vm)
     }
   }
 
-//  delete p_neu_simu;
+  delete p_neu_pop;
+  delete p_neu_simu;
 
   return 0;
 }

@@ -14,6 +14,7 @@ public:
       TySpikeEventVec &ras, std::vector< size_t > &vec_n_spike) = 0;
   virtual const TyPoissonTimeVec & Get_poisson_time_vec() const = 0;
   virtual       TyPoissonTimeVec & Get_poisson_time_vec() = 0;
+  virtual ~NeuronSimulatorBase() { }
 };
 
 #endif

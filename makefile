@@ -32,7 +32,7 @@ debug: $(BIN)
 
 .PHONY : debug-sanitize
 debug-sanitize: CXXFLAGS = -g -Og -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined
-debug-sanitize: LDLIBS += -lasan -lubsan
+debug-sanitize: LDLIBS := -lasan -lubsan $(LDLIBS)
 debug-sanitize: $(BIN)
 
 .PHONY : debug-log

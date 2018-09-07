@@ -41,6 +41,7 @@ struct Ty_Neuron_Dym_Base
   //            Probably use (void*) ?
   virtual void VoltHandReset(double *dym_val) const = 0;
   virtual const double * Get_dym_default_val() const = 0;
+  virtual ~Ty_Neuron_Dym_Base() { }
 };
 
 struct Ty_LIF_G_core

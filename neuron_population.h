@@ -52,6 +52,8 @@ public:
   // For setting neuronal dynamical constants
   virtual void SetRisingFallingTau(const TyNeuDymParam &dym_param) { }
   virtual void SetAllDymParam(const TyArrVals &v) { }
+  
+  virtual ~NeuronPopulationBase() { }
 };
 
 class NeuronPopulationBaseCommon:
@@ -307,16 +309,18 @@ public:
 
   void SetAllDymParam(const TyArrVals &v) override
   {
-    /*
-    int neu_sz = sizeof(TyNeu);
-    cout << "SetAllDymParam: sz of model = " << neu_sz << " byte.\n";
-    double *vd = (double*)neuron_model_array.data();
-    size_t *vi = (size_t*)neuron_model_array.data();
-    for (int k = 0; k < neu_sz / sizeof(double); k++) {
-      printf("v[%d] = %.16g = %lx\n", k, vd[k], vi[k]);
-    }
-    */
-    int offset = 8;  // offset in byte, to the start of struct data member
+//    int neu_sz = sizeof(TyNeu);
+//    cout << "SetAllDymParam: sz of model = " << neu_sz << " byte.\n";
+//    double *vd = (double*)neuron_model_array.data();
+//    size_t *vi = (size_t*)neuron_model_array.data();
+//    for (int k = 0; k < neu_sz / sizeof(double); k++) {
+//      printf("neuron_model_array[%d] = %.16g = %lx\n", k, vd[k], vi[k]);
+//    }
+//    for (size_t k = 0; k < v.size(); k++) {
+//      printf("v[%zd] = %.16g\n", k, v[k]);
+//    }
+    
+    int offset = 8;  // offset (in byte) to the start of struct data member.
     int neu_sz = sizeof(TyNeu) - offset;
     if (v.size() != n_neurons() * neu_sz/sizeof(double)) {
       throw "Data length inconsistent: neuronal constants. ";
@@ -324,8 +328,15 @@ public:
     // Fill in the fields in the struct of neuron model
     for (int k = 0; k < n_neurons(); k++) {
       memcpy((char*)(neuron_model_array.data() + k) + offset,
-          v.data() + k * neu_sz, neu_sz);
+          v.data() + k * neu_sz/sizeof(double), neu_sz);
     }
+//    for (int k = 0; k < n_neurons(); k++) {
+//      printf("#%d params\n", k);
+//      for (int j = 1; j <= neu_sz / 8; j++) {
+//        printf("%g ", *(((double*)&neuron_model_array[k]) + j));
+//      }
+//      printf("\n");
+//    }
   }
   
   void NoInteractDt(int neuron_id, double dt, double t_local,
@@ -508,6 +519,71 @@ public:
   NeuronPopulationDeltaInteractConstantDelayExtI(const TyNeuronalParams &_pm)
     :NeuronPopulationDeltaInteractExtI<TyNeu>(_pm)
   { }
+};
+
+// A model allow to set all dynamical constants for each neuron
+// TODO: make a "Heterogeneous" adapter that transform population to heterogeneous.
+template<class TyNeu>
+class NeuronPopulationDeltaInteractConstantDelayHeterogeneous
+  :public NeuronPopulationDeltaInteractConstantDelay<TyNeu>
+{
+  typedef NeuronPopulationDeltaInteractConstantDelay<TyNeu> NBase;
+  using NBase::StatePtr;
+  using NBase::n_neurons;
+  using NBase::time_in_refractory;
+
+public:
+  std::vector<TyNeu> neuron_model_array;
+
+  NeuronPopulationDeltaInteractConstantDelayHeterogeneous(const TyNeuronalParams &_pm)
+    :NeuronPopulationDeltaInteractConstantDelay<TyNeu>(_pm),
+     neuron_model_array(_pm.n_total())
+  { }
+
+  void SetRisingFallingTau(const TyNeuDymParam &dym_param) override
+  {
+    if (dym_param.rows() != n_neurons()) {
+      cerr << "dym_param.rows != n_neurons : " << dym_param.rows() << " != " << n_neurons() << "\n";
+      throw "Inconsistent number of neurons. ";
+    }
+    for (int k = 0; k < n_neurons(); k++) {
+      neuron_model_array[k].tau_gE_s1 = dym_param(k, 0);
+      neuron_model_array[k].tau_gE    = dym_param(k, 1);
+      neuron_model_array[k].tau_gI_s1 = dym_param(k, 2);
+      neuron_model_array[k].tau_gI    = dym_param(k, 3);
+    }
+  }
+
+  void SetAllDymParam(const TyArrVals &v) override
+  {
+//    printf("v.size() = %lu\n", v.size());
+//    printf("n_neurons() = %d\n", n_neurons());
+//    printf("neuron_model_array.size() = %lu\n", neuron_model_array.size());
+    int offset = 8;  // offset (in byte) to the start of struct data member.
+    int neu_sz = sizeof(TyNeu) - offset;
+    if (v.size() != n_neurons() * neu_sz/sizeof(double)) {
+      throw "Data length inconsistent: neuronal constants. ";
+    }
+    // Fill in the fields in the struct of neuron model
+    for (int k = 0; k < n_neurons(); k++) {
+      memcpy((char*)(neuron_model_array.data() + k) + offset,
+          v.data() + k * neu_sz/sizeof(double), neu_sz);
+    }
+  }
+  
+  void NoInteractDt(int neuron_id, double dt, double t_local,
+                    TySpikeEventVec &spike_events) override
+  {
+    dbg_printf("NoInteractDt(): neuron_id = %d\n", neuron_id);
+    double spike_time_local = qNaN;
+    double *dym_val = StatePtr(neuron_id);
+    QUIET_STEP_CALL_INC();
+    neuron_model_array[neuron_id].NextStepSingleNeuronQuiet(
+        dym_val, time_in_refractory[neuron_id], spike_time_local, dt);
+    if (!std::isnan(spike_time_local)) {
+      spike_events.emplace_back(t_local + spike_time_local, neuron_id);
+    }
+  }
 };
 
 // Population: delta interact, net delay, zero current input

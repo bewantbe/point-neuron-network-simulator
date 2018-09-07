@@ -1,23 +1,24 @@
-%
+% Demo: How to set every dynamical variables in the neuronal model.
 
 pm = [];
 pm.neuron_model = 'LIF-GH';
-pm.simu_method = 'simple';
-pm.net  = zeros(1);
+pm.simu_method = 'big-delay';
+pm.net  = 1*(eye(2)==0);
 pm.nI   = floor(length(pm.net)/2);
-pm.scee = 0.001;
-pm.scie = 0.00;
-pm.scei = 0.00;
-pm.scii = 0.00;
+pm.scee = 0.03;
+pm.scie = 0.03;
+pm.scei = 0.05;
+pm.scii = 0.05;
 pm.t    = 1e2;
 pm.dt   = 1.0/32;
 pm.stv  = pm.dt;
 pm.seed = 123;
 pm.pr   = 0;
-pm.ps   = 0.01;
+pm.ps   = 0.02;
 pm.pri  = 0;
-pm.psi  = 0.012;
+pm.psi  = 0.03;
 pm.extra_cmd = '';
+pm.synaptic_delay = 5;
 
 % Suppose there are events to neuron 1 at time 5.0ms with strength 
 % 0.01 (Excitatory) and 0.012 (negative means Inhibitory).
@@ -33,8 +34,8 @@ pm.input_event = [...
 % See single_neuron_dynamics.h and search "int n_var" for the details of other
 %   neuron models.
 % Currently, only LIF-GH and HH-GH model support this function. And it can not 
-%   combine with delayed synaptic or current/sine input.
-pm.neuron_const = [...
+%   combine with heterogeneous delayed synaptic or current/sine input.
+pm.neuron_const = ones(length(pm.net), 1) * [...
 1.0, 0.0, 0.0, 14/3.0, -2/3.0, 0.05, 2.0, 0.5, 5.0, 0.8, 2.0
 ];
 
@@ -44,7 +45,7 @@ pm.neuron_const = [...
 % See single_neuron_dynamics.h and search "int n_var" for the details of other
 %   neuron models.
 % Note: no error checking is performed.
-pm.initial_state = [...
+pm.initial_state = ones(length(pm.net), 1) * [...
 0 0 0 0 0
 ];
 
@@ -55,13 +56,28 @@ figure(10);
 plot(s_t, X);
 
 f_exp_rise_fall = @(t, tg, th) tg*th*(exp(-t/tg) - exp(-t/th))/(tg-th) .* (t>0);
-GE_ref = pm.ps  * f_exp_rise_fall(s_t-5.0, pm.neuron_const(7), pm.neuron_const(8));
-GI_ref = pm.psi * f_exp_rise_fall(s_t-5.0, pm.neuron_const(9), pm.neuron_const(10));
+GE_ref = pm.input_event(1,3) * f_exp_rise_fall(s_t-pm.input_event(1,2), pm.neuron_const(1,7), pm.neuron_const(1,8));
+GI_ref =-pm.input_event(2,3) * f_exp_rise_fall(s_t-pm.input_event(2,2), pm.neuron_const(1,9), pm.neuron_const(1,10));
 G_ref = [GE_ref; GI_ref];
 
 figure(20);
-plot(s_t, extra_data.G, s_t, G_ref);
+plot(s_t, extra_data.G(1:2, :), s_t, G_ref);
 
 fprintf('Should be machine eps: \n');
-maxabs(G_ref - extra_data.G)
+maxabs(G_ref - extra_data.G(1:2, :))
+
+%% Experiment 2, test the interaction.
+pm.input_event = zeros(25, 2);
+pm.input_event(:,1) = 1;
+pm.input_event(:,2) = 1:25;  % stimulus at 1, 2, ..., 25 ms
+[X, ISI, ras] = gen_neu(pm, 'rm');
+
+figure(110);
+plot(s_t, X);
+
+id_up = find(X(2,:)>0, 1);
+pp = polyfit(0:2, X(2,id_up:id_up+2),2);
+t_rec = fzero(@(x) polyval(pp, x), [-1,0]);
+t_rec = (t_rec + id_up) * pm.stv;
+fprintf('synaptic delay = %g ms\n', t_rec - ras(1,2));
 
