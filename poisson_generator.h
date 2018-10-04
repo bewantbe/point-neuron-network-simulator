@@ -30,6 +30,8 @@ public:
     rate = _rate;
     strength = _strength;
     t = t0;
+
+	if (rate == 0) rate = std::numeric_limits<double>::min();
     exp_dis = std::exponential_distribution<>(rate);
   }
 

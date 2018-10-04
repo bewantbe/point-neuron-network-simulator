@@ -1,6 +1,14 @@
 #ifndef HEADER_COMMON_HEADER
 #define HEADER_COMMON_HEADER
 
+
+/* YWS: 
+ * to disable warning of vs, caused by std::copy
+ * in single_neuron_dynamics.h:
+ * std::copy(dym_t, dym_t+n_var, dym_val);
+ */
+#pragma warning(disable : 4996) 
+
 #ifndef DEBUG
 #define NDEBUG  // disable assert() and disable checks in Eigen
 #endif
@@ -33,6 +41,7 @@ static const double Inf = std::numeric_limits<double>::infinity();
 static const double qNaN = std::numeric_limits<double>::quiet_NaN();
 
 typedef std::vector<double> TyArrVals;
+typedef std::vector<TyArrVals> TyMatVals;
 
 extern std::mt19937 rand_eng;
 double g_rand();

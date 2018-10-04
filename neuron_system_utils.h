@@ -23,6 +23,16 @@ struct TyNeuronalParams
   TyArrVals arr_pri;   // Poisson input rate for each neuron, I type.
   TyArrVals arr_psi;   // Poisson input strength for each neuron, I type.
 
+
+					   // Only for DIF
+					   // NOTICE: initialized by default constructor when copy
+					   // Alpha is determined by shunting coefficients
+					   // Alpha[l][i][j] means the effect of the pair of neuron (E,I) to the l-th neuron
+					   // where E is i-th exitory and I is the j-th inhibitory
+  std::vector<TyMatVals > alpha;
+  bool DIF_flag;	   // whether it's used in an non-simple DIF model
+					   // it will be initalized by default constructor when copy
+
   inline int n_total() const
   { return n_E + n_I; }
 
@@ -42,6 +52,8 @@ struct TyNeuronalParams
   :scee(0), scie(0), scei(0), scii(0)
   {
     SetNumberOfNeurons(_n_E, _n_I);
+	// NOTICE: alpha will be initialized by default constructor 
+	// not here because not all model need it
   }
 };
 
@@ -159,6 +171,8 @@ int FillTauG(TyNeuDymParam &dym_param, const char *path);
 
 void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
                      bool is_sparse);
+void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef, 
+					 bool is_sparse);
 SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net);
 int ReadSpikeList(TySpikeEventVec &spike_list, const char *path);
 

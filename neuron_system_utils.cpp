@@ -150,6 +150,105 @@ void FillNetFromPath(TyNeuronalParams &pm, const std::string &name_net,
   }
 }
 
+
+// YWS
+// TODO use strtod instead?
+// credit to http://www.cplusplus.com/forum/general/42594/
+double string2double(const std::string& a)
+{
+	// Convert a string representation of a number into a floating point value.
+	// Throws an int if the string contains anything but whitespace and a valid
+	// numeric representation.
+	double result;
+	std::string s(a);
+
+	// Get rid of any trailing whitespace
+	s.erase(s.find_last_not_of(" \f\n\r\t\v") + 1);
+
+	// Read it into the target type
+	std::istringstream ss(s);
+	ss >> result;
+
+	// Check to see that there is nothing left over
+	if (!ss.eof())
+		throw 1;
+
+	return result;
+}
+
+bool isNumber(std::string str) {
+	try
+	{
+		string2double(str);
+	}
+	catch (int)
+	{
+		return false;
+	}
+	return true;
+}
+
+
+// if the input string is a double, fill in the alpha(3d vector, vector<vector<vector<double> > >) with the double
+// otherwise, fill alpha from the path recogized in the input string
+void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef, bool is_sparse)
+{
+	int n_neu = pm.n_total();
+
+	if (isNumber(name_coef)) {
+		double value = string2double(name_coef);
+		TyArrVals onerow(n_neu, value);
+		TyMatVals onemat(n_neu, onerow);
+
+		pm.alpha.resize(n_neu, onemat);
+
+	}
+	else {
+		std::ifstream fin_alpha(name_coef);
+		if (!fin_alpha) {
+			cerr << "Fail to open file! \"" << name_coef << "\"" << endl;
+			throw "Fail to open file!\n";
+		}
+		if (!is_sparse) {
+			// Read network from text file
+			double a;
+			for (int i = 0; i < n_neu; i++) {
+				TyMatVals amat;
+
+				for (int j = 0; j < n_neu; j++) {
+					TyArrVals arow;
+					for (int k = 0; k < n_neu; k++) {
+						fin_alpha >> a;
+						if (j == k && a != 0) {
+							dbg_printf("Warning: in InitAlphaCoeffFromPath: it is unusual that alpha[i][i] to be nonzero. \n");
+						}
+						if (!std::isfinite(a)) {
+							dbg_printf("Warning: in InitAlphaCoeffFromPath: it is unusual that alpha[i][i] to be infinite. \n");
+						}
+						arow.push_back(a);
+					}
+					amat.push_back(arow);
+				}
+				pm.alpha.push_back(amat);
+			}
+
+			if (!fin_alpha) {
+				cerr << "Bad alpha coefficient file: \"" << name_coef << "\"\n"
+					<< " Notice that alpha coefficent file shall contain n*n*n doubles (n is the number of neurons)\n";
+				throw "Bad alpha coefficient file!\n";
+			}
+		}
+		else {
+			printf("DIF-GH model doesn't suppport sparse net");
+			exit(-101);
+			// TODO YWS
+
+		}
+
+	}
+}
+
+
 SparseMat ReadNetDelay(const std::string &dn_name, const SparseMat &net)
 {
   std::ifstream fin_net(dn_name);

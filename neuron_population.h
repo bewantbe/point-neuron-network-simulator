@@ -630,4 +630,181 @@ public:
   }
 };
 
+
+// Base class for dentritic interact
+class NeuronPopulationBaseDendritic
+	:public NeuronPopulationBaseCommon
+{
+public:
+	using NeuronPopulationBaseCommon::alpha;
+
+
+
+	NeuronPopulationBaseDendritic(const TyNeuronalParams &_pm, int n_var)
+		:NeuronPopulationBaseCommon(_pm, n_var + _pm.n_total() * 4)  
+						// we need extra space  _pm.n_total() * 4 to store dentritic conductance
+	{
+		
+		assert(DIF_flag == true);
+	}
+
+
+//	TyMatVals& Get_alpha(int neuron_id) {
+//		return alpha[neuron_id];
+//	}
+
+	TyMatVals* Get_alpha_Ptr(int neuron_id) {
+		return &alpha[neuron_id];
+	}
+
+};
+
+// Population:  dentretic interaction considered, delta interact, no delay, no current input
+template<class TyNeu, class NBase = NeuronPopulationBaseDendritic>  // neuron model
+class NeuronPopulationDendriticDeltaInteractTemplate :
+	public NBase
+{
+public:						 // It is defined in struct TyNeuronalDymState
+	using NBase::StatePtr;   // Note YWS: If this class is to be inherited, do CHECK this
+							 //using NBase::GetGEIPtr;  // Get g_EI for one neuron, return a doule*, storing g_E_i(*n_total) and g_I_i(*n_total) continously
+	using NBase::Get_alpha_Ptr;
+	using NBase::time_in_refractory;
+	using NBase::n_E;
+	using NBase::n_I;
+	using NBase::n_total;
+	using NBase::net;
+	using NBase::scee;
+	using NBase::scei;
+	using NBase::scie;
+	using NBase::scii;
+	using NBase::arr_ps;
+	using NBase::dym_vals;
+
+	//TyNeu neuron_model; // One can access some (not static but infact static) functions via this instance
+
+	std::vector<TyNeu> neuron_models;
+
+	NeuronPopulationDendriticDeltaInteractTemplate(const TyNeuronalParams &_pm)
+		:NBase(_pm, TyNeu::n_var)
+	{
+		TyNeu _neuron_model;
+		_neuron_model.n_neu = _pm.n_total();
+		neuron_models.resize(_pm.n_total(), _neuron_model);
+		for (int i = 0; i < n_total(); i++) {
+			neuron_models[i].alpha = Get_alpha_Ptr(i);
+			neuron_models[i].n_neu = _pm.n_total();
+		}
+
+	}
+
+	void NoInteractDt(int neuron_id, double dt, double t_local,
+		TySpikeEventVec &spike_events) override
+	{
+		dbg_printf("NoInteractDt(): neuron_id = %d\n", neuron_id);
+		double spike_time_local = qNaN;
+		double *dym_val = StatePtr(neuron_id);
+		QUIET_STEP_CALL_INC();
+		neuron_models[neuron_id].NextStepSingleNeuronQuiet(
+			dym_val, time_in_refractory[neuron_id], spike_time_local, dt);
+		if (!std::isnan(spike_time_local)) {
+			spike_events.emplace_back(t_local + spike_time_local, neuron_id);
+		}
+	}
+
+	void SynapticInteraction(const TySpikeEvent &se) override
+	{
+		if (se.id < n_E) {
+			// Excitatory neuron fired
+			for (SparseMat::InnerIterator it(net, se.id); it; ++it) {
+				if (it.row() < n_E) {
+					dym_vals(it.row(), TyNeu::n_var + n_total() * 2 + se.id) += it.value() * scee;
+				}
+				else {
+					dym_vals(it.row(), TyNeu::n_var + n_total() * 2 + se.id) += it.value() * scie;
+				}
+			}
+		}
+		else {
+			// Inhibitory neuron fired
+			for (SparseMat::InnerIterator it(net, se.id); it; ++it) {
+				if (it.row() < n_E) {
+					dym_vals(it.row(), TyNeu::n_var + n_total() * 3 + se.id) += it.value() * scei; // YWSCHECK
+				}
+				else {
+					dym_vals(it.row(), TyNeu::n_var + n_total() * 3 + se.id) += it.value() * scii;
+				}
+			}
+		}
+	}
+
+	void SynapticInteraction(int neuron_id, const int spike_from_id) override
+	{
+		if (spike_from_id < n_E) {
+			// Excitatory neuron fired
+			if (neuron_id < n_E) {
+				dym_vals(neuron_id, TyNeu::n_var + n_total() * 2 + neuron_id) += scee;
+			}
+			else {
+				dym_vals(neuron_id, TyNeu::n_var + n_total() * 2 + neuron_id) += scie;
+
+			}
+		}
+		else {
+			// Inhibitory neuron fired
+			if (neuron_id < n_E) {
+				dym_vals(neuron_id, TyNeu::n_var + n_total() * 3 + neuron_id) += scei;
+
+			}
+			else {
+				dym_vals(neuron_id, TyNeu::n_var + n_total() * 3 + neuron_id) += scii;
+
+			}
+		}
+	}
+
+	void ForceReset(int neuron_id) override
+	{
+		neuron_models[neuron_id].VoltHandReset(StatePtr(neuron_id));
+		time_in_refractory[neuron_id] = std::numeric_limits<double>::min();
+	}
+
+	void SetRefractoryTime(double t_ref) override
+	{
+		for (int i = 0; i < n_total(); i++) { neuron_models[i].Set_Time_Refractory(t_ref); }
+	}
+
+	void SetThreshold(double V_thres) override
+	{
+		for (int i = 0; i<n_total();i++) { neuron_models[i].V_threshold = V_thres; }
+	}
+
+	void DisableThreshold() override
+	{
+		SetThreshold(std::numeric_limits<double>::infinity());
+	}
+
+	void InjectPoissonE(int neuron_id) override
+	{
+		// Add Poisson input
+		dym_vals(neuron_id, TyNeu::id_gEPoisson_s1) += arr_ps[neuron_id];
+	}
+
+	void InjectDeltaInput(int neuron_id, double strength) override
+	{
+		if (strength >= 0) {
+			dym_vals(neuron_id, TyNeu::id_gEPoisson_s1) += strength;
+		}
+		else {
+			dym_vals(neuron_id, TyNeu::id_gIPoisson_s1) -= strength;
+		}
+	}
+
+	// to get inform of the neuron model in main.c
+	// NOTE that some varibles may not be homogeneous!
+	const Ty_Neuron_Dym_Base * GetNeuronModel() const override
+	{
+		return &neuron_models[0];
+	}
+};
+
 #endif

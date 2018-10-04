@@ -15,6 +15,8 @@ TODO:
    * isomerisom of neurons in a network?
 */
 
+
+
 #ifndef DEBUG
 #define NDEBUG  // disable assert() and disable checks in Eigen
 #endif
@@ -126,7 +128,7 @@ int MainLoop(const po::variables_map &vm)
     HH_G_sine, HH_GH_sine, HH_PT_GH_sine, HH_FT_GH_sine,
     HH_G_extI, HH_GH_extI,
     HH_GH_cont_syn, IF_jump, Hawkes_GH,
-    DIF_single_GH
+    DIF_single_GH, DIF_GH
   };
   EnumNeuronModel enum_neuron_model;
   if (str_nm ==            "LIF-G") {
@@ -160,7 +162,9 @@ int MainLoop(const po::variables_map &vm)
   } else if (str_nm ==     "Hawkes-GH") {
     enum_neuron_model =     Hawkes_GH;
   } else if (str_nm ==     "DIF-single-GH") {
-    enum_neuron_model =     DIF_single_GH;
+	enum_neuron_model =		DIF_single_GH;
+  } else if (str_nm ==     "DIF-GH"){
+	  enum_neuron_model = DIF_GH;
   } else {
     cerr << "Unrecognized neuron model. See --help.\n";
     return -1;
@@ -207,6 +211,23 @@ int MainLoop(const po::variables_map &vm)
   } else {
     cout << "You must specify a network. (--net)" << endl;
     return -1;
+  }
+
+  // Only for DIF
+  // Parameters about --alpha-coefficient
+  // Initialize alpha_coef(ficient) before DIF-related models contruction
+  pm.DIF_flag = false;
+  if (enum_neuron_model == DIF_GH) {
+	  pm.DIF_flag = true;
+	  if (vm.count("alpha-coefficient")) {
+		  std::string name_coef = vm["alpha-coefficient"].as<std::string>();
+		  bool is_sparse = vm.count("sparse-net") > 0;
+		  InitAlphaCoeffFromPath(pm, name_coef, is_sparse);
+	  }
+	  else {
+		  cout << "You must specify alpha coefficients. (--alpha-coefficient)" << endl;
+		  return -1;
+	  }
   }
 
   // Set neuron population type
@@ -395,6 +416,8 @@ int MainLoop(const po::variables_map &vm)
       case DIF_single_GH:
         p_neu_pop = new NeuronPopulationDeltaInteractTemplate<Ty_DIF_single_GH>(pm);
         break;
+	  case DIF_GH:
+		p_neu_pop = new NeuronPopulationDendriticDeltaInteractTemplate<Ty_DIF_GH>(pm);
     }
   }
 
@@ -621,6 +644,8 @@ int MainLoop(const po::variables_map &vm)
   std::ofstream fout_G;    // G: conductance
   bool b_output_G = fout_try_open("conductance-path", fout_G);
 
+  bool b_output_extra_G_DIF = (enum_neuron_model == DIF_GH);
+
   std::ofstream fout_HH_gate;    // File for saving gating variables: h, m, n
   bool b_output_HH_gate = false;
   if (str_nm.find("HH") != std::string::npos) {
@@ -734,10 +759,21 @@ int MainLoop(const po::variables_map &vm)
     printf("  Simulation         : ");
   }
 
+
+  /*                             TODOYWS: check
+	 example of the case storing conductance of DIF-GH model (n neuron, [t/dt] = m):
+	 {t = 1*dt, 1st neu} {t = 1*dt, 2ed neu} ... {t = 1*dt, nst neu} 
+	 {t = 2*dt, 1st neu} {t = 2*dt, 2ed neu} ... {t = 2*dt, nst neu}
+	 ......
+	 {t = m*dt, 1st neu} {t = m*dt, 2ed neu} ... {t = m*dt, nst neu}
+	 where
+	 {t = i*dt, jth ner} means: data of jth neu at time i*dt,
+	 'data' includes gEP gIP gEPs gIPs  gE(1) gE(2) ... gE(n)  gI(1) gI(2) ... gI(n), refer to @@Ty_DIF_GH_core for more information
+   */
   // Function for save data to file
   auto func_save_dym_values = [
     b_output_volt, &fout_volt,
-    b_output_G, &fout_G,
+    b_output_G, b_output_extra_G_DIF, &fout_G,     // EIDTED YWS, to enable output extra conductance data for DIF model
     b_output_HH_gate, &fout_HH_gate,
     p_neuron_model]
     (const NeuronPopulationBase &neu_pop) {
@@ -749,7 +785,7 @@ int MainLoop(const po::variables_map &vm)
       }
       fout_volt.write((char*)v.data(), neu_pop.n_neurons()*sizeof(double));
     }
-    if (b_output_G) {
+    if (b_output_G && ! b_output_extra_G_DIF) {
       int id_gE = p_neuron_model->Get_id_gE();
       int id_gI = p_neuron_model->Get_id_gI();
       std::vector<double> v(2*neu_pop.n_neurons());
@@ -759,6 +795,31 @@ int MainLoop(const po::variables_map &vm)
       }
       fout_G.write((char*)v.data(), 2*neu_pop.n_neurons()*sizeof(double));
     }
+	if (b_output_G && b_output_extra_G_DIF) {							// output conductence for DIF-GH model
+
+		int n_var = (2 + 2 * neu_pop.n_neurons()) * neu_pop.n_neurons();
+		std::vector<double> v(n_var*neu_pop.n_neurons());
+		for (int j = 0; j < neu_pop.n_neurons(); j++) {
+			v[n_var*j + 0] = neu_pop.GetDymState().dym_vals(j, 1);      // id_gEPoisson == 1
+			v[n_var*j + 1] = neu_pop.GetDymState().dym_vals(j, 2);		// id_gIPoisson == 2
+			for (int i = 2; i < n_var; i++) {
+				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i+3); // we skipped '3' varibles, namely gEP, gIP, gEPs, gIPs
+			}
+		}
+		
+		/* // the following part of code output all dynamic varibles, including V gEP gEI gE(i) gI(i) gEs(i) gIs(i)
+		   // useful when debug
+		int n_var = (p_neuron_model->Get_n_dym_vars() + 4* neu_pop.n_neurons()) * neu_pop.n_neurons();
+		std::vector<double> v(n_var*neu_pop.n_neurons());
+		for (int j = 0; j < neu_pop.n_neurons(); j++) {					// I think we can just write the whole dym_val[]
+			for (int i = 0; i < n_var; i++) {
+				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i);
+			}
+		}
+		*/
+		fout_G.write((char*)v.data(), n_var*neu_pop.n_neurons()*sizeof(double));
+
+	}
     if (b_output_HH_gate) {
       int id_gating = p_neuron_model->Get_id_V() + 1;
       int n_gating = ((Ty_HH_GH*)p_neuron_model)->n_var_soma - 1;
@@ -857,7 +918,7 @@ int main(int argc, char *argv[])
   // http://stackoverflow.com/questions/3621181/short-options-only-in-boostprogram-options
   desc.add_options()
       ("neuron-model",  po::value<std::string>(),
-       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH, DIF_single_GH.")
+       "One of LIF-G, LIF-GH, HH-G, HH-GH, HH-PT-GH, HH-FT-GH, HH-G-sine, HH-GH-sine, HH-PT-GH-sine, HH-FT-GH-sine, HH-G-extI, HH-GH-extI, HH-GH-cont-syn, IF-jump, Hawkes-GH, DIF-single-GH, DIF-GH.")
       ("simulation-method",  po::value<std::string>(),
        "One of simple, SSC, SSC-Sparse, SSC-Sparse2, big-delay, big-net-delay, cont-syn, IF-jump, IF-jump-delay, auto. Some combinations of neuron model and simulator are mutually exclusive, hence not allowed. If not specify, a suitable simulator will be choosen automatically.")
       ("help,h",
@@ -923,7 +984,7 @@ int main(int argc, char *argv[])
       ("isi-path",         po::value<std::string>(),
        "Output mean InterSpike Interval to path.")
       ("conductance-path", po::value<std::string>(),
-       "Output conductance to path.")
+       "Output conductance to path")
       ("ion-gate-path", po::value<std::string>(),
        "Output gating variables to path. In raw binary format.")
       ("output-first-data-point",
@@ -942,6 +1003,8 @@ int main(int argc, char *argv[])
        "Read parameters from path, in INI style.")
       ("force-spike-list", po::value<std::string>(),
        "Read force spike list.")
+	  ("alpha-coefficient", po::value<std::string>(),
+	   "Set alpha-coeffecient from path, needed for DIF model.")
   ;
   // filter?
 

@@ -1180,7 +1180,7 @@ struct Ty_Hawkes_GH: public Ty_Neuron_Dym_Base
 //
 struct Ty_LIF_GH_single_dendritic_core
 {
-  // The neuron model named DIF-GH in this code.
+  // The neuron model named DIF-single-GH in this code.
   // This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance. and the conductance has second order term.
   double V_threshold  = 1.0;  // voltages are in dimensionless unit
   double V_reset      = 0.0;
@@ -1224,7 +1224,7 @@ struct Ty_LIF_GH_single_dendritic_core
     return - G_leak * (dym_val[id_V] - V_leakage)
            - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
            - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory)
-           + synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] *
+           - synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] * // YWS I did a test here
              ((dym_val[id_V] - V_excitatory));
   }
 
@@ -1276,5 +1276,387 @@ struct Ty_LIF_GH_single_dendritic_core
 };
 
 typedef Ty_LIF_stepper<Ty_LIF_GH_single_dendritic_core> Ty_DIF_single_GH;
+
+/////////////////////////////////////////////////////////////////////////////
+// Model of HH-GH with bilinear dentritic interaction
+
+struct Ty_DIF_GH_core
+{
+	// The neuron model named DIF-GH in this code.
+	// This is the Leaky Integrate-and-Fire model with order 1 smoothed conductance.
+	double V_threshold = 1.0;  // voltages are in dimensionless unit
+	double V_reset = 0.0;
+	double V_leakage = 0.0;
+	double V_excitatory = 14.0 / 3.0;
+	double V_inhibitory = -2.0 / 3.0;
+	double G_leak = 0.05;  // ms^-1
+	double tau_gE = 2.0;   // ms
+	double tau_gE_s1 = 0.5;   // ms
+	double tau_gI = 5.0;   // ms
+	double tau_gI_s1 = 0.8;   // ms
+	double Time_Refractory = 2.0;   // ms
+
+	TyMatVals* alpha;			 // coeffcients for dentritic interaction
+								 // it will be initialized in NeuronPopulationDendriticDeltaInteractTemplate
+
+	int n_neu;			 // number of neurons, it will be intialized in 
+					     // NeuronPopulationDendriticDeltaInteractTemplate and other similar classes
+
+
+	/* The following costants describes how the dynmaic varibles are stored in the memory 
+	 * for a single neuron, voltage, conductances, derivatives of conductances are stored continously
+	 * the order is:
+	 * V gEP gIP gEPs gIPs  gE(1) gE(2) ... gE(n)  gI(1) gI(2) ... gI(n)  gEs(1) gEs(2) ... gEs(n)  gIs(1) gIs(2) ... gIs(n)
+	 * where:
+	 * V is the voltage of the neuron, 
+	 * gEP (gIP) is the excitatory(inhibitory) conductance related with poisson input
+	 * gE(i) (gI(i)) is the excitatory(inhibitory) conductance input from the ith neuron, n is the number of ALL neurons
+	 * gEPs, gIPs, gEs, gIs are the corresponding derivatives
+	 *
+	 * @@get_id_gE and others will help when deal with a specific conductance
+	 */
+
+	static const int n_var = 5;  // number of dynamical variables, EXculding gE(i), gI(i), gEs(i), gIs(i)
+	static const int id_V = 0;   // index of V variable
+	static const int id_gEPoisson = 1; // index of conductance rlatinng to Poisson input
+	static const int id_gIPoisson = 2; // index of conductance rlatinng to Poisson input
+	static const int id_gEPoisson_s1 = 3; // index of conductance rlatinng to Poisson input
+	static const int id_gIPoisson_s1 = 4; // index of conductance rlatinng to Poisson input
+
+	// The following id shall be interpreted differentyl, since the there are a vector of gE, gI, etc
+	// id_x = n really means the data is stored continously in dymvals 
+	// from n_var + id_x * n_neu to n_var + (id_x + 1) * neu
+	static const int id_gE = 0;  // index bais coeff of gE variable
+	static const int id_gI = 1;  // index bias coeff of gI variable
+	static const int id_gE_s1 = 2;  // index bias coeff of derivative of gE
+	static const int id_gI_s1 = 3;  // index bias coeff of derivative of gI
+	static const int id_gEInject = id_gE_s1;  // index of bias coeff gE injection variable
+	static const int id_gIInject = id_gI_s1;  // index of bias coeff gI injection variable
+
+	// the real index of gE(etc) of the i-th neuron
+	inline int get_id_gE(int neuron_id) const { return n_var + n_neu * id_gE + neuron_id; }
+	inline int get_id_gI(int neuron_id) const { return n_var + n_neu * id_gI + neuron_id; }
+	inline int get_id_gE_s1(int neuron_id) const { return n_var + n_neu * id_gE_s1 + neuron_id; }
+	inline int get_id_gI_s1(int neuron_id) const { return n_var + n_neu * id_gI_s1 + neuron_id; }
+
+											  // Evolve conductance only
+	void NextDtConductance(double *dym_val, double dt) const
+	{
+		/**
+		ODE:
+		g '[t] == -1/tC  * g [t] + gR[t]
+		gR'[t] == -1/tCR * gR[t]
+		Solution:
+		g [t] = exp(-t/tC) * g[0] + (exp(-t/tC) - exp(-t/tCR)) * gR[0] * tC * tCR / (tC - tCR)
+		gR[t] = exp(-t/tCR) * gR[0]
+		Another form (hopefully more accurate, note exp(x)-1 is expm1(x) ):
+		g [t] = exp(-t/tC) * (g[0] + gR[0] * (exp((1/tC-1/tCR)*t) - 1) / (1/tC - 1/tCR))
+		Or
+		g [t] = exp(-t/tC) * g[0] + exp(-t/tCR) * gR[0] * (exp((1/tCR-1/tC)*t) - 1) / (1/tCR-1/tC)
+		*/
+		double expCE = exp(-dt / tau_gE);
+		double expCRE = exp(-dt / tau_gE_s1);
+
+		double expCI = exp(-dt / tau_gI);
+		double expCRI = exp(-dt / tau_gI_s1);
+
+		// The two lines below is for test, based on my guess YWS, it seems works well 
+		dym_val[id_gEPoisson] = expCE*dym_val[id_gEPoisson] + (expCE - expCRE) * dym_val[id_gEPoisson_s1] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+		dym_val[id_gIPoisson] = expCI*dym_val[id_gIPoisson] + (expCI - expCRI) * dym_val[id_gIPoisson_s1] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
+		dym_val[id_gEPoisson_s1] *= expCE;
+		dym_val[id_gIPoisson_s1] *= expCI;
+		
+		for (int i = 0; i < n_neu; i++) {
+			// exhibitory
+			dym_val[get_id_gE(i)] = expCE*dym_val[get_id_gE(i)] + (expCE - expCRE) * dym_val[get_id_gE_s1(i)] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+			dym_val[get_id_gE_s1(i)] *= expCRE;
+			// inhibitory
+			dym_val[get_id_gI(i)] = expCI*dym_val[get_id_gI(i)] + (expCI - expCRI) * dym_val[get_id_gI_s1(i)] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
+			dym_val[get_id_gI_s1(i)] *= expCRI;
+		}
+		
+	}
+
+	// Get instantaneous dv/dt for current dynamical state
+	inline double GetDv(const double *dym_val) const
+	{
+		double v_n = dym_val[id_V];
+		double v_E_diff = v_n - V_excitatory;
+		double v_I_diff = v_n - V_inhibitory;
+
+		double retval = 0;
+		retval += G_leak * (v_n - V_leakage);
+		retval += dym_val[id_gEPoisson] * v_E_diff;
+		retval += dym_val[id_gIPoisson] * v_I_diff;
+
+		
+		for (int i = 0; i < n_neu; i++) {
+			retval += dym_val[get_id_gE(i)] * v_E_diff;
+			retval += dym_val[get_id_gI(i)] * v_I_diff;
+
+		}
+		for (int i = 0; i < n_neu; i++) {
+			for (int j = 0; j < n_neu; j++) {
+				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(i)] * v_E_diff;
+			}
+		}
+
+		retval += alpha->at(0).at(0) * dym_val[id_gEPoisson] * dym_val[id_gIPoisson] * v_E_diff;
+		
+
+		return -retval;  // NOTE that in fact all terms are negative
+	}
+
+	// Evolve the state `dym_val' a `dt' forward,
+	// using classical Runge–Kutta 4-th order scheme for voltage.
+	// Conductance will evolve using the exact formula.
+	// Return derivative k1 at t_n, for later interpolation.
+	MACRO_NO_INLINE double DymInplaceRK4(double *dym_val, double dt) const
+	{
+
+		double v_n = dym_val[id_V];
+		double k1, k2, k3, k4;
+		double expEC = exp(-0.5 * dt / tau_gE);  // TODO: maybe cache this value?
+		double expECR = exp(-0.5 * dt / tau_gE_s1);
+		double expIC = exp(-0.5 * dt / tau_gI);
+		double expICR = exp(-0.5 * dt / tau_gI_s1);
+		double gE_s_coef = (expEC - expECR) * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
+		double gI_s_coef = (expIC - expICR) * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
+
+		// k1 = f(t_n, y_n)
+		k1 = GetDv(dym_val);
+
+		// y_n + 0.5*k1*dt
+		dym_val[id_V] = v_n + 0.5 * dt * k1;
+
+		dym_val[id_gEPoisson] = expEC * dym_val[id_gEPoisson] + gE_s_coef * dym_val[id_gEPoisson_s1];
+		dym_val[id_gIPoisson] = expIC * dym_val[id_gIPoisson] + gI_s_coef * dym_val[id_gIPoisson_s1];
+		dym_val[id_gEPoisson_s1] *= expECR;
+		dym_val[id_gIPoisson_s1] *= expICR;
+		for (int i = 0; i < n_neu; i++) {
+			dym_val[get_id_gE(i)] = expEC * dym_val[get_id_gE(i)] + gE_s_coef * dym_val[get_id_gE_s1(i)];
+			dym_val[get_id_gI(i)] = expIC * dym_val[get_id_gI(i)] + gI_s_coef * dym_val[get_id_gI_s1(i)];
+			dym_val[get_id_gE_s1(i)] *= expECR;
+			dym_val[get_id_gI_s1(i)] *= expICR;
+		}
+		// k2 = f(t+dt/2, y_n + 0.5*k1*dt)
+		k2 = GetDv(dym_val);
+
+		// y_n + 0.5*k2*dt
+		dym_val[id_V] = v_n + 0.5 * dt * k2;
+		// k3 = f(t+dt/2, y_n + 0.5*k2*dt)
+		k3 = GetDv(dym_val);
+
+		// y_n + k3*dt
+		dym_val[id_V] = v_n + dt * k3;
+		dym_val[id_gEPoisson] = expEC * dym_val[id_gEPoisson] + gE_s_coef * dym_val[id_gEPoisson_s1];
+		dym_val[id_gIPoisson] = expIC * dym_val[id_gIPoisson] + gI_s_coef * dym_val[id_gIPoisson_s1];
+		dym_val[id_gEPoisson_s1] *= expECR;
+		dym_val[id_gIPoisson_s1] *= expICR;
+		for (int i = 0; i < n_neu; i++) {
+			dym_val[get_id_gE(i)] = expEC * dym_val[get_id_gE(i)] + gE_s_coef * dym_val[get_id_gE_s1(i)];
+			dym_val[get_id_gI(i)] = expIC * dym_val[get_id_gI(i)] + gI_s_coef * dym_val[get_id_gI_s1(i)];
+			dym_val[get_id_gE_s1(i)] *= expECR;
+			dym_val[get_id_gI_s1(i)] *= expICR;
+		}
+		// k4 = f(t+dt, y_n + k3*dt)
+		k4 = GetDv(dym_val);
+
+		dym_val[id_V] = v_n + dt / 6.0 * (k1 + 2 * k2 + 2 * k3 + k4);
+
+		return k1;
+	}
+};
+
+// Adapter for DIF model (only sub-threshold dynamics and need hand reset)
+template<typename TyNeuronModel>
+struct Ty_DIF_stepper : public TyNeuronModel, public Ty_Neuron_Dym_Base
+{
+	// for template class we need these "using"s. It's a requirement for TyNeuronModel.
+	using TyNeuronModel::id_V;	
+	using TyNeuronModel::id_gE;	// not to use to avoid confusion, interpreted in DIF-GH, DO READ the comments there before use them
+	using TyNeuronModel::id_gI; // use with care if needed, READ the comments!
+	using TyNeuronModel::V_threshold;
+	using TyNeuronModel::V_reset;
+	using TyNeuronModel::Time_Refractory;
+	using TyNeuronModel::GetDv;
+	using TyNeuronModel::NextDtConductance;
+	using TyNeuronModel::DymInplaceRK4;
+
+	using TyNeuronModel::id_gEInject;
+	using TyNeuronModel::id_gIInject;
+	using TyNeuronModel::n_var;
+	// YWS the following is added for DIF
+	using TyNeuronModel::n_neu;
+	using TyNeuronModel::id_gEPoisson_s1; // not used so far
+	using TyNeuronModel::id_gIPoisson_s1;
+
+
+	double Get_V_threshold() const override { return V_threshold; };
+	int Get_id_gEInject() const override { return id_gEInject; assert(0); } // These functions shall not be called to avoid confusion
+	int Get_id_gIInject() const override { return id_gIInject; assert(0); } // use with care if u do need them
+	int Get_n_dym_vars() const override { return n_var; }   // OK to use
+	int Get_id_V() const override { return id_V; }			// OK to use
+	int Get_id_gE() const override { return id_gE; assert(0);}
+	int Get_id_gI() const override { return id_gI; assert(0);}
+
+	void Set_Time_Refractory(double t_ref) override
+	{
+		if (t_ref >= 0) {
+			Time_Refractory = t_ref;  // No error checking
+		}
+		else {
+			cerr << "Setting Time_Refractory < 0 : t_ref = " << t_ref << "\n";
+		}
+	}
+
+	// Used when reset the voltage by hand. (e.g. outside this class)
+	inline void VoltHandReset(double *dym_val) const override
+	{
+		dym_val[id_V] = V_reset;
+	}
+
+	// in fact, we never use it(? YWSQ )
+	void SpikeTimeRefine(double *dym_t, double &t_spike, int n_it, int n_E, int n_I) const
+	{
+		if (n_it == 1) {
+			DymInplaceRK4(dym_t, t_spike);
+			t_spike -= (dym_t[id_V] - V_threshold) / GetDv(dym_t);
+		}
+		else {  // multiple iterations
+			double dym_t0[n_var];
+			std::copy(dym_t, dym_t + n_var, dym_t0);  // copy of init state
+			for (int i = n_it - 1; i >= 0; i--) {
+				DymInplaceRK4(dym_t, t_spike);
+				/*t_spike -= (dym_t[id_V]-V_threshold) / GetDv(dym_t);*/
+				double dt_spike = (dym_t[id_V] - V_threshold) / GetDv(dym_t);
+				t_spike -= dt_spike;
+				dbg_printf("SpikeTimeRefine(): dt = %.17g, t_spike = %.17g, V = %.17g, Dv = %g\n",
+					dt_spike, t_spike, dym_t[id_V], GetDv(dym_t));
+				if (i) std::copy(dym_t0, dym_t0 + n_var, dym_t);
+			}
+		}
+	}
+
+	// Evolve the ODE and note down the spike time, assuming no reset and no external input.
+	// `spike_time_local' should be guaranteed to be within [0, dt] or NAN.
+	MACRO_NO_INLINE void NextStepSingleNeuronContinuous(double *dym_val, double &spike_time_local, double dt) const
+	{
+		double dym_t[n_var];
+		std::copy(dym_val, dym_val + n_var, dym_t);
+		double v_n = dym_val[id_V];						// the original V
+		double k1 = DymInplaceRK4(dym_val, dt);
+
+		// if there is a spike in this dt
+		if (v_n <= V_threshold							// the original V
+			&& dym_val[id_V] > V_threshold) {			// V, after evolve for dt
+			spike_time_local = cubic_hermit_real_root(dt,
+				v_n, dym_val[id_V],
+				k1, GetDv(dym_val), V_threshold);
+			// refine spike time
+			/*SpikeTimeRefine(dym_t, spike_time_local, 2);*/
+		}
+		else {
+			if (v_n > 0.996 && k1>0) { // the v_n > 0.996 is for dt=0.5 ms, LIF,G model
+									   // Try capture some missing spikes that the intermediate value passes
+									   // threshold, but both ends are lower than threshold.
+									   // Get quadratic curve from value of both ends and derivative from left end
+									   // Return the maximum point as `t_max_guess'
+				double c = v_n;
+				double b = k1;
+				double a = (dym_val[id_V] - c - b*dt) / (dt*dt);
+				double t_max_guess = -b / (2 * a);
+				// In LIF-G, it can guarantee that a<0 (concave),
+				// hence t_max_guess > 0. But in LIF-G model, we still need to
+				// check 0 < t_max_guess
+				if (0 < t_max_guess && t_max_guess < dt
+					&& (b*b) / (-4 * a) + c >= V_threshold) {
+					//dbg_printf("Rare event: mid-dt spike captured, guess time: %f\n", t_max_guess);
+					dbg_printf("NextStepSingleNeuronContinuous(): possible mid-dt spike detected:\n");
+					dbg_printf("  Guessed max time: %f, dt = %f\n", t_max_guess, dt);
+					// root should in [0, t_max_guess]
+					spike_time_local = cubic_hermit_real_root(dt,
+						v_n, dym_val[id_V],
+						k1, GetDv(dym_val), V_threshold);
+					/*SpikeTimeRefine(dym_t, spike_time_local, 2);*/
+				}
+				else {
+					spike_time_local = std::numeric_limits<double>::quiet_NaN();
+				}
+			}
+			else {
+				spike_time_local = std::numeric_limits<double>::quiet_NaN();
+			}
+		}
+	}
+
+	// Evolve single neuron as if no external input.
+	// Return first spike time in `spike_time_local', if any.
+	void NextStepSingleNeuronQuiet(double *dym_val, double &t_in_refractory,
+		double &spike_time_local, double dt_local) const override
+	{
+		//! at most one spike allowed during this dt_local
+		if (t_in_refractory == 0) {
+			dbg_printf("NextStepSingleNeuronQuiet(): dt_local = %.17g\n", dt_local);
+			dbg_printf("NextStepSingleNeuronQuiet(): begin state=%.16e,%.16e,%.16e\n",
+				dym_val[0], dym_val[1], dym_val[2]);
+			NextStepSingleNeuronContinuous(dym_val, spike_time_local, dt_local);
+			dbg_printf("NextStepSingleNeuronQuiet(): end   state=%.16e,%.16e,%.16e\n",
+				dym_val[0], dym_val[1], dym_val[2]);
+			if (!std::isnan(spike_time_local)) {
+				// Add `numeric_limits<double>::min()' to make sure t_in_refractory > 0.
+				t_in_refractory = dt_local - spike_time_local
+					+ std::numeric_limits<double>::min();
+				dym_val[id_V] = V_reset;
+				dbg_printf("NextStepSingleNeuronQuiet(): neuron fired, spike_time_local = %.17g\n", spike_time_local);
+				if (t_in_refractory >= Time_Refractory) {
+					// Short refractory period (< dt_local), neuron will be actived again.
+					dt_local = t_in_refractory - Time_Refractory;
+					t_in_refractory = 0;
+					// Back to the activation time.
+					NextDtConductance(dym_val, -dt_local);
+					double spike_time_local_tmp;
+					NextStepSingleNeuronContinuous(dym_val, spike_time_local_tmp, dt_local);
+					if (!std::isnan(spike_time_local_tmp)) {
+						cerr << "NextStepSingleNeuronQuiet(): Multiple spikes in one dt. Interaction dropped." << endl;
+						cerr << "  dt_local = " << dt_local << '\n';
+						cerr << "  spike_time_local = " << spike_time_local << '\n';
+						cerr << "  t_in_refractory = " << t_in_refractory << '\n';
+						cerr << "  dym_val[id_V] = " << dym_val[id_V] << '\n';
+						cerr << "  dym_val[id_gE] = " << dym_val[id_gE] << '\n';
+						throw "Multiple spikes in one dt.";
+					}
+				}
+			}
+		}
+		else {
+			// Neuron in refractory period.
+			double dt_refractory_remain = Time_Refractory
+				- t_in_refractory;
+			if (dt_refractory_remain < dt_local) {
+				// neuron will awake after dt_refractory_remain which is in this dt_local
+				NextDtConductance(dym_val, dt_refractory_remain);
+				assert(dym_val[id_V] == V_reset);
+				t_in_refractory = 0;
+				NextStepSingleNeuronQuiet(dym_val, t_in_refractory,
+					spike_time_local, dt_local - dt_refractory_remain);
+			}
+			else {
+				spike_time_local = std::numeric_limits<double>::quiet_NaN();
+				NextDtConductance(dym_val, dt_local);
+				t_in_refractory += dt_local;
+			}
+		}
+	}
+
+	const double * Get_dym_default_val() const
+	{
+		static const double dym[n_var] = { 0 };
+		return dym;
+	}
+};
+
+typedef Ty_DIF_stepper<Ty_DIF_GH_core> Ty_DIF_GH;
+
 
 #endif
