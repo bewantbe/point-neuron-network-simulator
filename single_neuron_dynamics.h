@@ -131,7 +131,7 @@ struct Ty_LIF_GH_core
   double tau_gE_s1    = 0.5;   // ms
   double tau_gI       = 5.0;   // ms
   double tau_gI_s1    = 0.8;   // ms
-  double Time_Refractory = 2.0;   // ms
+  double Time_Refractory = 2.0;   // ms   
   static const int n_var    = 5;  // number of dynamical variables
   static const int id_V     = 0;  // index of V variable
   static const int id_gE    = 1;  // index of gE variable
@@ -1187,7 +1187,7 @@ struct Ty_LIF_GH_single_dendritic_core
   double V_excitatory = 14.0/3.0;
   double V_inhibitory = -2.0/3.0;
   double G_leak       = 0.05;  // ms^-1
-  double synaptic_alpha = 0.01;
+  double synaptic_alpha = -0.01;												// EDIT YWS: snaptic alpha is usually negative
   double tau_gE       = 2.0;   // ms
   double tau_gE_s1    = 0.5;   // ms
   double tau_gI       = 5.0;   // ms
@@ -1223,8 +1223,8 @@ struct Ty_LIF_GH_single_dendritic_core
     return - G_leak * (dym_val[id_V] - V_leakage)
            - dym_val[id_gE] * (dym_val[id_V] - V_excitatory)
            - dym_val[id_gI] * (dym_val[id_V] - V_inhibitory)
-           - synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] * // YWS I did a test here
-             ((dym_val[id_V] - V_excitatory));
+           - synaptic_alpha * dym_val[id_gE] * dym_val[id_gI] * // EDIT YWS: if we set synaptic alpha to be nagative, the sign here shall be negative
+             ((dym_val[id_V] - V_excitatory));					
   }
 
   // Evolve the state `dym_val' a `dt' forward,
@@ -1293,7 +1293,7 @@ struct Ty_DIF_GH_core
 	double tau_gE_s1 = 0.5;   // ms
 	double tau_gI = 5.0;   // ms
 	double tau_gI_s1 = 0.8;   // ms
-	double Time_Refractory = 2.0;   // ms
+	double Time_Refractory = 2.0;   // ms  
 
 	TyMatVals* alpha;			 // coeffcients for dentritic interaction
 								 // it will be initialized in NeuronPopulationDendriticDeltaInteractTemplate
@@ -1333,7 +1333,7 @@ struct Ty_DIF_GH_core
 	static const int id_gIInject = id_gI_s1;  // index of bias coeff gI injection variable
 
 	// the real index of gE(etc) of the i-th neuron
-	inline int get_id_gE(int neuron_id) const { return n_var + n_neu * id_gE + neuron_id; }
+	inline int get_id_gE(int neuron_id) const { return n_var + n_neu * id_gE + neuron_id; }			//neuron_id count starting from 0
 	inline int get_id_gI(int neuron_id) const { return n_var + n_neu * id_gI + neuron_id; }
 	inline int get_id_gE_s1(int neuron_id) const { return n_var + n_neu * id_gE_s1 + neuron_id; }
 	inline int get_id_gI_s1(int neuron_id) const { return n_var + n_neu * id_gI_s1 + neuron_id; }
@@ -1362,8 +1362,8 @@ struct Ty_DIF_GH_core
 		// The two lines below is for test, based on my guess YWS, it seems works well 
 		dym_val[id_gEPoisson] = expCE*dym_val[id_gEPoisson] + (expCE - expCRE) * dym_val[id_gEPoisson_s1] * tau_gE * tau_gE_s1 / (tau_gE - tau_gE_s1);
 		dym_val[id_gIPoisson] = expCI*dym_val[id_gIPoisson] + (expCI - expCRI) * dym_val[id_gIPoisson_s1] * tau_gI * tau_gI_s1 / (tau_gI - tau_gI_s1);
-		dym_val[id_gEPoisson_s1] *= expCE;
-		dym_val[id_gIPoisson_s1] *= expCI;
+		dym_val[id_gEPoisson_s1] *= expCRE;		// FIXED 2018/09/18 YWS Note that the correction may not be correct
+		dym_val[id_gIPoisson_s1] *= expCRI;
 		
 		for (int i = 0; i < n_neu; i++) {
 			// exhibitory
@@ -1396,7 +1396,7 @@ struct Ty_DIF_GH_core
 		}
 		for (int i = 0; i < n_neu; i++) {
 			for (int j = 0; j < n_neu; j++) {
-				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(i)] * v_E_diff;
+				retval += alpha->at(i).at(j) * dym_val[get_id_gE(i)] * dym_val[get_id_gI(j)] * v_E_diff; // bug FIXED 11/12 YWS
 			}
 		}
 

@@ -219,7 +219,7 @@ void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef
 					TyArrVals arow;
 					for (int k = 0; k < n_neu; k++) {
 						fin_alpha >> a;
-						if (j == k && a != 0) {
+						if (j == k && a != 0 && j!=0) {
 							dbg_printf("Warning: in InitAlphaCoeffFromPath: it is unusual that alpha[i][i] to be nonzero. \n");
 						}
 						if (!std::isfinite(a)) {
@@ -233,9 +233,9 @@ void InitAlphaCoeffFromPath(TyNeuronalParams & pm, const std::string & name_coef
 			}
 
 			if (!fin_alpha) {
-				cerr << "Bad alpha coefficient file: \"" << name_coef << "\"\n"
+				cerr << "Bad synaptic alpha file: \"" << name_coef << "\"\n"
 					<< " Notice that alpha coefficent file shall contain n*n*n doubles (n is the number of neurons)\n";
-				throw "Bad alpha coefficient file!\n";
+				throw "Bad synatptic alpha file!\n";
 			}
 		}
 		else {

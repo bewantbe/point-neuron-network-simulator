@@ -214,18 +214,18 @@ int MainLoop(const po::variables_map &vm)
   }
 
   // Only for DIF
-  // Parameters about --alpha-coefficient
+  // Parameters about --synaptic-alpha-path
   // Initialize alpha_coef(ficient) before DIF-related models contruction
   pm.DIF_flag = false;
   if (enum_neuron_model == DIF_GH) {
 	  pm.DIF_flag = true;
-	  if (vm.count("alpha-coefficient")) {
-		  std::string name_coef = vm["alpha-coefficient"].as<std::string>();
+	  if (vm.count("synaptic-alpha-path")) {
+		  std::string name_coef = vm["synaptic-alpha-path"].as<std::string>();
 		  bool is_sparse = vm.count("sparse-net") > 0;
 		  InitAlphaCoeffFromPath(pm, name_coef, is_sparse);
 	  }
 	  else {
-		  cout << "You must specify alpha coefficients. (--alpha-coefficient)" << endl;
+		  cout << "You must specify synaptic alpha(s). (--synaptic-alpha-path)" << endl;
 		  return -1;
 	  }
   }
@@ -774,26 +774,28 @@ int MainLoop(const po::variables_map &vm)
     }
 	if (b_output_G && b_output_extra_G_DIF) {							// output conductence for DIF-GH model
 
-		int n_var = (2 + 2 * neu_pop.n_neurons()) * neu_pop.n_neurons();
-		std::vector<double> v(n_var*neu_pop.n_neurons());
-		for (int j = 0; j < neu_pop.n_neurons(); j++) {
-			v[n_var*j + 0] = neu_pop.GetDymState().dym_vals(j, 1);      // id_gEPoisson == 1
-			v[n_var*j + 1] = neu_pop.GetDymState().dym_vals(j, 2);		// id_gIPoisson == 2
-			for (int i = 2; i < n_var; i++) {
-				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i+3); // we skipped '3' varibles, namely gEP, gIP, gEPs, gIPs
-			}
-		}
+		//int n_var = (2 + 2 * neu_pop.n_neurons()) * neu_pop.n_neurons();
+		//std::vector<double> v(n_var*neu_pop.n_neurons());
+		//for (int j = 0; j < neu_pop.n_neurons(); j++) {
+			//v[n_var*j + 0] = neu_pop.GetDymState().dym_vals(j, 1);      // id_gEPoisson == 1
+			//v[n_var*j + 1] = neu_pop.GetDymState().dym_vals(j, 2);		// id_gIPoisson == 2
+			//for (int i = 2; i < n_var; i++) {
+			//	v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i+3); // we skipped '2' varibles, namely gEPs, gIPs
+			//}
+
+		//}
+
 		
-		/* // the following part of code output all dynamic varibles, including V gEP gEI gE(i) gI(i) gEs(i) gIs(i)
+		   // the following part of code output all dynamic varibles, including gEP gEI gE(i) gI(i) gEs(i) gIs(i), excluding V
 		   // useful when debug
-		int n_var = (p_neuron_model->Get_n_dym_vars() + 4* neu_pop.n_neurons()) * neu_pop.n_neurons();
+		int n_var = (p_neuron_model->Get_n_dym_vars() - 1 + 4 * neu_pop.n_neurons()); // FIXED YWS 2018/11/15  * neu_pop.n_neurons();
 		std::vector<double> v(n_var*neu_pop.n_neurons());
 		for (int j = 0; j < neu_pop.n_neurons(); j++) {					// I think we can just write the whole dym_val[]
 			for (int i = 0; i < n_var; i++) {
-				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i);
+				v[n_var*j + i] = neu_pop.GetDymState().dym_vals(j, i+1);
 			}
 		}
-		*/
+		
 		fout_G.write((char*)v.data(), n_var*neu_pop.n_neurons()*sizeof(double));
 
 	}
@@ -979,8 +981,8 @@ int main(int argc, char *argv[])
        "Read parameters from path, in INI style.")
       ("force-spike-list", po::value<std::string>(),
        "Read force spike list.")
-	  ("alpha-coefficient", po::value<std::string>(),
-	   "Set alpha-coeffecient from path, needed for DIF model.")
+	  ("synaptic-alpha-path", po::value<std::string>(),
+	   "Set synaptic-alpha from path, only needed for DIF based model")
   ;
   // filter?
 
