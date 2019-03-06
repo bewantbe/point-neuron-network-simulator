@@ -20,6 +20,7 @@ maxabs = @(x) max(abs(x(:)));
 % network case
 
 pm0 = [];
+pm0.neuron_model = 'LIF-GH';
 pm0.net  = ones(15);
 pm0.nI   = 0;
 pm0.scee = 0.05;
@@ -28,12 +29,20 @@ pm0.scei = 0.07;
 pm0.scii = 0.04;
 pm0.pr   = 1.0;
 pm0.ps   = 0.02;
-pm0.t    = 1e3;
-pm0.dt   = 1.0/1024;
-pm0.stv  = pm0.dt;
+pm0.t    = 64;
+pm0.dt   = 1.0/32;
+%pm0.stv  = pm0.dt;
+pm0.stv  = 1.0/32;
 pm0.seed = 4563;
 
-s_dt = 1 ./ [32 64 128 256 512 1024];
+n_points = 8;
+s_dt = zeros(n_points, 1);
+dt0 = 1.0/32;
+for i = 1:n_points
+    s_dt(i) = dt0 / 2^i;
+end
+    
+%s_dt = 1 ./ [1024 2048 4096 8192]; % 2048 4096 8192 %[32 64 128 256 512 1024]
 s_err_V    = zeros(size(s_dt));
 s_err_Vend = zeros(size(s_dt));
 s_err_ras  = zeros(size(s_dt));
@@ -41,16 +50,16 @@ s_err_ras  = zeros(size(s_dt));
 pm = pm0;
 
 % Reference answer
-pm.dt = s_dt(end)/2;
-[X_r, isi_r, ras_r, pm_expand_r] = gen_neu(pm, 'new,rm');
+pm.dt = s_dt(end)/4.0;
+[X_r, isi_r, ras_r, pm_expand_r] = gen_neu(pm, 'new,rm,verbose');
 
 v0 = X_r(:, end);
-t_last = lastRASEvent(ras_r, size(pm.net,1));
-v0(pm.t - t_last < 4 | v0 > 10 | v0 < 0) = nan;
+t_last0 = lastRASEvent(ras_r, size(pm.net,1));
+v0(pm.t - t_last0 < 4 | v0 > 10 | v0 < 0) = nan;
 
 for id_dt = 1:numel(s_dt)
   pm.dt = s_dt(id_dt);
-  [X, isi, ras, pm_expand] = gen_neu(pm, 'new,rm');
+  [X, isi, ras, pm_expand] = gen_neu(pm, 'new,rm,verbose');
 
   v = X(:, end);
   t_last = lastRASEvent(ras, size(pm.net,1));
@@ -58,16 +67,16 @@ for id_dt = 1:numel(s_dt)
 
   s_err_Vend(id_dt) = maxabs(v - v0);
   s_err_V(id_dt) = maxabs(X - X_r) / maxabs(X_r);
-  s_err_ras(id_dt) = maxabs(ras - ras_r);
+  s_err_ras(id_dt) = maxabs(t_last - t_last0);
 end
 
 figure(1);
-loglog(s_dt, s_err_V, '-o');
+semilogy(s_dt, s_err_V, '-o');
 ylabel('V err');
 xlabel('dt (ms)');
 
 figure(2);
-loglog(s_dt, s_err_ras, '-o');
+semilogy(s_dt, s_err_ras, '-o');
 ylabel('ras err');
 xlabel('dt (ms)');
 

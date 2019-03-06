@@ -35,7 +35,8 @@ pm.input_event = [...
 % Currently, only LIF-GH, DIF-single-GH and HH-GH model support this function.
 % And it can not combine with delayed synaptic or current/sine input.
 pm.neuron_const = [...
-1.0, 0.0, 0.0, 14/3.0, -2/3.0, 0.05, 1, 2.0, 0.5, 5.0, 0.8, 2.0
+1.0, 0.0, 0.0, 14/3.0, -2/3.0, 0.05, -1, 2.0, 0.5, 5.0, 0.8, 2.0                % EDITED YWS  (the 7th,synaptic_alpha) 1 -> -1 
+                                                                                % since the sign has changed within program gen_lab has changed
 ];
 
 % Set initial state of the neurons.
@@ -55,14 +56,15 @@ s_t = (1:length(X))*pm.stv;
 figure(11);
 plot(s_t, X);
 
+
 f_exp_rise_fall = @(t, tg, th) tg*th*(exp(-t/tg) - exp(-t/th))/(tg-th) .* (t>0);
-GE_ref = pm.ps  * f_exp_rise_fall(s_t-5.0, pm.neuron_const(8), pm.neuron_const(9));
-GI_ref = pm.psi * f_exp_rise_fall(s_t-5.0, pm.neuron_const(10), pm.neuron_const(11));
+GE_ref = abs(pm.input_event(1,3)) * f_exp_rise_fall(s_t-5.0, pm.neuron_const(8), pm.neuron_const(9));   % EDITED YWS
+GI_ref = abs(pm.input_event(2,3)) * f_exp_rise_fall(s_t-5.0, pm.neuron_const(10), pm.neuron_const(11));
 G_ref = [GE_ref; GI_ref];
 
 figure(21);
 plot(s_t, extra_data.G, s_t, G_ref);
 
 fprintf('Should be machine eps: \n');
-maxabs(G_ref - extra_data.G)
+max(max(abs(G_ref - extra_data.G)));
 
