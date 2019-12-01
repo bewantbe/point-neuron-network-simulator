@@ -1,7 +1,7 @@
 # Project: point-neuron-network-simulator
 
 # variables for implicit rules
-CPPFLAGS = -std=c++11 -Wall --pedantic -Wextra -Wno-unused-parameter
+CPPFLAGS = -std=c++11 -Wall --pedantic -Wextra -Wno-unused-parameter -isystem./external_code/
 CXXFLAGS = -g -O2
 LDFLAGS = 
 LDLIBS = -lboost_program_options
