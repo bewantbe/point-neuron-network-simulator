@@ -19,6 +19,7 @@ if ischar(pm0)
 else
   pm.neuron_model = pm0.neuron_model;
 end
+pm.neuron_model = strrep(pm.neuron_model, '-extI','');
 if isfield(pm0, 'prog_path')
   pm.prog_path = pm0.prog_path;
 end

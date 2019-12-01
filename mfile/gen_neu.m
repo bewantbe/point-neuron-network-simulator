@@ -450,6 +450,7 @@ if ~mode_legancy
     {'scei'}
     {'scii'}
     {'extI'}
+    {'refractory_time'}
     {'sine_amp',           [], '--current-sine-amp'}
     {'sine_freq',          [], '--current-sine-freq'}
     {'t', t_string}
